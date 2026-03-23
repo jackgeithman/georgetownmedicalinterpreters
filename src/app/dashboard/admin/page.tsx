@@ -4,6 +4,14 @@ import { useSession, signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useCallback } from "react";
 
+type VolunteerStats = {
+  languages: string[];
+  hoursVolunteered: number;
+  cancellationsWithin24h: number;
+  cancellationsWithin2h: number;
+  noShows: number;
+};
+
 type User = {
   id: string;
   email: string;
@@ -13,6 +21,7 @@ type User = {
   clinicId: string | null;
   createdAt: string;
   clinic?: { name: string } | null;
+  volunteer?: VolunteerStats | null;
 };
 
 type Clinic = {
@@ -42,7 +51,7 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     if (status === "unauthenticated") router.push("/login");
-    if (session?.user?.role && session.user.role !== "ADMIN") router.push("/dashboard");
+    if (session?.user?.role && session.user.role !== "ADMIN" && session.user.role !== "SUPER_ADMIN") router.push("/dashboard");
   }, [status, session, router]);
 
   const fetchData = useCallback(async () => {
@@ -115,8 +124,13 @@ export default function AdminDashboard() {
             <h1 className="text-lg font-semibold text-stone-800 tracking-tight">Georgetown Medical Interpreters</h1>
             <p className="text-xs text-stone-400">Admin Dashboard</p>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
             <span className="text-sm text-stone-500">{session?.user?.email}</span>
+            {session?.user?.role === "SUPER_ADMIN" && (
+              <span className="text-xs px-2 py-0.5 rounded-full bg-violet-100 text-violet-700 font-medium">
+                Super Admin
+              </span>
+            )}
             <button
               onClick={() => signOut({ callbackUrl: "/login" })}
               className="text-sm px-3 py-1.5 bg-stone-100 hover:bg-stone-200 text-stone-600 rounded-md transition-colors"
@@ -215,6 +229,7 @@ export default function AdminDashboard() {
                   <th className="text-left text-xs font-medium text-stone-400 uppercase tracking-wider px-5 py-3">Role</th>
                   <th className="text-left text-xs font-medium text-stone-400 uppercase tracking-wider px-5 py-3">Status</th>
                   <th className="text-left text-xs font-medium text-stone-400 uppercase tracking-wider px-5 py-3">Clinic</th>
+                  <th className="text-left text-xs font-medium text-stone-400 uppercase tracking-wider px-5 py-3">Volunteer Stats</th>
                   <th className="text-right text-xs font-medium text-stone-400 uppercase tracking-wider px-5 py-3">Actions</th>
                 </tr>
               </thead>
@@ -225,12 +240,13 @@ export default function AdminDashboard() {
                     <td className="px-5 py-3.5 text-sm text-stone-500">{user.email}</td>
                     <td className="px-5 py-3.5">
                       <span className={`text-xs px-2 py-1 rounded-full font-medium ${
+                        user.role === "SUPER_ADMIN" ? "bg-violet-100 text-violet-800" :
                         user.role === "ADMIN" ? "bg-violet-50 text-violet-700" :
                         user.role === "CLINIC" ? "bg-blue-50 text-blue-700" :
                         user.role === "VOLUNTEER" ? "bg-emerald-50 text-emerald-700" :
                         "bg-stone-100 text-stone-500"
                       }`}>
-                        {user.role}
+                        {user.role === "SUPER_ADMIN" ? "Super Admin" : user.role}
                       </span>
                     </td>
                     <td className="px-5 py-3.5">
@@ -243,9 +259,27 @@ export default function AdminDashboard() {
                       </span>
                     </td>
                     <td className="px-5 py-3.5 text-sm text-stone-500">{user.clinic?.name || "—"}</td>
+                    <td className="px-5 py-3.5">
+                      {user.volunteer ? (
+                        <div className="flex gap-3 text-xs text-stone-500">
+                          <span title="Hours volunteered">⏱ {user.volunteer.hoursVolunteered}h</span>
+                          <span title="No-shows" className={user.volunteer.noShows > 0 ? "text-red-500" : ""}>
+                            NS {user.volunteer.noShows}
+                          </span>
+                          <span title="Cancellations within 24 hours" className={user.volunteer.cancellationsWithin24h > 0 ? "text-amber-600" : ""}>
+                            24h {user.volunteer.cancellationsWithin24h}
+                          </span>
+                          <span title="Cancellations within 2 hours" className={user.volunteer.cancellationsWithin2h > 0 ? "text-red-500" : ""}>
+                            2h {user.volunteer.cancellationsWithin2h}
+                          </span>
+                        </div>
+                      ) : (
+                        <span className="text-xs text-stone-300">—</span>
+                      )}
+                    </td>
                     <td className="px-5 py-3.5 text-right">
                       <div className="flex gap-1 justify-end">
-                        {user.role !== "ADMIN" && (
+                        {user.role !== "SUPER_ADMIN" && (user.role !== "ADMIN" || session?.user?.role === "SUPER_ADMIN") && (
                           <>
                             <select
                               className="text-xs border border-stone-200 rounded px-2 py-1 text-stone-600"
@@ -254,6 +288,9 @@ export default function AdminDashboard() {
                             >
                               <option value="VOLUNTEER">Volunteer</option>
                               <option value="CLINIC">Clinic</option>
+                              {session?.user?.role === "SUPER_ADMIN" && (
+                                <option value="ADMIN">Admin</option>
+                              )}
                             </select>
                             {user.role === "CLINIC" && (
                               <button

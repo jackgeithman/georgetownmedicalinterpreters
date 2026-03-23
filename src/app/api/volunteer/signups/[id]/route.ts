@@ -23,20 +23,39 @@ export async function DELETE(
   if (!user.volunteer) return NextResponse.json({ error: "No volunteer profile" }, { status: 404 });
 
   const { id } = await params;
-  const signup = await prisma.subBlockSignup.findUnique({ where: { id } });
+  const signup = await prisma.subBlockSignup.findUnique({
+    where: { id },
+    include: { slot: true },
+  });
   if (!signup || signup.volunteerId !== user.volunteer.id || signup.status !== "ACTIVE") {
     return NextResponse.json({ error: "Signup not found" }, { status: 404 });
   }
+
+  // Compute actual slot start time: date stored at noon, startTime is the hour
+  const slotDate = new Date(signup.slot.date);
+  slotDate.setHours(signup.slot.startTime, 0, 0, 0);
+  const hoursUntilSlot = (slotDate.getTime() - Date.now()) / (1000 * 60 * 60);
 
   await prisma.subBlockSignup.update({
     where: { id },
     data: { status: "CANCELLED", cancelledAt: new Date() },
   });
 
-  await prisma.volunteerProfile.update({
-    where: { id: user.volunteer.id },
-    data: { totalCancellations: { increment: 1 } },
-  });
+  // Increment cancellation counters based on how close to the slot it is
+  const counterUpdate: { cancellationsWithin24h?: { increment: number }; cancellationsWithin2h?: { increment: number } } = {};
+  if (hoursUntilSlot < 24) {
+    counterUpdate.cancellationsWithin24h = { increment: 1 };
+    if (hoursUntilSlot < 2) {
+      counterUpdate.cancellationsWithin2h = { increment: 1 };
+    }
+  }
+
+  if (Object.keys(counterUpdate).length > 0) {
+    await prisma.volunteerProfile.update({
+      where: { id: user.volunteer.id },
+      data: counterUpdate,
+    });
+  }
 
   return NextResponse.json({ ok: true });
 }

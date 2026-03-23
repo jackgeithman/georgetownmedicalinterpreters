@@ -34,9 +34,7 @@ type VolunteerProfile = {
   id: string;
   languages: string[];
   backgroundInfo: string | null;
-  sessionsCompleted: number;
-  totalCancellations: number;
-  noShows: number;
+  hoursVolunteered: number;
 };
 
 type Tab = "browse" | "signups" | "profile";
@@ -397,17 +395,9 @@ export default function VolunteerDashboard() {
         {tab === "profile" && profile && (
           <div className="space-y-4">
             {/* Stats */}
-            <div className="grid grid-cols-3 gap-4">
-              {[
-                { label: "Sessions Completed", value: profile.sessionsCompleted },
-                { label: "Total Cancellations", value: profile.totalCancellations },
-                { label: "No-Shows", value: profile.noShows },
-              ].map((stat) => (
-                <div key={stat.label} className="bg-white rounded-xl border border-stone-200 p-5 text-center">
-                  <p className="text-2xl font-semibold text-stone-800">{stat.value}</p>
-                  <p className="text-xs text-stone-400 mt-1">{stat.label}</p>
-                </div>
-              ))}
+            <div className="bg-white rounded-xl border border-stone-200 p-5 text-center w-48">
+              <p className="text-2xl font-semibold text-stone-800">{profile.hoursVolunteered}</p>
+              <p className="text-xs text-stone-400 mt-1">Hours Volunteered</p>
             </div>
 
             {/* Languages */}

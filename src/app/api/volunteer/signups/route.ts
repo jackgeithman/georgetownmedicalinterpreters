@@ -56,6 +56,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Slot not found or inactive" }, { status: 404 });
   }
 
+  // Enforce language match — profile.languages must include the slot's language
+  if (!profile.languages.includes(slot.language)) {
+    return NextResponse.json(
+      { error: "Your language profile does not include this slot's language. Update your profile first." },
+      { status: 403 }
+    );
+  }
+
   const hour = Number(subBlockHour);
   if (hour < slot.startTime || hour >= slot.endTime) {
     return NextResponse.json({ error: "Invalid sub-block hour" }, { status: 400 });

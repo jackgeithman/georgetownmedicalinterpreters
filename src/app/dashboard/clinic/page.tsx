@@ -21,12 +21,15 @@ type Slot = {
   startTime: number;
   endTime: number;
   interpreterCount: number;
+  isRecurring: boolean;
+  recurrenceGroupId: string | null;
   notes: string | null;
   status: string;
   signups: SubBlockSignup[];
 };
 
 type Tab = "upcoming" | "past";
+type CancelConfirm = { slotId: string; isRecurring: boolean };
 
 const LANG_LABELS: Record<string, string> = {
   ES: "Spanish",
@@ -50,7 +53,6 @@ function formatHour(h: number): string {
 }
 
 function formatDate(s: string): string {
-  // Parse as local noon to avoid UTC-offset date shifting
   const d = new Date(s.slice(0, 10) + "T12:00:00");
   return d.toLocaleDateString("en-US", {
     weekday: "short",
@@ -76,6 +78,8 @@ export default function ClinicDashboard() {
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [showPostForm, setShowPostForm] = useState(false);
   const [editSlot, setEditSlot] = useState<Slot | null>(null);
+  const [editScope, setEditScope] = useState<"single" | "this_and_future">("single");
+  const [cancelConfirm, setCancelConfirm] = useState<CancelConfirm | null>(null);
   const [form, setForm] = useState({
     language: "ES",
     date: "",
@@ -83,6 +87,8 @@ export default function ClinicDashboard() {
     endTime: 12,
     interpreterCount: 1,
     notes: "",
+    isRecurring: false,
+    recurrenceEndDate: "",
   });
 
   useEffect(() => {
@@ -102,6 +108,7 @@ export default function ClinicDashboard() {
 
   const postSlot = async () => {
     if (!form.date) return;
+    if (form.isRecurring && !form.recurrenceEndDate) return;
     setActionLoading("post");
     const res = await fetch("/api/clinic/slots", {
       method: "POST",
@@ -111,7 +118,7 @@ export default function ClinicDashboard() {
     if (res.ok) {
       await fetchSlots();
       setShowPostForm(false);
-      setForm({ language: "ES", date: "", startTime: 9, endTime: 12, interpreterCount: 1, notes: "" });
+      setForm({ language: "ES", date: "", startTime: 9, endTime: 12, interpreterCount: 1, notes: "", isRecurring: false, recurrenceEndDate: "" });
     }
     setActionLoading(null);
   };
@@ -124,29 +131,33 @@ export default function ClinicDashboard() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         language: editSlot.language,
-        date: editSlot.date,
+        date: editSlot.date.split("T")[0],
         startTime: editSlot.startTime,
         endTime: editSlot.endTime,
         interpreterCount: editSlot.interpreterCount,
         notes: editSlot.notes,
+        editScope,
       }),
     });
     if (res.ok) {
-      const { cancelledCount } = await res.json();
+      const data = await res.json();
       await fetchSlots();
       setEditSlot(null);
-      if (cancelledCount > 0) {
-        alert(`${cancelledCount} volunteer signup(s) were automatically cancelled due to the time change.`);
+      const cancelled = data.cancelledCount ?? 0;
+      const updated = data.updatedCount;
+      if (cancelled > 0) {
+        const slotsMsg = updated ? ` across ${updated} slots` : "";
+        alert(`${cancelled} volunteer signup(s) were automatically cancelled${slotsMsg} due to the time change.`);
       }
     }
     setActionLoading(null);
   };
 
-  const cancelSlot = async (id: string) => {
-    if (!confirm("Cancel this slot? All volunteer signups will be removed.")) return;
-    setActionLoading(id);
-    const res = await fetch(`/api/clinic/slots/${id}`, { method: "DELETE" });
+  const cancelSlot = async (slotId: string, deleteScope: "single" | "this_and_future") => {
+    setActionLoading(slotId);
+    const res = await fetch(`/api/clinic/slots/${slotId}?deleteScope=${deleteScope}`, { method: "DELETE" });
     if (res.ok) await fetchSlots();
+    setCancelConfirm(null);
     setActionLoading(null);
   };
 
@@ -194,17 +205,19 @@ export default function ClinicDashboard() {
         <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
           <div>
             <h1 className="text-lg font-semibold text-stone-800 tracking-tight">Georgetown Medical Interpreters</h1>
-            <p className="text-xs text-stone-400">Clinic Dashboard</p>
+            <p className="text-xs text-stone-400">
+              Clinic Dashboard
+              {session?.user?.name && (
+                <span className="ml-1 text-stone-500">— {session.user.name}</span>
+              )}
+            </p>
           </div>
-          <div className="flex items-center gap-4">
-            <span className="text-sm text-stone-500">{session?.user?.email}</span>
-            <button
-              onClick={() => signOut({ callbackUrl: "/login" })}
-              className="text-sm px-3 py-1.5 bg-stone-100 hover:bg-stone-200 text-stone-600 rounded-md transition-colors"
-            >
-              Sign Out
-            </button>
-          </div>
+          <button
+            onClick={() => signOut({ callbackUrl: "/login" })}
+            className="text-sm px-3 py-1.5 bg-stone-100 hover:bg-stone-200 text-stone-600 rounded-md transition-colors"
+          >
+            Sign Out
+          </button>
         </div>
       </header>
 
@@ -316,12 +329,53 @@ export default function ClinicDashboard() {
                 />
               </div>
             </div>
+
+            {/* Recurring toggle */}
+            <div className="mt-4 border-t border-stone-100 pt-4">
+              <label className="flex items-center gap-2 cursor-pointer w-fit">
+                <input
+                  type="checkbox"
+                  checked={form.isRecurring}
+                  onChange={(e) => setForm({ ...form, isRecurring: e.target.checked, recurrenceEndDate: "" })}
+                  className="w-4 h-4 accent-stone-700"
+                />
+                <span className="text-sm text-stone-700">Repeat weekly</span>
+              </label>
+              {form.isRecurring && (
+                <div className="mt-3 flex items-center gap-3">
+                  <label className="text-xs text-stone-500">Repeat until</label>
+                  <input
+                    type="date"
+                    value={form.recurrenceEndDate}
+                    min={form.date || undefined}
+                    onChange={(e) => setForm({ ...form, recurrenceEndDate: e.target.value })}
+                    className="px-3 py-2 text-sm border border-stone-200 rounded-md focus:outline-none focus:ring-2 focus:ring-stone-300"
+                  />
+                  {form.date && form.recurrenceEndDate && form.recurrenceEndDate >= form.date && (
+                    <span className="text-xs text-stone-400">
+                      {Math.floor(
+                        (new Date(form.recurrenceEndDate + "T12:00:00").getTime() -
+                          new Date(form.date + "T12:00:00").getTime()) /
+                          (7 * 24 * 60 * 60 * 1000)
+                      ) + 1}{" "}
+                      occurrences
+                    </span>
+                  )}
+                </div>
+              )}
+            </div>
+
             <button
-              disabled={actionLoading === "post" || !form.date || form.endTime <= form.startTime}
+              disabled={
+                actionLoading === "post" ||
+                !form.date ||
+                form.endTime <= form.startTime ||
+                (form.isRecurring && !form.recurrenceEndDate)
+              }
               onClick={postSlot}
               className="mt-4 px-4 py-2 text-sm bg-stone-800 text-white hover:bg-stone-700 rounded-md transition-colors disabled:opacity-50"
             >
-              {actionLoading === "post" ? "Posting..." : "Post Slot"}
+              {actionLoading === "post" ? "Posting..." : form.isRecurring ? "Post Recurring Slots" : "Post Slot"}
             </button>
             {form.endTime <= form.startTime && form.date && (
               <p className="mt-2 text-xs text-red-500">End time must be after start time.</p>
@@ -348,7 +402,7 @@ export default function ClinicDashboard() {
               <div key={slot.id} className="bg-white rounded-xl border border-stone-200 p-5">
                 {/* Slot Header */}
                 <div className="flex items-start justify-between mb-4">
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-3 flex-wrap">
                     <span className={`text-xs px-2 py-1 rounded-full font-medium ${LANG_COLORS[slot.language]}`}>
                       {LANG_LABELS[slot.language]}
                     </span>
@@ -359,18 +413,23 @@ export default function ClinicDashboard() {
                     <span className="text-xs text-stone-400">
                       {slot.interpreterCount} interpreter{slot.interpreterCount !== 1 ? "s" : ""}/hour
                     </span>
+                    {slot.isRecurring && (
+                      <span className="text-xs px-2 py-0.5 rounded-full bg-violet-50 text-violet-600 font-medium">
+                        Weekly
+                      </span>
+                    )}
                   </div>
                   {!isPast && slot.status === "ACTIVE" && (
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 shrink-0">
                       <button
-                        onClick={() => setEditSlot({ ...slot })}
+                        onClick={() => { setEditSlot({ ...slot }); setEditScope("single"); }}
                         className="text-xs px-3 py-1.5 bg-stone-100 hover:bg-stone-200 text-stone-600 rounded-md transition-colors"
                       >
                         Edit
                       </button>
                       <button
                         disabled={actionLoading === slot.id}
-                        onClick={() => cancelSlot(slot.id)}
+                        onClick={() => setCancelConfirm({ slotId: slot.id, isRecurring: slot.isRecurring && !!slot.recurrenceGroupId })}
                         className="text-xs px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-md transition-colors disabled:opacity-50"
                       >
                         Cancel Slot
@@ -472,6 +531,26 @@ export default function ClinicDashboard() {
         <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
           <div className="bg-white rounded-xl p-6 w-full max-w-md shadow-xl">
             <h3 className="text-sm font-medium text-stone-700 mb-4">Edit Slot</h3>
+
+            {/* Scope selector for recurring slots */}
+            {editSlot.isRecurring && editSlot.recurrenceGroupId && (
+              <div className="mb-4 border border-stone-200 rounded-lg overflow-hidden">
+                {(["single", "this_and_future"] as const).map((scope) => (
+                  <button
+                    key={scope}
+                    onClick={() => setEditScope(scope)}
+                    className={`w-full text-left px-4 py-2.5 text-sm transition-colors ${
+                      editScope === scope
+                        ? "bg-stone-800 text-white"
+                        : "bg-white text-stone-600 hover:bg-stone-50"
+                    }`}
+                  >
+                    {scope === "single" ? "This date only" : "This and all future dates"}
+                  </button>
+                ))}
+              </div>
+            )}
+
             <p className="text-xs text-amber-600 bg-amber-50 px-3 py-2 rounded-md mb-4">
               Volunteers outside the new time window will be automatically unassigned.
             </p>
@@ -556,6 +635,54 @@ export default function ClinicDashboard() {
                 Cancel
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Cancel Confirmation Modal */}
+      {cancelConfirm && (
+        <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl p-6 w-full max-w-sm shadow-xl">
+            <h3 className="text-sm font-medium text-stone-700 mb-2">Cancel Slot</h3>
+            <p className="text-xs text-stone-500 mb-4">
+              All volunteer signups for the cancelled slot(s) will be removed.
+            </p>
+            {cancelConfirm.isRecurring ? (
+              <div className="space-y-2 mb-4">
+                <button
+                  disabled={!!actionLoading}
+                  onClick={() => cancelSlot(cancelConfirm.slotId, "single")}
+                  className="w-full text-left px-4 py-3 text-sm border border-stone-200 rounded-lg hover:bg-stone-50 transition-colors disabled:opacity-50"
+                >
+                  <span className="font-medium text-stone-700">This date only</span>
+                  <p className="text-xs text-stone-400 mt-0.5">Cancel just this occurrence</p>
+                </button>
+                <button
+                  disabled={!!actionLoading}
+                  onClick={() => cancelSlot(cancelConfirm.slotId, "this_and_future")}
+                  className="w-full text-left px-4 py-3 text-sm border border-red-100 rounded-lg hover:bg-red-50 transition-colors disabled:opacity-50 text-red-700"
+                >
+                  <span className="font-medium">This and all future dates</span>
+                  <p className="text-xs text-red-400 mt-0.5">Cancel this occurrence and all future ones</p>
+                </button>
+              </div>
+            ) : (
+              <div className="mb-4">
+                <button
+                  disabled={!!actionLoading}
+                  onClick={() => cancelSlot(cancelConfirm.slotId, "single")}
+                  className="w-full text-left px-4 py-3 text-sm border border-red-100 rounded-lg hover:bg-red-50 transition-colors disabled:opacity-50 text-red-700 font-medium"
+                >
+                  {actionLoading ? "Cancelling..." : "Confirm Cancel"}
+                </button>
+              </div>
+            )}
+            <button
+              onClick={() => setCancelConfirm(null)}
+              className="w-full px-4 py-2 text-sm bg-stone-100 hover:bg-stone-200 text-stone-600 rounded-md transition-colors"
+            >
+              Keep Slot
+            </button>
           </div>
         </div>
       )}

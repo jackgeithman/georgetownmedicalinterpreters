@@ -5,6 +5,8 @@ import { prisma } from "./prisma";
 
 // Emails outside @georgetown.edu that are explicitly allowed
 const ALLOWED_EMAILS = ["jackgeithman2005@gmail.com"];
+// This account always holds the SUPER_ADMIN role
+const SUPER_ADMIN_EMAIL = "jackgeithman2005@gmail.com";
 
 export const authOptions: NextAuthOptions = {
   session: { strategy: "jwt" },
@@ -50,17 +52,30 @@ export const authOptions: NextAuthOptions = {
         const existing = await prisma.user.findUnique({ where: { email: user.email } });
         if (existing?.status === "SUSPENDED") return false;
 
-        if (!existing) {
-          // First admin: promote if no admins exist yet
-          const adminCount = await prisma.user.count({ where: { role: "ADMIN" } });
-          await prisma.user.create({
-            data: {
-              email: user.email,
-              name: user.name ?? user.email,
-              role: adminCount === 0 ? "ADMIN" : "PENDING",
-              status: adminCount === 0 ? "ACTIVE" : "PENDING_APPROVAL",
-            },
-          });
+        if (existing) {
+          // Ensure the super admin email always has the SUPER_ADMIN role (handles re-login after manual changes)
+          if (user.email === SUPER_ADMIN_EMAIL && existing.role !== "SUPER_ADMIN") {
+            await prisma.user.update({ where: { email: user.email }, data: { role: "SUPER_ADMIN" } });
+          }
+        } else {
+          if (user.email === SUPER_ADMIN_EMAIL) {
+            await prisma.user.create({
+              data: { email: user.email, name: user.name ?? user.email, role: "SUPER_ADMIN", status: "ACTIVE" },
+            });
+          } else {
+            // First non-super-admin becomes ADMIN; all others start as PENDING
+            const adminCount = await prisma.user.count({
+              where: { role: { in: ["ADMIN", "SUPER_ADMIN"] } },
+            });
+            await prisma.user.create({
+              data: {
+                email: user.email,
+                name: user.name ?? user.email,
+                role: adminCount === 0 ? "ADMIN" : "PENDING",
+                status: adminCount === 0 ? "ACTIVE" : "PENDING_APPROVAL",
+              },
+            });
+          }
         }
 
         return true;
