@@ -24,7 +24,7 @@ export async function GET(req: NextRequest) {
   const dateParam = searchParams.get("date");
 
   const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  today.setHours(0, 0, 0, 0); // local midnight — slots stored at noon so this correctly includes today
 
   const where: Prisma.SlotWhereInput = { status: "ACTIVE" };
 

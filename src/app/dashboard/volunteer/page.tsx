@@ -63,7 +63,8 @@ function formatHour(h: number): string {
 }
 
 function formatDate(s: string): string {
-  return new Date(s).toLocaleDateString("en-US", {
+  const d = new Date(s.slice(0, 10) + "T12:00:00");
+  return d.toLocaleDateString("en-US", {
     weekday: "short",
     month: "short",
     day: "numeric",

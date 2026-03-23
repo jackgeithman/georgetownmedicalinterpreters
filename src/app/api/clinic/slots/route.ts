@@ -50,7 +50,7 @@ export async function POST(req: NextRequest) {
     data: {
       clinicId: user.clinicId!,
       language,
-      date: new Date(date),
+      date: new Date(date + "T12:00:00"),
       startTime: Number(startTime),
       endTime: Number(endTime),
       interpreterCount: Number(interpreterCount),

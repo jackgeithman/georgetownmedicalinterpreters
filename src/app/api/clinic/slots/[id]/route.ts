@@ -25,7 +25,7 @@ export async function PATCH(
   const body = await req.json();
   const updateData: Record<string, unknown> = {};
   if (body.language != null) updateData.language = body.language;
-  if (body.date != null) updateData.date = new Date(body.date);
+  if (body.date != null) updateData.date = new Date(body.date + "T12:00:00");
   if (body.startTime != null) updateData.startTime = Number(body.startTime);
   if (body.endTime != null) updateData.endTime = Number(body.endTime);
   if (body.interpreterCount != null) updateData.interpreterCount = Number(body.interpreterCount);

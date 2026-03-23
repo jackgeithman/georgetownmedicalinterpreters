@@ -50,7 +50,9 @@ function formatHour(h: number): string {
 }
 
 function formatDate(s: string): string {
-  return new Date(s).toLocaleDateString("en-US", {
+  // Parse as local noon to avoid UTC-offset date shifting
+  const d = new Date(s.slice(0, 10) + "T12:00:00");
+  return d.toLocaleDateString("en-US", {
     weekday: "short",
     month: "short",
     day: "numeric",
