@@ -1,0 +1,152 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  CLINIC
+  VOLUNTEER
+  PENDING
+}
+
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+  PENDING_APPROVAL
+}
+
+enum Language {
+  ES
+  ZH
+  KO
+  AR
+}
+
+enum SlotStatus {
+  ACTIVE
+  CANCELLED
+  COMPLETED
+}
+
+enum SignupStatus {
+  ACTIVE
+  CANCELLED
+  NO_SHOW
+  COMPLETED
+}
+
+enum FeedbackAuthor {
+  CLINIC
+  VOLUNTEER
+}
+
+model User {
+  id            String            @id @default(uuid())
+  email         String            @unique
+  name          String?
+  emailVerified DateTime?
+  image         String?
+  role          Role              @default(PENDING)
+  status        UserStatus        @default(PENDING_APPROVAL)
+  clinicId      String?
+  clinic        Clinic?           @relation(fields: [clinicId], references: [id])
+  volunteer     VolunteerProfile?
+  accounts      Account[]
+  createdAt     DateTime          @default(now())
+}
+
+model Account {
+  id                String  @id @default(uuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model Clinic {
+  id           String   @id @default(uuid())
+  name         String
+  address      String
+  contactName  String
+  contactEmail String
+  loginToken   String   @unique @default(uuid())
+  loginPin     String   @default("000000")
+  staff        User[]
+  slots        Slot[]
+  createdAt    DateTime @default(now())
+}
+
+model VolunteerProfile {
+  id                String          @id @default(uuid())
+  userId            String          @unique
+  user              User            @relation(fields: [userId], references: [id])
+  languages         Language[]
+  backgroundInfo    String?
+  sessionsCompleted Int             @default(0)
+  totalCancellations Int            @default(0)
+  lateCancellations Int             @default(0)
+  noShows           Int             @default(0)
+  signups           SubBlockSignup[]
+  createdAt         DateTime        @default(now())
+}
+
+model Slot {
+  id               String     @id @default(uuid())
+  clinicId         String
+  clinic           Clinic     @relation(fields: [clinicId], references: [id])
+  language         Language
+  date             DateTime
+  startTime        Int
+  endTime          Int
+  interpreterCount Int
+  isRecurring      Boolean    @default(false)
+  notes            String?
+  status           SlotStatus @default(ACTIVE)
+  signups          SubBlockSignup[]
+  createdAt        DateTime   @default(now())
+}
+
+model SubBlockSignup {
+  id           String       @id @default(uuid())
+  slotId       String
+  slot         Slot         @relation(fields: [slotId], references: [id])
+  volunteerId  String
+  volunteer    VolunteerProfile @relation(fields: [volunteerId], references: [id])
+  subBlockHour Int
+  status       SignupStatus @default(ACTIVE)
+  cancelledAt  DateTime?
+  feedback     Feedback[]
+  createdAt    DateTime     @default(now())
+}
+
+model Feedback {
+  id         String         @id @default(uuid())
+  signupId   String
+  signup     SubBlockSignup @relation(fields: [signupId], references: [id])
+  authorRole FeedbackAuthor
+  note       String
+  createdAt  DateTime       @default(now())
+}
