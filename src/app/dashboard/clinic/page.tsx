@@ -2,7 +2,7 @@
 
 import { useSession, signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, Fragment } from "react";
 
 type SubBlockSignup = {
   id: string;
@@ -403,7 +403,7 @@ export default function ClinicDashboard() {
                         const empty = slot.interpreterCount - filled;
 
                         return (
-                          <>
+                          <Fragment key={hour}>
                             {hourSignups.map((signup) => (
                               <tr key={signup.id} className="border-b border-stone-50 last:border-0">
                                 <td className="px-4 py-2.5 text-stone-600 text-xs">
@@ -453,7 +453,7 @@ export default function ClinicDashboard() {
                                 {isPast && <td />}
                               </tr>
                             ))}
-                          </>
+                          </Fragment>
                         );
                       })}
                     </tbody>
