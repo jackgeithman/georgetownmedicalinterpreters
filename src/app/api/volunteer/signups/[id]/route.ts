@@ -10,7 +10,8 @@ async function getActiveVolunteer() {
     where: { email: session.user.email },
     include: { volunteer: true },
   });
-  if (!user || user.role !== "VOLUNTEER" || user.status !== "ACTIVE") return null;
+  const isVolunteerRole = user.role === "VOLUNTEER" || user.role === "ADMIN" || user.role === "SUPER_ADMIN";
+  if (!user || !isVolunteerRole || user.status !== "ACTIVE") return null;
   return user;
 }
 

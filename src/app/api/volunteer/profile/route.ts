@@ -10,7 +10,7 @@ async function getVolunteerUser() {
     where: { email: session.user.email },
     include: { volunteer: true },
   });
-  if (!user || user.role !== "VOLUNTEER") return null;
+  if (!user || (user.role !== "VOLUNTEER" && user.role !== "ADMIN" && user.role !== "SUPER_ADMIN")) return null;
   return user;
 }
 

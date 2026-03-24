@@ -144,6 +144,12 @@ export default function AdminDashboard() {
               </span>
             )}
             <button
+              onClick={() => router.push("/dashboard/volunteer")}
+              className="text-sm px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-md transition-colors"
+            >
+              Volunteer
+            </button>
+            <button
               onClick={() => signOut({ callbackUrl: "/login" })}
               className="text-sm px-3 py-1.5 bg-stone-100 hover:bg-stone-200 text-stone-600 rounded-md transition-colors"
             >
