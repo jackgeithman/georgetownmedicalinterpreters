@@ -65,7 +65,7 @@ export default function AdminDashboard() {
   }, []);
 
   useEffect(() => {
-    if (session?.user?.role === "ADMIN") {
+    if (session?.user?.role === "ADMIN" || session?.user?.role === "SUPER_ADMIN") {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       fetchData();
     }
