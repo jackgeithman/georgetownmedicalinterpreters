@@ -488,7 +488,8 @@ export default function VolunteerDashboard() {
 
             {/* Languages */}
             <div className="bg-white rounded-xl border border-stone-200 p-6">
-              <h3 className="text-sm font-medium text-stone-700 mb-4">Languages</h3>
+              <h3 className="text-sm font-medium text-stone-700 mb-1">Languages</h3>
+              <p className="text-xs text-stone-400 mb-4">Click to select languages you can interpret. Filled = you speak it, white = you don&apos;t.</p>
               <div className="flex gap-3 flex-wrap mb-4">
                 {Object.entries(LANG_LABELS).map(([code, label]) => (
                   <button
