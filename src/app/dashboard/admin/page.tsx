@@ -53,17 +53,21 @@ type AdminSlot = {
   }[];
 };
 
-type AdminProfile = { id: string; languages: string[] };
+type AdminProfile = {
+  id: string;
+  languages: string[];
+  backgroundInfo: string | null;
+  hoursVolunteered: number;
+};
 
 type TimeFilter = "ALL" | "MORNING" | "AFTERNOON" | "EVENING";
-type Tab = "slots" | "pending" | "users" | "clinics";
+type Tab = "slots" | "pending" | "users" | "clinics" | "profile";
 
-const LANG_LABELS: Record<string, string> = { ES: "Spanish", ZH: "Chinese", KO: "Korean", AR: "Arabic" };
+const LANG_LABELS: Record<string, string> = { ES: "Spanish", ZH: "Chinese", KO: "Korean" };
 const LANG_COLORS: Record<string, string> = {
   ES: "bg-amber-50 text-amber-700",
   ZH: "bg-red-50 text-red-700",
   KO: "bg-blue-50 text-blue-700",
-  AR: "bg-emerald-50 text-emerald-700",
 };
 
 function formatHour(h: number) {
@@ -97,6 +101,11 @@ export default function AdminDashboard() {
   const [langFilter, setLangFilter] = useState("ALL");
   const [timeFilter, setTimeFilter] = useState<TimeFilter>("ALL");
   const [availableOnly, setAvailableOnly] = useState(false);
+  const [profileForm, setProfileForm] = useState<{ languages: string[]; backgroundInfo: string }>({
+    languages: [],
+    backgroundInfo: "",
+  });
+  const [profileSaved, setProfileSaved] = useState(false);
 
   useEffect(() => {
     if (status === "unauthenticated") router.push("/login");
@@ -113,7 +122,11 @@ export default function AdminDashboard() {
     if (usersRes.ok) setUsers(await usersRes.json());
     if (clinicsRes.ok) setClinics(await clinicsRes.json());
     if (slotsRes.ok) setAdminSlots(await slotsRes.json());
-    if (profileRes.ok) setAdminProfile(await profileRes.json());
+    if (profileRes.ok) {
+      const p = await profileRes.json();
+      setAdminProfile(p);
+      setProfileForm({ languages: p.languages ?? [], backgroundInfo: p.backgroundInfo ?? "" });
+    }
     setLoading(false);
   }, []);
 
@@ -189,6 +202,19 @@ export default function AdminDashboard() {
     setActionLoading(null);
   };
 
+  const deleteClinic = async (clinicId: string, clinicName: string) => {
+    if (!confirm(`Delete "${clinicName}"? This cannot be undone.`)) return;
+    setActionLoading(`delete-clinic-${clinicId}`);
+    const res = await fetch(`/api/admin/clinics/${clinicId}`, { method: "DELETE" });
+    if (res.ok) {
+      await fetchData();
+    } else {
+      const data = await res.json().catch(() => ({}));
+      alert(data.error ?? "Could not delete clinic.");
+    }
+    setActionLoading(null);
+  };
+
   const regeneratePin = async (clinicId: string, clinicName: string) => {
     if (!confirm("Generate a new PIN for this clinic? The old PIN will stop working immediately.")) return;
     setActionLoading(`pin-${clinicId}`);
@@ -199,6 +225,31 @@ export default function AdminDashboard() {
       setPinReveal({ clinicName, pin: data.plainPin });
     }
     setActionLoading(null);
+  };
+
+  const saveProfile = async () => {
+    setActionLoading("profile");
+    setProfileSaved(false);
+    const res = await fetch("/api/volunteer/profile", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(profileForm),
+    });
+    if (res.ok) {
+      const p = await res.json();
+      setAdminProfile(p);
+      setProfileForm({ languages: p.languages ?? [], backgroundInfo: p.backgroundInfo ?? "" });
+      setProfileSaved(true);
+      setTimeout(() => setProfileSaved(false), 3000);
+    }
+    setActionLoading(null);
+  };
+
+  const toggleLanguage = (lang: string) => {
+    const langs = profileForm.languages.includes(lang)
+      ? profileForm.languages.filter((l) => l !== lang)
+      : [...profileForm.languages, lang];
+    setProfileForm({ ...profileForm, languages: langs });
   };
 
   const pendingUsers = users.filter((u) => u.status === "PENDING_APPROVAL");
@@ -340,6 +391,16 @@ export default function AdminDashboard() {
               </span>
             )}
             <button
+              onClick={() => router.push("/dashboard/volunteer")}
+              className="text-sm px-3 py-1.5 bg-stone-100 hover:bg-stone-200 text-stone-600 rounded-md transition-colors flex items-center gap-1.5"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+              </svg>
+              Volunteer View
+            </button>
+            <button
               onClick={() => signOut({ callbackUrl: "/login" })}
               className="text-sm px-3 py-1.5 bg-stone-100 hover:bg-stone-200 text-stone-600 rounded-md transition-colors"
             >
@@ -357,6 +418,7 @@ export default function AdminDashboard() {
             { key: "pending" as Tab, label: "Pending", count: pendingUsers.length },
             { key: "users" as Tab, label: "All Users", count: users.length },
             { key: "clinics" as Tab, label: "Clinics", count: clinics.length },
+            { key: "profile" as Tab, label: "My Profile", count: 0 },
           ].map((t) => (
             <button
               key={t.key}
@@ -392,12 +454,12 @@ export default function AdminDashboard() {
           <div>
             {!adminProfile?.languages.length && (
               <div className="mb-4 px-4 py-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-700">
-                To sign up for slots, add your languages in your{" "}
+                To sign up for slots, add your languages in{" "}
                 <button
-                  onClick={() => router.push("/dashboard/volunteer")}
+                  onClick={() => setTab("profile")}
                   className="underline font-medium"
                 >
-                  volunteer profile
+                  My Profile
                 </button>
                 .
               </div>
@@ -405,7 +467,7 @@ export default function AdminDashboard() {
 
             {/* Filters */}
             <div className="flex flex-wrap gap-2 mb-5">
-              {["ALL", "ES", "ZH", "KO", "AR"].map((lang) => (
+              {["ALL", "ES", "ZH", "KO"].map((lang) => (
                 <button
                   key={lang}
                   onClick={() => setLangFilter(lang)}
@@ -706,12 +768,75 @@ export default function AdminDashboard() {
                       </div>
                       <div className="flex items-center gap-3">
                         <span className="text-xs text-stone-400">{clinic._count?.slots || 0} slots</span>
+                        <button
+                          disabled={actionLoading === `delete-clinic-${clinic.id}`}
+                          onClick={() => deleteClinic(clinic.id, clinic.name)}
+                          className="text-xs px-2 py-1 bg-red-50 border border-red-100 hover:bg-red-100 text-red-600 rounded-md transition-colors disabled:opacity-50"
+                        >
+                          Delete
+                        </button>
                       </div>
                     </div>
                   </div>
                 ))}
               </div>
             )}
+          </div>
+        )}
+
+        {/* My Profile */}
+        {tab === "profile" && (
+          <div className="max-w-lg space-y-5">
+            {/* Hours stat */}
+            <div className="bg-white rounded-xl border border-stone-200 p-5 flex items-center gap-4">
+              <div className="text-center">
+                <p className="text-3xl font-semibold text-stone-800">{adminProfile?.hoursVolunteered ?? 0}</p>
+                <p className="text-xs text-stone-400 mt-1">Hours Volunteered</p>
+              </div>
+            </div>
+
+            {/* Language selection */}
+            <div className="bg-white rounded-xl border border-stone-200 p-6">
+              <h3 className="text-sm font-medium text-stone-700 mb-1">Languages</h3>
+              <p className="text-xs text-stone-400 mb-4">Select the languages you can interpret. Only matching slots will let you sign up.</p>
+              <div className="flex gap-3 flex-wrap mb-6">
+                {Object.entries(LANG_LABELS).map(([code, label]) => (
+                  <button
+                    key={code}
+                    onClick={() => toggleLanguage(code)}
+                    className={`px-4 py-2 text-sm rounded-md border transition-colors ${
+                      profileForm.languages.includes(code)
+                        ? "border-stone-800 bg-stone-800 text-white"
+                        : "border-stone-200 text-stone-600 hover:border-stone-400"
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+
+              <h3 className="text-sm font-medium text-stone-700 mb-2">Background / Notes</h3>
+              <textarea
+                rows={3}
+                placeholder="Any relevant background, certifications, or notes..."
+                value={profileForm.backgroundInfo}
+                onChange={(e) => setProfileForm({ ...profileForm, backgroundInfo: e.target.value })}
+                className="w-full px-3 py-2 text-sm border border-stone-200 rounded-md focus:outline-none focus:ring-2 focus:ring-stone-300 resize-none"
+              />
+
+              <div className="mt-4 flex items-center gap-3">
+                <button
+                  disabled={actionLoading === "profile"}
+                  onClick={saveProfile}
+                  className="px-4 py-2 text-sm bg-stone-800 text-white hover:bg-stone-700 rounded-md transition-colors disabled:opacity-50"
+                >
+                  {actionLoading === "profile" ? "Saving..." : "Save Profile"}
+                </button>
+                {profileSaved && (
+                  <span className="text-sm text-emerald-600">Saved!</span>
+                )}
+              </div>
+            </div>
           </div>
         )}
       </div>

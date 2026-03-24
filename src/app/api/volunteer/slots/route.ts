@@ -43,7 +43,7 @@ export async function GET(req: NextRequest) {
     where.date = { gte: thirtyDaysAgo };
   }
 
-  if (language && ["ES", "ZH", "KO", "AR"].includes(language)) {
+  if (language && ["ES", "ZH", "KO"].includes(language)) {
     where.language = language as Prisma.EnumLanguageFilter["equals"];
   }
 
