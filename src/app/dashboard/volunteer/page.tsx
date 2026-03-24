@@ -84,9 +84,12 @@ export default function VolunteerDashboard() {
     backgroundInfo: "",
   });
 
+  const isAdmin = session?.user?.role === "ADMIN" || session?.user?.role === "SUPER_ADMIN";
+
   useEffect(() => {
     if (status === "unauthenticated") router.push("/login");
-    if (session?.user?.role && session.user.role !== "VOLUNTEER") router.push("/dashboard");
+    const role = session?.user?.role;
+    if (role && role !== "VOLUNTEER" && role !== "ADMIN" && role !== "SUPER_ADMIN") router.push("/dashboard");
   }, [status, session, router]);
 
   const fetchAll = useCallback(async () => {
@@ -112,7 +115,8 @@ export default function VolunteerDashboard() {
   }, [langFilter]);
 
   useEffect(() => {
-    if (session?.user?.role === "VOLUNTEER") fetchAll();
+    const role = session?.user?.role;
+    if (role === "VOLUNTEER" || role === "ADMIN" || role === "SUPER_ADMIN") fetchAll();
   }, [session, fetchAll]);
 
   useEffect(() => {
@@ -186,8 +190,16 @@ export default function VolunteerDashboard() {
             <h1 className="text-lg font-semibold text-stone-800 tracking-tight">Georgetown Medical Interpreters</h1>
             <p className="text-xs text-stone-400">Volunteer Dashboard</p>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
             <span className="text-sm text-stone-500">{session?.user?.email}</span>
+            {isAdmin && (
+              <button
+                onClick={() => router.push("/dashboard/admin")}
+                className="text-sm px-3 py-1.5 bg-violet-50 hover:bg-violet-100 text-violet-700 rounded-md transition-colors"
+              >
+                Admin Dashboard
+              </button>
+            )}
             <button
               onClick={() => signOut({ callbackUrl: "/login" })}
               className="text-sm px-3 py-1.5 bg-stone-100 hover:bg-stone-200 text-stone-600 rounded-md transition-colors"
