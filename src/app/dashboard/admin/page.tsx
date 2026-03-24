@@ -67,6 +67,7 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     if (session?.user?.role === "ADMIN" || session?.user?.role === "SUPER_ADMIN") {
+
       fetchData();
     }
   }, [session, fetchData]);
