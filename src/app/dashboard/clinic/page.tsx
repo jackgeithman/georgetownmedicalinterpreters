@@ -35,14 +35,12 @@ const LANG_LABELS: Record<string, string> = {
   ES: "Spanish",
   ZH: "Chinese",
   KO: "Korean",
-  AR: "Arabic",
 };
 
 const LANG_COLORS: Record<string, string> = {
   ES: "bg-amber-50 text-amber-700",
   ZH: "bg-red-50 text-red-700",
   KO: "bg-blue-50 text-blue-700",
-  AR: "bg-emerald-50 text-emerald-700",
 };
 
 function formatHour(h: number): string {
