@@ -665,9 +665,9 @@ export default function ClinicDashboard() {
               <div>
                 <h3 className="text-sm font-semibold text-stone-800">Volunteers will be removed</h3>
                 <p className="text-sm text-stone-500 mt-1">
-                  {editWarning.cancelCount} volunteer signup{editWarning.cancelCount !== 1 ? "s" : ""} will be
-                  cancelled because {editWarning.cancelCount !== 1 ? "they fall" : "it falls"} outside your
-                  updated time window.
+                  {editWarning.cancelCount} volunteer signup{editWarning.cancelCount !== 1 ? "s" : ""}{" "}
+                  conflict{editWarning.cancelCount === 1 ? "s" : ""} with your changes and will be cancelled
+                  if you proceed.
                 </p>
               </div>
             </div>
