@@ -202,7 +202,6 @@ export default function AdminDashboard() {
   };
 
   const cancelMySignup = async (signupId: string) => {
-    if (!confirm("Cancel your signup for this slot?")) return;
     setActionLoading(signupId);
     const res = await fetch(`/api/volunteer/signups/${signupId}`, { method: "DELETE" });
     if (res.ok) await fetchData();
@@ -359,16 +358,14 @@ export default function AdminDashboard() {
                   {isPast ? (
                     <span className="text-xs px-2 py-1 bg-stone-100 text-stone-400 rounded-md">Past</span>
                   ) : mySignup ? (
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs px-2 py-1 bg-emerald-50 text-emerald-700 rounded-md font-medium">You</span>
-                      <button
-                        disabled={actionLoading === mySignup.id}
-                        onClick={() => cancelMySignup(mySignup.id)}
-                        className="text-xs px-2 py-1 bg-red-50 text-red-600 hover:bg-red-100 rounded transition-colors disabled:opacity-50"
-                      >
-                        Cancel
-                      </button>
-                    </div>
+                    <button
+                      disabled={actionLoading === mySignup.id}
+                      onClick={() => cancelMySignup(mySignup.id)}
+                      className="text-xs px-2 py-1 bg-emerald-50 text-emerald-700 hover:bg-red-50 hover:text-red-600 border border-emerald-200 hover:border-red-200 rounded-md font-medium transition-colors disabled:opacity-50"
+                      title="Click to cancel"
+                    >
+                      {actionLoading === mySignup.id ? "..." : "Signed Up ✓"}
+                    </button>
                   ) : isFull ? (
                     <span className="text-xs px-2 py-1 bg-stone-100 text-stone-400 rounded-md">Full</span>
                   ) : (

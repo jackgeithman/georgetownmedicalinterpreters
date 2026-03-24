@@ -140,7 +140,6 @@ export default function VolunteerDashboard() {
   };
 
   const cancelSignup = async (id: string) => {
-    if (!confirm("Cancel this signup?")) return;
     setActionLoading(id);
     const res = await fetch(`/api/volunteer/signups/${id}`, { method: "DELETE" });
     if (res.ok) await fetchAll();
@@ -289,9 +288,10 @@ export default function VolunteerDashboard() {
                 <div className="space-y-2">
                   {subBlocks.map((hour) => {
                     const filled = slot.signups.filter((s) => s.subBlockHour === hour).length;
-                    const isMine = profile
-                      ? slot.signups.some((s) => s.subBlockHour === hour && s.volunteerId === profile.id)
-                      : false;
+                    const mySignupEntry = profile
+                      ? mySignups.find((s) => s.slot.id === slot.id && s.subBlockHour === hour)
+                      : undefined;
+                    const isMine = !!mySignupEntry;
                     const isFull = filled >= slot.interpreterCount;
                     const key = `${slot.id}-${hour}`;
                     return (
@@ -305,7 +305,14 @@ export default function VolunteerDashboard() {
                         {isPast ? (
                           <span className="text-xs px-2 py-1 bg-stone-100 text-stone-400 rounded-md">Past</span>
                         ) : isMine ? (
-                          <span className="text-xs px-2 py-1 bg-emerald-50 text-emerald-700 rounded-md font-medium">Signed Up</span>
+                          <button
+                            disabled={actionLoading === mySignupEntry.id}
+                            onClick={() => cancelSignup(mySignupEntry.id)}
+                            className="text-xs px-2 py-1 bg-emerald-50 text-emerald-700 hover:bg-red-50 hover:text-red-600 border border-emerald-200 hover:border-red-200 rounded-md font-medium transition-colors disabled:opacity-50"
+                            title="Click to cancel"
+                          >
+                            {actionLoading === mySignupEntry.id ? "..." : "Signed Up ✓"}
+                          </button>
                         ) : isFull ? (
                           <span className="text-xs px-2 py-1 bg-stone-100 text-stone-400 rounded-md">Full</span>
                         ) : (

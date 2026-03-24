@@ -41,49 +41,44 @@ export async function PATCH(
     return NextResponse.json({ error: "End time must be after start time" }, { status: 400 });
   }
 
+  // If language or date changed, ALL active signups must be cancelled (not just out-of-window ones)
+  const languageChanged = updateData.language != null && updateData.language !== slot.language;
+  const dateChanged = updateData.date != null &&
+    (updateData.date as Date).toDateString() !== slot.date.toDateString();
+  const cancelAll = languageChanged || dateChanged;
+
   if (editScope === "this_and_future" && slot.recurrenceGroupId) {
-    // Find all future slots in the same group (including this one)
     const futureSlots = await prisma.slot.findMany({
-      where: {
-        recurrenceGroupId: slot.recurrenceGroupId,
-        status: "ACTIVE",
-        date: { gte: slot.date },
-      },
+      where: { recurrenceGroupId: slot.recurrenceGroupId, status: "ACTIVE", date: { gte: slot.date } },
       select: { id: true },
     });
     const futureIds = futureSlots.map((s) => s.id);
 
-    // Cancel signups outside the new time window across all affected slots
-    const { count: cancelledCount } = await prisma.subBlockSignup.updateMany({
+    await prisma.subBlockSignup.updateMany({
       where: {
         slotId: { in: futureIds },
         status: "ACTIVE",
-        OR: [{ subBlockHour: { lt: newStart } }, { subBlockHour: { gte: newEnd } }],
+        ...(cancelAll ? {} : { OR: [{ subBlockHour: { lt: newStart } }, { subBlockHour: { gte: newEnd } }] }),
       },
       data: { status: "CANCELLED", cancelledAt: new Date() },
     });
 
-    await prisma.slot.updateMany({
-      where: { id: { in: futureIds } },
-      data: updateData,
-    });
-
-    return NextResponse.json({ updatedCount: futureIds.length, cancelledCount });
+    await prisma.slot.updateMany({ where: { id: { in: futureIds } }, data: updateData });
+    return NextResponse.json({ updatedCount: futureIds.length });
   }
 
   // Single slot edit
-  const { count: cancelledCount } = await prisma.subBlockSignup.updateMany({
+  await prisma.subBlockSignup.updateMany({
     where: {
       slotId: id,
       status: "ACTIVE",
-      OR: [{ subBlockHour: { lt: newStart } }, { subBlockHour: { gte: newEnd } }],
+      ...(cancelAll ? {} : { OR: [{ subBlockHour: { lt: newStart } }, { subBlockHour: { gte: newEnd } }] }),
     },
     data: { status: "CANCELLED", cancelledAt: new Date() },
   });
 
   const updated = await prisma.slot.update({ where: { id }, data: updateData });
-
-  return NextResponse.json({ slot: updated, cancelledCount });
+  return NextResponse.json({ slot: updated });
 }
 
 export async function DELETE(
