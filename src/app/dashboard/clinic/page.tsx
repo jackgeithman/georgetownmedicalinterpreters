@@ -78,6 +78,7 @@ export default function ClinicDashboard() {
   const [editSlot, setEditSlot] = useState<Slot | null>(null);
   const [editScope, setEditScope] = useState<"single" | "this_and_future">("single");
   const [cancelConfirm, setCancelConfirm] = useState<CancelConfirm | null>(null);
+  const [editWarning, setEditWarning] = useState<{ cancelCount: number } | null>(null);
   const [form, setForm] = useState({
     language: "ES",
     date: "",
@@ -121,8 +122,29 @@ export default function ClinicDashboard() {
     setActionLoading(null);
   };
 
-  const saveEdit = async () => {
+  // Called when the clinic clicks "Save Changes" — checks for affected volunteers first.
+  const requestSaveEdit = () => {
     if (!editSlot) return;
+    const original = slots.find((s) => s.id === editSlot.id);
+    if (!original) { void confirmSaveEdit(); return; }
+
+    const cancelCount = original.signups.filter((s) => {
+      if (s.status !== "ACTIVE") return false;
+      if (editSlot.language !== original.language) return true; // language change cancels all
+      return s.subBlockHour < editSlot.startTime || s.subBlockHour >= editSlot.endTime;
+    }).length;
+
+    if (cancelCount > 0) {
+      setEditWarning({ cancelCount });
+    } else {
+      void confirmSaveEdit();
+    }
+  };
+
+  // Actually sends the PATCH request — called after confirmation.
+  const confirmSaveEdit = async () => {
+    if (!editSlot) return;
+    setEditWarning(null);
     setActionLoading("edit");
     const res = await fetch(`/api/clinic/slots/${editSlot.id}`, {
       method: "PATCH",
@@ -138,15 +160,8 @@ export default function ClinicDashboard() {
       }),
     });
     if (res.ok) {
-      const data = await res.json();
       await fetchSlots();
       setEditSlot(null);
-      const cancelled = data.cancelledCount ?? 0;
-      const updated = data.updatedCount;
-      if (cancelled > 0) {
-        const slotsMsg = updated ? ` across ${updated} slots` : "";
-        alert(`${cancelled} volunteer signup(s) were automatically cancelled${slotsMsg} due to the time change.`);
-      }
     }
     setActionLoading(null);
   };
@@ -549,9 +564,6 @@ export default function ClinicDashboard() {
               </div>
             )}
 
-            <p className="text-xs text-amber-600 bg-amber-50 px-3 py-2 rounded-md mb-4">
-              Volunteers outside the new time window will be automatically unassigned.
-            </p>
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs text-stone-500 mb-1">Language</label>
@@ -621,7 +633,7 @@ export default function ClinicDashboard() {
             <div className="flex gap-2 mt-4">
               <button
                 disabled={actionLoading === "edit" || editSlot.endTime <= editSlot.startTime}
-                onClick={saveEdit}
+                onClick={requestSaveEdit}
                 className="px-4 py-2 text-sm bg-stone-800 text-white hover:bg-stone-700 rounded-md transition-colors disabled:opacity-50"
               >
                 {actionLoading === "edit" ? "Saving..." : "Save Changes"}
@@ -631,6 +643,44 @@ export default function ClinicDashboard() {
                 className="px-4 py-2 text-sm bg-stone-100 hover:bg-stone-200 text-stone-600 rounded-md transition-colors"
               >
                 Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit — Volunteer Cancellation Warning Modal */}
+      {editWarning && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-[60]">
+          <div className="bg-white rounded-xl p-6 w-full max-w-sm shadow-xl">
+            <div className="flex items-start gap-3 mb-4">
+              <div className="shrink-0 w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+                </svg>
+              </div>
+              <div>
+                <h3 className="text-sm font-semibold text-stone-800">Volunteers will be removed</h3>
+                <p className="text-sm text-stone-500 mt-1">
+                  {editWarning.cancelCount} volunteer signup{editWarning.cancelCount !== 1 ? "s" : ""} will be
+                  cancelled because {editWarning.cancelCount !== 1 ? "they fall" : "it falls"} outside your
+                  updated time window.
+                </p>
+              </div>
+            </div>
+            <div className="flex flex-col gap-2">
+              <button
+                disabled={actionLoading === "edit"}
+                onClick={confirmSaveEdit}
+                className="w-full px-4 py-2.5 text-sm bg-stone-800 hover:bg-stone-700 text-white font-medium rounded-lg transition-colors disabled:opacity-50"
+              >
+                {actionLoading === "edit" ? "Saving..." : "Save Changes Anyway"}
+              </button>
+              <button
+                onClick={() => setEditWarning(null)}
+                className="w-full px-4 py-2.5 text-sm bg-stone-100 hover:bg-stone-200 text-stone-700 font-medium rounded-lg transition-colors"
+              >
+                Go Back &amp; Edit
               </button>
             </div>
           </div>
