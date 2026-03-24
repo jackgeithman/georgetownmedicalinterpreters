@@ -38,6 +38,7 @@ type VolunteerProfile = {
 };
 
 type Tab = "browse" | "signups" | "profile";
+type TimeFilter = "ALL" | "MORNING" | "AFTERNOON" | "EVENING";
 
 const LANG_LABELS: Record<string, string> = {
   ES: "Spanish",
@@ -79,6 +80,8 @@ export default function VolunteerDashboard() {
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [langFilter, setLangFilter] = useState<string>("ALL");
+  const [timeFilter, setTimeFilter] = useState<TimeFilter>("ALL");
+  const [availableOnly, setAvailableOnly] = useState(false);
   const [profileForm, setProfileForm] = useState<{ languages: string[]; backgroundInfo: string }>({
     languages: [],
     backgroundInfo: "",
@@ -242,111 +245,162 @@ export default function VolunteerDashboard() {
       <div className="max-w-6xl mx-auto px-6 py-6">
 
         {/* Browse Slots */}
-        {tab === "browse" && (
-          <div>
-            {/* Language Filter */}
-            <div className="flex gap-2 mb-5">
-              {["ALL", "ES", "ZH", "KO", "AR"].map((lang) => (
+        {tab === "browse" && (() => {
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+
+          const hasAvailability = (slot: BrowseSlot) =>
+            Array.from({ length: slot.endTime - slot.startTime }, (_, i) => slot.startTime + i)
+              .some((h) => slot.signups.filter((s) => s.subBlockHour === h).length < slot.interpreterCount);
+
+          const matchesTime = (slot: BrowseSlot) => {
+            if (timeFilter === "MORNING") return slot.startTime < 12;
+            if (timeFilter === "AFTERNOON") return slot.startTime >= 12 && slot.startTime < 17;
+            if (timeFilter === "EVENING") return slot.startTime >= 17;
+            return true;
+          };
+
+          const filtered = browseSlots.filter(
+            (s) => (!availableOnly || hasAvailability(s)) && matchesTime(s)
+          );
+
+          const upcoming = filtered.filter((s) => new Date(s.date.slice(0, 10) + "T12:00:00") >= today);
+          const past = filtered.filter((s) => new Date(s.date.slice(0, 10) + "T12:00:00") < today)
+            .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+          const renderSlot = (slot: BrowseSlot, isPast: boolean) => {
+            const subBlocks = Array.from({ length: slot.endTime - slot.startTime }, (_, i) => slot.startTime + i);
+            return (
+              <div key={slot.id} className={`bg-white rounded-xl border border-stone-200 p-5 ${isPast ? "opacity-50" : ""}`}>
+                <div className="flex items-start justify-between mb-3">
+                  <div className="flex items-center gap-3 flex-wrap">
+                    <span className={`text-xs px-2 py-1 rounded-full font-medium ${LANG_COLORS[slot.language]}`}>
+                      {LANG_LABELS[slot.language]}
+                    </span>
+                    <span className="text-sm font-medium text-stone-800">{formatDate(slot.date)}</span>
+                    <span className="text-sm text-stone-500">
+                      {formatHour(slot.startTime)} – {formatHour(slot.endTime)}
+                    </span>
+                    {isPast && (
+                      <span className="text-xs px-2 py-0.5 rounded-full bg-stone-100 text-stone-400">Past</span>
+                    )}
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm font-medium text-stone-800">{slot.clinic.name}</p>
+                    {slot.clinic.address && <p className="text-xs text-stone-400">{slot.clinic.address}</p>}
+                  </div>
+                </div>
+                {slot.notes && <p className="text-xs text-stone-400 italic mb-3">{slot.notes}</p>}
+                <div className="space-y-2">
+                  {subBlocks.map((hour) => {
+                    const filled = slot.signups.filter((s) => s.subBlockHour === hour).length;
+                    const isMine = profile
+                      ? slot.signups.some((s) => s.subBlockHour === hour && s.volunteerId === profile.id)
+                      : false;
+                    const isFull = filled >= slot.interpreterCount;
+                    const key = `${slot.id}-${hour}`;
+                    return (
+                      <div key={hour} className="flex items-center justify-between px-3 py-2 rounded-md bg-stone-50">
+                        <div className="flex items-center gap-3">
+                          <span className="text-xs text-stone-600 w-28">
+                            {formatHour(hour)} – {formatHour(hour + 1)}
+                          </span>
+                          <span className="text-xs text-stone-400">{filled}/{slot.interpreterCount} filled</span>
+                        </div>
+                        {isPast ? (
+                          <span className="text-xs px-2 py-1 bg-stone-100 text-stone-400 rounded-md">Past</span>
+                        ) : isMine ? (
+                          <span className="text-xs px-2 py-1 bg-emerald-50 text-emerald-700 rounded-md font-medium">Signed Up</span>
+                        ) : isFull ? (
+                          <span className="text-xs px-2 py-1 bg-stone-100 text-stone-400 rounded-md">Full</span>
+                        ) : (
+                          <button
+                            disabled={actionLoading === key}
+                            onClick={() => signUp(slot.id, hour)}
+                            className="text-xs px-3 py-1 bg-stone-800 text-white hover:bg-stone-700 rounded-md transition-colors disabled:opacity-50"
+                          >
+                            {actionLoading === key ? "..." : "Sign Up"}
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          };
+
+          return (
+            <div>
+              {/* Filters */}
+              <div className="flex flex-wrap gap-2 mb-5">
+                {/* Language */}
+                {["ALL", "ES", "ZH", "KO", "AR"].map((lang) => (
+                  <button
+                    key={lang}
+                    onClick={() => setLangFilter(lang)}
+                    className={`px-3 py-1.5 text-xs rounded-md transition-colors ${
+                      langFilter === lang
+                        ? "bg-stone-800 text-white"
+                        : "bg-white border border-stone-200 text-stone-500 hover:border-stone-300"
+                    }`}
+                  >
+                    {lang === "ALL" ? "All Languages" : LANG_LABELS[lang]}
+                  </button>
+                ))}
+
+                <div className="w-px bg-stone-200 mx-1" />
+
+                {/* Time of day */}
+                {(["ALL", "MORNING", "AFTERNOON", "EVENING"] as TimeFilter[]).map((t) => (
+                  <button
+                    key={t}
+                    onClick={() => setTimeFilter(t)}
+                    className={`px-3 py-1.5 text-xs rounded-md transition-colors ${
+                      timeFilter === t
+                        ? "bg-stone-800 text-white"
+                        : "bg-white border border-stone-200 text-stone-500 hover:border-stone-300"
+                    }`}
+                  >
+                    {t === "ALL" ? "All Times" : t === "MORNING" ? "Morning" : t === "AFTERNOON" ? "Afternoon" : "Evening"}
+                  </button>
+                ))}
+
+                <div className="w-px bg-stone-200 mx-1" />
+
+                {/* Availability */}
                 <button
-                  key={lang}
-                  onClick={() => setLangFilter(lang)}
+                  onClick={() => setAvailableOnly(!availableOnly)}
                   className={`px-3 py-1.5 text-xs rounded-md transition-colors ${
-                    langFilter === lang
-                      ? "bg-stone-800 text-white"
+                    availableOnly
+                      ? "bg-emerald-700 text-white"
                       : "bg-white border border-stone-200 text-stone-500 hover:border-stone-300"
                   }`}
                 >
-                  {lang === "ALL" ? "All Languages" : LANG_LABELS[lang]}
+                  Available Only
                 </button>
-              ))}
+              </div>
+
+              {/* Upcoming */}
+              {upcoming.length === 0 && past.length === 0 ? (
+                <div className="bg-white rounded-xl border border-stone-200 p-12 text-center">
+                  <p className="text-stone-400">No slots match your filters.</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {upcoming.map((slot) => renderSlot(slot, false))}
+
+                  {past.length > 0 && (
+                    <>
+                      <p className="text-xs font-medium text-stone-400 uppercase tracking-wider pt-2">Past Slots</p>
+                      {past.map((slot) => renderSlot(slot, true))}
+                    </>
+                  )}
+                </div>
+              )}
             </div>
-
-            {browseSlots.length === 0 ? (
-              <div className="bg-white rounded-xl border border-stone-200 p-12 text-center">
-                <p className="text-stone-400">No available slots. Check back soon.</p>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {browseSlots.map((slot) => {
-                  const subBlocks = Array.from(
-                    { length: slot.endTime - slot.startTime },
-                    (_, i) => slot.startTime + i
-                  );
-
-                  return (
-                    <div key={slot.id} className="bg-white rounded-xl border border-stone-200 p-5">
-                      <div className="flex items-start justify-between mb-3">
-                        <div className="flex items-center gap-3 flex-wrap">
-                          <span className={`text-xs px-2 py-1 rounded-full font-medium ${LANG_COLORS[slot.language]}`}>
-                            {LANG_LABELS[slot.language]}
-                          </span>
-                          <span className="text-sm font-medium text-stone-800">{formatDate(slot.date)}</span>
-                          <span className="text-sm text-stone-500">
-                            {formatHour(slot.startTime)} – {formatHour(slot.endTime)}
-                          </span>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-sm font-medium text-stone-800">{slot.clinic.name}</p>
-                          {slot.clinic.address && (
-                            <p className="text-xs text-stone-400">{slot.clinic.address}</p>
-                          )}
-                        </div>
-                      </div>
-                      {slot.notes && (
-                        <p className="text-xs text-stone-400 italic mb-3">{slot.notes}</p>
-                      )}
-
-                      {/* Sub-blocks */}
-                      <div className="space-y-2">
-                        {subBlocks.map((hour) => {
-                          const filled = slot.signups.filter((s) => s.subBlockHour === hour).length;
-                          const isMine = profile
-                            ? slot.signups.some((s) => s.subBlockHour === hour && s.volunteerId === profile.id)
-                            : false;
-                          const isFull = filled >= slot.interpreterCount;
-                          const key = `${slot.id}-${hour}`;
-
-                          return (
-                            <div
-                              key={hour}
-                              className="flex items-center justify-between px-3 py-2 rounded-md bg-stone-50"
-                            >
-                              <div className="flex items-center gap-3">
-                                <span className="text-xs text-stone-600 w-28">
-                                  {formatHour(hour)} – {formatHour(hour + 1)}
-                                </span>
-                                <span className="text-xs text-stone-400">
-                                  {filled}/{slot.interpreterCount} filled
-                                </span>
-                              </div>
-                              {isMine ? (
-                                <span className="text-xs px-2 py-1 bg-emerald-50 text-emerald-700 rounded-md font-medium">
-                                  Signed Up
-                                </span>
-                              ) : isFull ? (
-                                <span className="text-xs px-2 py-1 bg-stone-100 text-stone-400 rounded-md">
-                                  Full
-                                </span>
-                              ) : (
-                                <button
-                                  disabled={actionLoading === key}
-                                  onClick={() => signUp(slot.id, hour)}
-                                  className="text-xs px-3 py-1 bg-stone-800 text-white hover:bg-stone-700 rounded-md transition-colors disabled:opacity-50"
-                                >
-                                  {actionLoading === key ? "..." : "Sign Up"}
-                                </button>
-                              )}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        )}
+          );
+        })()}
 
         {/* My Signups */}
         {tab === "signups" && (

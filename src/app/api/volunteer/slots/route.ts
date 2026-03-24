@@ -26,7 +26,10 @@ export async function GET(req: NextRequest) {
   const dateParam = searchParams.get("date");
 
   const today = new Date();
-  today.setHours(0, 0, 0, 0); // local midnight — slots stored at noon so this correctly includes today
+  today.setHours(0, 0, 0, 0);
+
+  const thirtyDaysAgo = new Date(today);
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
   const where: Prisma.SlotWhereInput = { status: "ACTIVE" };
 
@@ -36,7 +39,8 @@ export async function GET(req: NextRequest) {
     next.setDate(next.getDate() + 1);
     where.date = { gte: d, lt: next };
   } else {
-    where.date = { gte: today };
+    // Include past 30 days so volunteers can see recent history (grayed out in UI)
+    where.date = { gte: thirtyDaysAgo };
   }
 
   if (language && ["ES", "ZH", "KO", "AR"].includes(language)) {
