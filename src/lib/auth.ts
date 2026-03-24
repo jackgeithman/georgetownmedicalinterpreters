@@ -72,7 +72,12 @@ export const authOptions: NextAuthOptions = {
       if (!user.email) return false;
 
       if (account?.provider === "google") {
+        // Check DB-managed email rules first
+        const rule = await prisma.emailRule.findUnique({ where: { email: user.email.toLowerCase() } });
+        if (rule?.type === "BLOCK") return "/login?error=DomainNotAllowed";
+
         const allowed =
+          rule?.type === "ALLOW" ||
           user.email.endsWith("@georgetown.edu") ||
           ALLOWED_EMAILS.includes(user.email) ||
           user.email === SUPER_ADMIN_EMAIL;

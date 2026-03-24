@@ -38,7 +38,6 @@ type VolunteerProfile = {
 };
 
 type Tab = "browse" | "signups" | "profile";
-type TimeFilter = "ALL" | "MORNING" | "AFTERNOON" | "EVENING";
 
 const LANG_LABELS: Record<string, string> = {
   ES: "Spanish",
@@ -78,12 +77,11 @@ export default function VolunteerDashboard() {
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [langFilter, setLangFilter] = useState<string>("ALL");
-  const [timeFilter, setTimeFilter] = useState<TimeFilter>("ALL");
+  const [clinicFilter, setClinicFilter] = useState("ALL");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
   const [availableOnly, setAvailableOnly] = useState(false);
-  const [profileForm, setProfileForm] = useState<{ languages: string[]; backgroundInfo: string }>({
-    languages: [],
-    backgroundInfo: "",
-  });
+  const [profileForm, setProfileForm] = useState<{ languages: string[] }>({ languages: [] });
 
   const isAdmin = session?.user?.role === "ADMIN" || session?.user?.role === "SUPER_ADMIN";
 
@@ -104,7 +102,7 @@ export default function VolunteerDashboard() {
     if (profileRes.ok) {
       const p = await profileRes.json();
       setProfile(p);
-      setProfileForm({ languages: p.languages ?? [], backgroundInfo: p.backgroundInfo ?? "" });
+      setProfileForm({ languages: p.languages ?? [] });
     }
     setLoading(false);
   }, []);
@@ -154,7 +152,7 @@ export default function VolunteerDashboard() {
     const res = await fetch("/api/volunteer/profile", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(profileForm),
+      body: JSON.stringify({ languages: profileForm.languages }),
     });
     if (res.ok) setProfile(await res.json());
     setActionLoading(null);
@@ -164,7 +162,7 @@ export default function VolunteerDashboard() {
     const langs = profileForm.languages.includes(lang)
       ? profileForm.languages.filter((l) => l !== lang)
       : [...profileForm.languages, lang];
-    setProfileForm({ ...profileForm, languages: langs });
+    setProfileForm({ languages: langs });
   };
 
   if (status === "loading" || loading) {
@@ -251,16 +249,15 @@ export default function VolunteerDashboard() {
             Array.from({ length: slot.endTime - slot.startTime }, (_, i) => slot.startTime + i)
               .some((h) => slot.signups.filter((s) => s.subBlockHour === h).length < slot.interpreterCount);
 
-          const matchesTime = (slot: BrowseSlot) => {
-            if (timeFilter === "MORNING") return slot.startTime < 12;
-            if (timeFilter === "AFTERNOON") return slot.startTime >= 12 && slot.startTime < 17;
-            if (timeFilter === "EVENING") return slot.startTime >= 17;
-            return true;
-          };
+          const uniqueClinics = Array.from(new Set(browseSlots.map((s) => s.clinic.name))).sort();
 
-          const filtered = browseSlots.filter(
-            (s) => (!availableOnly || hasAvailability(s)) && matchesTime(s)
-          );
+          const filtered = browseSlots.filter((s) => {
+            if (availableOnly && !hasAvailability(s)) return false;
+            if (clinicFilter !== "ALL" && s.clinic.name !== clinicFilter) return false;
+            if (dateFrom && new Date(s.date.slice(0, 10) + "T12:00:00") < new Date(dateFrom + "T00:00:00")) return false;
+            if (dateTo && new Date(s.date.slice(0, 10) + "T12:00:00") > new Date(dateTo + "T23:59:59")) return false;
+            return true;
+          });
 
           const upcoming = filtered.filter((s) => new Date(s.date.slice(0, 10) + "T12:00:00") >= today);
           const past = filtered.filter((s) => new Date(s.date.slice(0, 10) + "T12:00:00") < today)
@@ -331,7 +328,7 @@ export default function VolunteerDashboard() {
           return (
             <div>
               {/* Filters */}
-              <div className="flex flex-wrap gap-2 mb-5">
+              <div className="flex flex-wrap items-center gap-2 mb-5">
                 {/* Language */}
                 {["ALL", "ES", "ZH", "KO"].map((lang) => (
                   <button
@@ -347,24 +344,49 @@ export default function VolunteerDashboard() {
                   </button>
                 ))}
 
-                <div className="w-px bg-stone-200 mx-1" />
+                <div className="w-px bg-stone-200 mx-1 self-stretch" />
 
-                {/* Time of day */}
-                {(["ALL", "MORNING", "AFTERNOON", "EVENING"] as TimeFilter[]).map((t) => (
+                {/* Clinic */}
+                <select
+                  value={clinicFilter}
+                  onChange={(e) => setClinicFilter(e.target.value)}
+                  className="px-2 py-1.5 text-xs border border-stone-200 rounded-md bg-white text-stone-600 focus:outline-none"
+                >
+                  <option value="ALL">All Clinics</option>
+                  {uniqueClinics.map((c) => <option key={c} value={c}>{c}</option>)}
+                </select>
+
+                <div className="w-px bg-stone-200 mx-1 self-stretch" />
+
+                {/* Date range */}
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs text-stone-400">From</span>
+                  <input
+                    type="date"
+                    value={dateFrom}
+                    onChange={(e) => setDateFrom(e.target.value)}
+                    className="px-2 py-1.5 text-xs border border-stone-200 rounded-md bg-white text-stone-600 focus:outline-none"
+                  />
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs text-stone-400">To</span>
+                  <input
+                    type="date"
+                    value={dateTo}
+                    onChange={(e) => setDateTo(e.target.value)}
+                    className="px-2 py-1.5 text-xs border border-stone-200 rounded-md bg-white text-stone-600 focus:outline-none"
+                  />
+                </div>
+                {(dateFrom || dateTo) && (
                   <button
-                    key={t}
-                    onClick={() => setTimeFilter(t)}
-                    className={`px-3 py-1.5 text-xs rounded-md transition-colors ${
-                      timeFilter === t
-                        ? "bg-stone-800 text-white"
-                        : "bg-white border border-stone-200 text-stone-500 hover:border-stone-300"
-                    }`}
+                    onClick={() => { setDateFrom(""); setDateTo(""); }}
+                    className="text-xs text-stone-400 hover:text-stone-600"
                   >
-                    {t === "ALL" ? "All Times" : t === "MORNING" ? "Morning" : t === "AFTERNOON" ? "Afternoon" : "Evening"}
+                    Clear
                   </button>
-                ))}
+                )}
 
-                <div className="w-px bg-stone-200 mx-1" />
+                <div className="w-px bg-stone-200 mx-1 self-stretch" />
 
                 {/* Availability */}
                 <button
@@ -467,7 +489,7 @@ export default function VolunteerDashboard() {
             {/* Languages */}
             <div className="bg-white rounded-xl border border-stone-200 p-6">
               <h3 className="text-sm font-medium text-stone-700 mb-4">Languages</h3>
-              <div className="flex gap-3 flex-wrap mb-6">
+              <div className="flex gap-3 flex-wrap mb-4">
                 {Object.entries(LANG_LABELS).map(([code, label]) => (
                   <button
                     key={code}
@@ -482,15 +504,6 @@ export default function VolunteerDashboard() {
                   </button>
                 ))}
               </div>
-
-              <h3 className="text-sm font-medium text-stone-700 mb-2">Background / Notes</h3>
-              <textarea
-                rows={3}
-                placeholder="Any relevant background, certifications, or notes..."
-                value={profileForm.backgroundInfo}
-                onChange={(e) => setProfileForm({ ...profileForm, backgroundInfo: e.target.value })}
-                className="w-full px-3 py-2 text-sm border border-stone-200 rounded-md focus:outline-none focus:ring-2 focus:ring-stone-300 resize-none"
-              />
 
               <button
                 disabled={actionLoading === "profile"}
