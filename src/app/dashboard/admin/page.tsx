@@ -46,6 +46,7 @@ export default function AdminDashboard() {
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [showClinicForm, setShowClinicForm] = useState(false);
   const [clinicForm, setClinicForm] = useState({ name: "", address: "", contactName: "", contactEmail: "" });
+  const [clinicFormError, setClinicFormError] = useState("");
   const [assignModal, setAssignModal] = useState<{ userId: string; userName: string } | null>(null);
   const [pinReveal, setPinReveal] = useState<{ clinicName: string; pin: string } | null>(null);
 
@@ -83,6 +84,7 @@ export default function AdminDashboard() {
 
   const createClinic = async () => {
     setActionLoading("clinic-form");
+    setClinicFormError("");
     const res = await fetch("/api/admin/clinics", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -92,8 +94,12 @@ export default function AdminDashboard() {
       const data = await res.json();
       await fetchData();
       setClinicForm({ name: "", address: "", contactName: "", contactEmail: "" });
+      setClinicFormError("");
       setShowClinicForm(false);
       setPinReveal({ clinicName: data.name, pin: data.plainPin });
+    } else {
+      const data = await res.json().catch(() => ({}));
+      setClinicFormError(data.error ?? `Error ${res.status} — please try again.`);
     }
     setActionLoading(null);
   };
@@ -372,12 +378,17 @@ export default function AdminDashboard() {
                     className="px-3 py-2 text-sm border border-stone-200 rounded-md focus:outline-none focus:ring-2 focus:ring-stone-300"
                   />
                 </div>
+                {clinicFormError && (
+                  <p className="mt-3 text-sm text-red-600 bg-red-50 border border-red-100 rounded-md px-3 py-2">
+                    {clinicFormError}
+                  </p>
+                )}
                 <button
                   disabled={actionLoading === "clinic-form" || !clinicForm.name || !clinicForm.contactEmail}
                   onClick={createClinic}
                   className="mt-4 px-4 py-2 text-sm bg-stone-800 text-white hover:bg-stone-700 rounded-md transition-colors disabled:opacity-50"
                 >
-                  Create Clinic
+                  {actionLoading === "clinic-form" ? "Creating..." : "Create Clinic"}
                 </button>
               </div>
             )}
