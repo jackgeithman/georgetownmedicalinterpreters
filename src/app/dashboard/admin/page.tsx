@@ -498,7 +498,6 @@ export default function AdminDashboard() {
             )}
           </div>
         )}
-      </div>
 
         {/* Signups */}
         {tab === "signups" && (
