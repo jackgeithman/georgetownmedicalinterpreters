@@ -34,21 +34,29 @@ type Clinic = {
   _count?: { staff: number; slots: number };
 };
 
-type AdminSignup = {
+type AdminSlot = {
   id: string;
-  subBlockHour: number;
-  slot: {
+  language: string;
+  date: string;
+  startTime: number;
+  endTime: number;
+  interpreterCount: number;
+  notes: string | null;
+  clinic: { name: string; address: string };
+  signups: {
     id: string;
-    language: string;
-    date: string;
-    startTime: number;
-    endTime: number;
-    clinic: { name: string };
-  };
-  volunteer: {
-    user: { name: string | null; email: string };
-  };
+    subBlockHour: number;
+    volunteer: {
+      id: string;
+      user: { name: string | null; email: string };
+    };
+  }[];
 };
+
+type AdminProfile = { id: string; languages: string[] };
+
+type TimeFilter = "ALL" | "MORNING" | "AFTERNOON" | "EVENING";
+type Tab = "slots" | "pending" | "users" | "clinics";
 
 const LANG_LABELS: Record<string, string> = { ES: "Spanish", ZH: "Chinese", KO: "Korean", AR: "Arabic" };
 const LANG_COLORS: Record<string, string> = {
@@ -71,15 +79,14 @@ function formatDate(s: string) {
   });
 }
 
-type Tab = "pending" | "users" | "clinics" | "signups";
-
 export default function AdminDashboard() {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const [tab, setTab] = useState<Tab>("pending");
+  const [tab, setTab] = useState<Tab>("slots");
   const [users, setUsers] = useState<User[]>([]);
   const [clinics, setClinics] = useState<Clinic[]>([]);
-  const [signups, setSignups] = useState<AdminSignup[]>([]);
+  const [adminSlots, setAdminSlots] = useState<AdminSlot[]>([]);
+  const [adminProfile, setAdminProfile] = useState<AdminProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [showClinicForm, setShowClinicForm] = useState(false);
@@ -87,6 +94,9 @@ export default function AdminDashboard() {
   const [clinicFormError, setClinicFormError] = useState("");
   const [assignModal, setAssignModal] = useState<{ userId: string; userName: string } | null>(null);
   const [pinReveal, setPinReveal] = useState<{ clinicName: string; pin: string } | null>(null);
+  const [langFilter, setLangFilter] = useState("ALL");
+  const [timeFilter, setTimeFilter] = useState<TimeFilter>("ALL");
+  const [availableOnly, setAvailableOnly] = useState(false);
 
   useEffect(() => {
     if (status === "unauthenticated") router.push("/login");
@@ -94,20 +104,21 @@ export default function AdminDashboard() {
   }, [status, session, router]);
 
   const fetchData = useCallback(async () => {
-    const [usersRes, clinicsRes, signupsRes] = await Promise.all([
+    const [usersRes, clinicsRes, slotsRes, profileRes] = await Promise.all([
       fetch("/api/admin/users"),
       fetch("/api/admin/clinics"),
-      fetch("/api/admin/signups"),
+      fetch("/api/admin/slots"),
+      fetch("/api/volunteer/profile"),
     ]);
     if (usersRes.ok) setUsers(await usersRes.json());
     if (clinicsRes.ok) setClinics(await clinicsRes.json());
-    if (signupsRes.ok) setSignups(await signupsRes.json());
+    if (slotsRes.ok) setAdminSlots(await slotsRes.json());
+    if (profileRes.ok) setAdminProfile(await profileRes.json());
     setLoading(false);
   }, []);
 
   useEffect(() => {
     if (session?.user?.role === "ADMIN" || session?.user?.role === "SUPER_ADMIN") {
-
       fetchData();
     }
   }, [session, fetchData]);
@@ -153,6 +164,31 @@ export default function AdminDashboard() {
     setActionLoading(null);
   };
 
+  const signUp = async (slotId: string, subBlockHour: number) => {
+    const key = `signup-${slotId}-${subBlockHour}`;
+    setActionLoading(key);
+    const res = await fetch("/api/volunteer/signups", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ slotId, subBlockHour }),
+    });
+    if (res.ok) {
+      await fetchData();
+    } else {
+      const err = await res.json().catch(() => ({}));
+      alert(err.error ?? "Could not sign up.");
+    }
+    setActionLoading(null);
+  };
+
+  const cancelMySignup = async (signupId: string) => {
+    if (!confirm("Cancel your signup for this slot?")) return;
+    setActionLoading(signupId);
+    const res = await fetch(`/api/volunteer/signups/${signupId}`, { method: "DELETE" });
+    if (res.ok) await fetchData();
+    setActionLoading(null);
+  };
+
   const regeneratePin = async (clinicId: string, clinicName: string) => {
     if (!confirm("Generate a new PIN for this clinic? The old PIN will stop working immediately.")) return;
     setActionLoading(`pin-${clinicId}`);
@@ -175,6 +211,118 @@ export default function AdminDashboard() {
     );
   }
 
+  // --- Slots tab helpers ---
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const filteredSlots = adminSlots.filter((s) => {
+    if (langFilter !== "ALL" && s.language !== langFilter) return false;
+    if (timeFilter === "MORNING" && s.startTime >= 12) return false;
+    if (timeFilter === "AFTERNOON" && (s.startTime < 12 || s.startTime >= 17)) return false;
+    if (timeFilter === "EVENING" && s.startTime < 17) return false;
+    if (availableOnly) {
+      const hasOpen = Array.from({ length: s.endTime - s.startTime }, (_, i) => s.startTime + i)
+        .some((h) => s.signups.filter((sg) => sg.subBlockHour === h).length < s.interpreterCount);
+      if (!hasOpen) return false;
+    }
+    return true;
+  });
+
+  const upcomingSlots = filteredSlots.filter((s) => new Date(s.date.slice(0, 10) + "T12:00:00") >= today);
+  const pastSlots = filteredSlots
+    .filter((s) => new Date(s.date.slice(0, 10) + "T12:00:00") < today)
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+  const renderSlot = (slot: AdminSlot, isPast: boolean) => {
+    const subBlocks = Array.from({ length: slot.endTime - slot.startTime }, (_, i) => slot.startTime + i);
+    const canSignUp = adminProfile?.languages.includes(slot.language) ?? false;
+
+    return (
+      <div key={slot.id} className={`bg-white rounded-xl border border-stone-200 p-5 ${isPast ? "opacity-50" : ""}`}>
+        <div className="flex items-start justify-between mb-3">
+          <div className="flex items-center gap-3 flex-wrap">
+            <span className={`text-xs px-2 py-1 rounded-full font-medium ${LANG_COLORS[slot.language]}`}>
+              {LANG_LABELS[slot.language]}
+            </span>
+            <span className="text-sm font-medium text-stone-800">{formatDate(slot.date)}</span>
+            <span className="text-sm text-stone-500">{formatHour(slot.startTime)} – {formatHour(slot.endTime)}</span>
+            {isPast && <span className="text-xs px-2 py-0.5 rounded-full bg-stone-100 text-stone-400">Past</span>}
+          </div>
+          <div className="text-right">
+            <p className="text-sm font-medium text-stone-800">{slot.clinic.name}</p>
+            {slot.clinic.address && <p className="text-xs text-stone-400">{slot.clinic.address}</p>}
+          </div>
+        </div>
+        {slot.notes && <p className="text-xs text-stone-400 italic mb-3">{slot.notes}</p>}
+        <div className="space-y-2">
+          {subBlocks.map((hour) => {
+            const hoursSignups = slot.signups.filter((s) => s.subBlockHour === hour);
+            const mySignup = adminProfile ? hoursSignups.find((s) => s.volunteer.id === adminProfile.id) : null;
+            const filled = hoursSignups.length;
+            const isFull = filled >= slot.interpreterCount;
+            const signupKey = `signup-${slot.id}-${hour}`;
+
+            return (
+              <div key={hour} className="rounded-md bg-stone-50 px-3 py-2 space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs text-stone-600 w-28">{formatHour(hour)} – {formatHour(hour + 1)}</span>
+                    <span className="text-xs text-stone-400">{filled}/{slot.interpreterCount} filled</span>
+                  </div>
+                  {isPast ? (
+                    <span className="text-xs px-2 py-1 bg-stone-100 text-stone-400 rounded-md">Past</span>
+                  ) : mySignup ? (
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs px-2 py-1 bg-emerald-50 text-emerald-700 rounded-md font-medium">You</span>
+                      <button
+                        disabled={actionLoading === mySignup.id}
+                        onClick={() => cancelMySignup(mySignup.id)}
+                        className="text-xs px-2 py-1 bg-red-50 text-red-600 hover:bg-red-100 rounded transition-colors disabled:opacity-50"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  ) : isFull ? (
+                    <span className="text-xs px-2 py-1 bg-stone-100 text-stone-400 rounded-md">Full</span>
+                  ) : (
+                    <button
+                      disabled={actionLoading === signupKey || !canSignUp}
+                      onClick={() => signUp(slot.id, hour)}
+                      title={!canSignUp ? "Add this language to your volunteer profile first" : undefined}
+                      className="text-xs px-3 py-1 bg-stone-800 text-white hover:bg-stone-700 rounded-md transition-colors disabled:opacity-40"
+                    >
+                      {actionLoading === signupKey ? "..." : "Sign Up"}
+                    </button>
+                  )}
+                </div>
+                {/* Other volunteers signed up this hour */}
+                {hoursSignups
+                  .filter((s) => s.volunteer.id !== adminProfile?.id)
+                  .map((s) => (
+                    <div key={s.id} className="flex items-center justify-between pl-1">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-stone-500">{s.volunteer.user.name ?? s.volunteer.user.email}</span>
+                        <span className="text-xs text-stone-300">{s.volunteer.user.email}</span>
+                      </div>
+                      {!isPast && (
+                        <button
+                          disabled={actionLoading === s.id}
+                          onClick={() => removeVolunteer(s.id)}
+                          className="text-xs px-2 py-0.5 bg-red-50 text-red-500 hover:bg-red-100 rounded transition-colors disabled:opacity-50"
+                        >
+                          Remove
+                        </button>
+                      )}
+                    </div>
+                  ))}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="min-h-screen bg-stone-50">
       {/* Header */}
@@ -192,12 +340,6 @@ export default function AdminDashboard() {
               </span>
             )}
             <button
-              onClick={() => router.push("/dashboard/volunteer")}
-              className="text-sm px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-md transition-colors"
-            >
-              Volunteer
-            </button>
-            <button
               onClick={() => signOut({ callbackUrl: "/login" })}
               className="text-sm px-3 py-1.5 bg-stone-100 hover:bg-stone-200 text-stone-600 rounded-md transition-colors"
             >
@@ -211,10 +353,10 @@ export default function AdminDashboard() {
       <div className="max-w-6xl mx-auto px-6 pt-6">
         <div className="flex gap-1 bg-stone-200/50 p-1 rounded-lg w-fit">
           {[
+            { key: "slots" as Tab, label: "Browse Slots", count: 0 },
             { key: "pending" as Tab, label: "Pending", count: pendingUsers.length },
             { key: "users" as Tab, label: "All Users", count: users.length },
             { key: "clinics" as Tab, label: "Clinics", count: clinics.length },
-            { key: "signups" as Tab, label: "Signups", count: signups.length },
           ].map((t) => (
             <button
               key={t.key}
@@ -244,6 +386,83 @@ export default function AdminDashboard() {
 
       {/* Content */}
       <div className="max-w-6xl mx-auto px-6 py-6">
+
+        {/* Browse Slots */}
+        {tab === "slots" && (
+          <div>
+            {!adminProfile?.languages.length && (
+              <div className="mb-4 px-4 py-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-700">
+                To sign up for slots, add your languages in your{" "}
+                <button
+                  onClick={() => router.push("/dashboard/volunteer")}
+                  className="underline font-medium"
+                >
+                  volunteer profile
+                </button>
+                .
+              </div>
+            )}
+
+            {/* Filters */}
+            <div className="flex flex-wrap gap-2 mb-5">
+              {["ALL", "ES", "ZH", "KO", "AR"].map((lang) => (
+                <button
+                  key={lang}
+                  onClick={() => setLangFilter(lang)}
+                  className={`px-3 py-1.5 text-xs rounded-md transition-colors ${
+                    langFilter === lang
+                      ? "bg-stone-800 text-white"
+                      : "bg-white border border-stone-200 text-stone-500 hover:border-stone-300"
+                  }`}
+                >
+                  {lang === "ALL" ? "All Languages" : LANG_LABELS[lang]}
+                </button>
+              ))}
+              <div className="w-px bg-stone-200 mx-1" />
+              {(["ALL", "MORNING", "AFTERNOON", "EVENING"] as TimeFilter[]).map((t) => (
+                <button
+                  key={t}
+                  onClick={() => setTimeFilter(t)}
+                  className={`px-3 py-1.5 text-xs rounded-md transition-colors ${
+                    timeFilter === t
+                      ? "bg-stone-800 text-white"
+                      : "bg-white border border-stone-200 text-stone-500 hover:border-stone-300"
+                  }`}
+                >
+                  {t === "ALL" ? "All Times" : t === "MORNING" ? "Morning" : t === "AFTERNOON" ? "Afternoon" : "Evening"}
+                </button>
+              ))}
+              <div className="w-px bg-stone-200 mx-1" />
+              <button
+                onClick={() => setAvailableOnly(!availableOnly)}
+                className={`px-3 py-1.5 text-xs rounded-md transition-colors ${
+                  availableOnly
+                    ? "bg-emerald-700 text-white"
+                    : "bg-white border border-stone-200 text-stone-500 hover:border-stone-300"
+                }`}
+              >
+                Available Only
+              </button>
+            </div>
+
+            {upcomingSlots.length === 0 && pastSlots.length === 0 ? (
+              <div className="bg-white rounded-xl border border-stone-200 p-12 text-center">
+                <p className="text-stone-400">No slots match your filters.</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {upcomingSlots.map((slot) => renderSlot(slot, false))}
+                {pastSlots.length > 0 && (
+                  <>
+                    <p className="text-xs font-medium text-stone-400 uppercase tracking-wider pt-2">Past Slots</p>
+                    {pastSlots.map((slot) => renderSlot(slot, true))}
+                  </>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Pending Approvals */}
         {tab === "pending" && (
           <div>
@@ -462,13 +681,10 @@ export default function AdminDashboard() {
                         <h3 className="font-medium text-stone-800">{clinic.name}</h3>
                         <p className="text-sm text-stone-500 mt-0.5">{clinic.address}</p>
                         <p className="text-xs text-stone-400 mt-1">{clinic.contactName} · {clinic.contactEmail}</p>
-                        {/* Login credentials */}
                         <div className="mt-3 flex items-center gap-3 flex-wrap">
                           <div className="flex items-center gap-1.5 bg-stone-50 border border-stone-200 rounded-md px-2 py-1">
                             <span className="text-xs text-stone-400">PIN</span>
-                            <span className="text-xs font-mono font-semibold text-stone-400 tracking-widest">
-                              ••••••
-                            </span>
+                            <span className="text-xs font-mono font-semibold text-stone-400 tracking-widest">••••••</span>
                           </div>
                           <button
                             onClick={() => {
@@ -498,64 +714,9 @@ export default function AdminDashboard() {
             )}
           </div>
         )}
-
-        {/* Signups */}
-        {tab === "signups" && (
-          <div>
-            {signups.length === 0 ? (
-              <div className="bg-white rounded-xl border border-stone-200 p-12 text-center">
-                <p className="text-stone-400">No active volunteer signups.</p>
-              </div>
-            ) : (
-              <div className="bg-white rounded-xl border border-stone-200 overflow-hidden">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-stone-100">
-                      <th className="text-left text-xs font-medium text-stone-400 uppercase tracking-wider px-5 py-3">Volunteer</th>
-                      <th className="text-left text-xs font-medium text-stone-400 uppercase tracking-wider px-5 py-3">Clinic</th>
-                      <th className="text-left text-xs font-medium text-stone-400 uppercase tracking-wider px-5 py-3">Date</th>
-                      <th className="text-left text-xs font-medium text-stone-400 uppercase tracking-wider px-5 py-3">Language</th>
-                      <th className="text-left text-xs font-medium text-stone-400 uppercase tracking-wider px-5 py-3">Time</th>
-                      <th className="text-right text-xs font-medium text-stone-400 uppercase tracking-wider px-5 py-3">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {signups.map((signup) => (
-                      <tr key={signup.id} className="border-b border-stone-50 last:border-0">
-                        <td className="px-5 py-3.5">
-                          <p className="text-sm text-stone-800">{signup.volunteer.user.name ?? "—"}</p>
-                          <p className="text-xs text-stone-400">{signup.volunteer.user.email}</p>
-                        </td>
-                        <td className="px-5 py-3.5 text-sm text-stone-600">{signup.slot.clinic.name}</td>
-                        <td className="px-5 py-3.5 text-sm text-stone-600">{formatDate(signup.slot.date)}</td>
-                        <td className="px-5 py-3.5">
-                          <span className={`text-xs px-2 py-1 rounded-full font-medium ${LANG_COLORS[signup.slot.language]}`}>
-                            {LANG_LABELS[signup.slot.language]}
-                          </span>
-                        </td>
-                        <td className="px-5 py-3.5 text-sm text-stone-600">
-                          {formatHour(signup.subBlockHour)} – {formatHour(signup.subBlockHour + 1)}
-                        </td>
-                        <td className="px-5 py-3.5 text-right">
-                          <button
-                            disabled={actionLoading === signup.id}
-                            onClick={() => removeVolunteer(signup.id)}
-                            className="text-xs px-2 py-1 bg-red-50 text-red-600 hover:bg-red-100 rounded transition-colors disabled:opacity-50"
-                          >
-                            Remove
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-        )}
       </div>
 
-      {/* PIN Reveal Modal — shown once after create or regenerate */}
+      {/* PIN Reveal Modal */}
       {pinReveal && (
         <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
           <div className="bg-white rounded-xl p-6 w-full max-w-sm shadow-xl">
@@ -564,9 +725,7 @@ export default function AdminDashboard() {
               Copy this PIN now — it cannot be shown again. Share it with the clinic directly.
             </p>
             <div className="flex items-center gap-3 bg-stone-50 border border-stone-200 rounded-lg px-4 py-3 mb-4">
-              <span className="text-2xl font-mono font-bold tracking-[0.3em] text-stone-800">
-                {pinReveal.pin}
-              </span>
+              <span className="text-2xl font-mono font-bold tracking-[0.3em] text-stone-800">{pinReveal.pin}</span>
               <button
                 onClick={() => navigator.clipboard.writeText(pinReveal.pin)}
                 className="ml-auto text-xs px-2 py-1 bg-stone-200 hover:bg-stone-300 text-stone-600 rounded transition-colors"
