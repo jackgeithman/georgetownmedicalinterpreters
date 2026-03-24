@@ -59,5 +59,39 @@ export async function DELETE(
     });
   }
 
+  // Queue cancellation receipt (immediate)
+  await prisma.pendingNotif.create({
+    data: {
+      type: "CANCEL_RECEIPT",
+      signupId: id,
+      scheduledFor: new Date(),
+    },
+  }).catch(() => {/* non-fatal */});
+
+  // If within 24h of the slot, queue:
+  //  - CLINIC_VOLUNTEER_CANCEL (immediate — clinic checks their window preference)
+  //  - UNFILLED_ALERT for qualifying volunteers (delayed 5 min to confirm slot stays unfilled)
+  if (hoursUntilSlot > 0 && hoursUntilSlot <= 24) {
+    await prisma.pendingNotif.createMany({
+      data: [
+        {
+          type: "CLINIC_VOLUNTEER_CANCEL",
+          signupId: id,
+          slotId: signup.slotId,
+          subBlockHour: signup.subBlockHour,
+          volunteerId: user.volunteer.id,
+          scheduledFor: new Date(),
+        },
+        {
+          type: "UNFILLED_ALERT",
+          slotId: signup.slotId,
+          subBlockHour: signup.subBlockHour,
+          volunteerId: user.volunteer.id,
+          scheduledFor: new Date(Date.now() + 5 * 60_000),
+        },
+      ],
+    }).catch(() => {/* non-fatal */});
+  }
+
   return NextResponse.json({ ok: true });
 }

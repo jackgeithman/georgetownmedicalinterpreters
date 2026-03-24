@@ -51,6 +51,21 @@ enum EmailRuleType {
   BLOCK
 }
 
+enum NotifType {
+  SIGNUP_RECEIPT
+  CANCEL_RECEIPT
+  REMINDER_24H
+  REMINDER_8H
+  REMINDER_2H
+  UNFILLED_ALERT
+  ADMIN_REMOVED
+  SLOT_CANCELLED
+  SLOT_EDITED
+  CLINIC_VOLUNTEER_CANCEL
+  CLINIC_UNFILLED_24H
+  ADMIN_PENDING_VOLUNTEER
+}
+
 model User {
   id            String            @id @default(uuid())
   email         String            @unique
@@ -93,16 +108,17 @@ model VerificationToken {
 }
 
 model Clinic {
-  id           String   @id @default(uuid())
-  name         String
-  address      String
-  contactName  String
-  contactEmail String
-  loginToken   String   @unique @default(uuid())
-  loginPin     String   @default("000000")
-  staff        User[]
-  slots        Slot[]
-  createdAt    DateTime @default(now())
+  id               String                @id @default(uuid())
+  name             String
+  address          String
+  contactName      String
+  contactEmail     String
+  loginToken       String                @unique @default(uuid())
+  loginPin         String                @default("000000")
+  staff            User[]
+  slots            Slot[]
+  notifPrefs       ClinicNotifPrefs?
+  createdAt        DateTime              @default(now())
 }
 
 model VolunteerProfile {
@@ -116,6 +132,7 @@ model VolunteerProfile {
   cancellationsWithin2h  Int @default(0)
   noShows                Int @default(0)
   signups           SubBlockSignup[]
+  notifPrefs        VolunteerNotifPrefs?
   createdAt         DateTime        @default(now())
 }
 
@@ -164,4 +181,48 @@ model Feedback {
   authorRole FeedbackAuthor
   note       String
   createdAt  DateTime       @default(now())
+}
+
+model VolunteerNotifPrefs {
+  id                 String           @id @default(uuid())
+  volunteerId        String           @unique
+  volunteer          VolunteerProfile @relation(fields: [volunteerId], references: [id])
+  signupReceipt      Boolean          @default(true)
+  cancellationReceipt Boolean         @default(true)
+  reminder24h        Boolean          @default(true)
+  reminder8h         Boolean          @default(false)
+  reminder2h         Boolean          @default(false)
+  unfilledSlotAlert  Boolean          @default(false)
+  updatedAt          DateTime         @updatedAt
+}
+
+model ClinicNotifPrefs {
+  id                    String   @id @default(uuid())
+  clinicId              String   @unique
+  clinic                Clinic   @relation(fields: [clinicId], references: [id])
+  dailySummary          Boolean  @default(true)
+  volunteerCancelWindow Int?
+  unfilledAlert24h      Boolean  @default(true)
+  updatedAt             DateTime @updatedAt
+}
+
+model PendingNotif {
+  id           String    @id @default(uuid())
+  type         NotifType
+  signupId     String?
+  slotId       String?
+  subBlockHour Int?
+  volunteerId  String?
+  scheduledFor DateTime
+  processed    Boolean   @default(false)
+  createdAt    DateTime  @default(now())
+}
+
+model NotifLog {
+  id             String    @id @default(uuid())
+  type           NotifType
+  recipientEmail String
+  signupId       String?
+  slotId         String?
+  sentAt         DateTime  @default(now())
 }

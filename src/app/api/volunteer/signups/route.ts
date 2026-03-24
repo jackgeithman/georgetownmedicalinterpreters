@@ -91,5 +91,14 @@ export async function POST(req: NextRequest) {
     data: { slotId, volunteerId: profile.id, subBlockHour: hour },
   });
 
+  // Queue signup receipt — delayed 2 min so toggle-happy signups don't flood emails
+  await prisma.pendingNotif.create({
+    data: {
+      type: "SIGNUP_RECEIPT",
+      signupId: signup.id,
+      scheduledFor: new Date(Date.now() + 2 * 60_000),
+    },
+  }).catch(() => {/* non-fatal */});
+
   return NextResponse.json(signup, { status: 201 });
 }

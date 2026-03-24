@@ -28,8 +28,14 @@ type Slot = {
   signups: SubBlockSignup[];
 };
 
-type Tab = "upcoming" | "past";
+type Tab = "upcoming" | "past" | "settings";
 type CancelConfirm = { slotId: string; isRecurring: boolean };
+
+type ClinicNotifPrefs = {
+  dailySummary: boolean;
+  volunteerCancelWindow: number | null;
+  unfilledAlert24h: boolean;
+};
 
 const LANG_LABELS: Record<string, string> = {
   ES: "Spanish",
@@ -79,6 +85,12 @@ export default function ClinicDashboard() {
   const [editScope, setEditScope] = useState<"single" | "this_and_future">("single");
   const [cancelConfirm, setCancelConfirm] = useState<CancelConfirm | null>(null);
   const [editWarning, setEditWarning] = useState<{ cancelCount: number } | null>(null);
+  const [notifPrefs, setNotifPrefs] = useState<ClinicNotifPrefs>({
+    dailySummary: true,
+    volunteerCancelWindow: null,
+    unfilledAlert24h: true,
+  });
+  const [notifSaved, setNotifSaved] = useState(false);
   const [form, setForm] = useState({
     language: "ES",
     date: "",
@@ -96,14 +108,29 @@ export default function ClinicDashboard() {
   }, [status, session, router]);
 
   const fetchSlots = useCallback(async () => {
-    const res = await fetch("/api/clinic/slots");
-    if (res.ok) setSlots(await res.json());
+    const [slotsRes, notifRes] = await Promise.all([
+      fetch("/api/clinic/slots"),
+      fetch("/api/clinic/notif-prefs"),
+    ]);
+    if (slotsRes.ok) setSlots(await slotsRes.json());
+    if (notifRes.ok) setNotifPrefs(await notifRes.json());
     setLoading(false);
   }, []);
 
   useEffect(() => {
     if (session?.user?.role === "CLINIC") fetchSlots();
   }, [session, fetchSlots]);
+
+  const saveNotifPrefs = async (updated: ClinicNotifPrefs) => {
+    await fetch("/api/clinic/notif-prefs", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(updated),
+    });
+    setNotifPrefs(updated);
+    setNotifSaved(true);
+    setTimeout(() => setNotifSaved(false), 2000);
+  };
 
   const postSlot = async () => {
     if (!form.date) return;
@@ -243,6 +270,7 @@ export default function ClinicDashboard() {
           {[
             { key: "upcoming" as Tab, label: "Upcoming", count: upcoming.length },
             { key: "past" as Tab, label: "Past", count: past.length },
+            { key: "settings" as Tab, label: "Notifications", count: 0 },
           ].map((t) => (
             <button
               key={t.key}
@@ -262,12 +290,20 @@ export default function ClinicDashboard() {
             </button>
           ))}
         </div>
-        {tab === "upcoming" && (
+        {tab === "upcoming" && !showPostForm && (
           <button
-            onClick={() => setShowPostForm(!showPostForm)}
+            onClick={() => setShowPostForm(true)}
             className="px-4 py-2 text-sm bg-stone-800 text-white hover:bg-stone-700 rounded-md transition-colors"
           >
-            {showPostForm ? "Cancel" : "+ Post Slot"}
+            + Post Slot
+          </button>
+        )}
+        {tab === "upcoming" && showPostForm && (
+          <button
+            onClick={() => setShowPostForm(false)}
+            className="px-4 py-2 text-sm bg-stone-100 hover:bg-stone-200 text-stone-600 rounded-md transition-colors"
+          >
+            Cancel
           </button>
         )}
       </div>
@@ -539,6 +575,77 @@ export default function ClinicDashboard() {
               </div>
             );
           })
+        )}
+        {/* Notification Settings */}
+        {tab === "settings" && (
+          <div className="max-w-lg space-y-6">
+            <div className="bg-white rounded-xl border border-stone-200 p-6">
+              <div className="flex items-center justify-between mb-1">
+                <h3 className="text-sm font-medium text-stone-700">Email Notifications</h3>
+                {notifSaved && <span className="text-xs text-emerald-600">Saved ✓</span>}
+              </div>
+              <p className="text-xs text-stone-400 mb-5">Changes save instantly.</p>
+
+              <div className="space-y-4">
+                {/* Daily summary */}
+                <label className="flex items-start gap-3 cursor-pointer">
+                  <button
+                    role="switch"
+                    aria-checked={notifPrefs.dailySummary}
+                    onClick={() => saveNotifPrefs({ ...notifPrefs, dailySummary: !notifPrefs.dailySummary })}
+                    className={`mt-0.5 relative inline-flex h-5 w-9 flex-shrink-0 rounded-full border-2 border-transparent transition-colors focus:outline-none ${
+                      notifPrefs.dailySummary ? "bg-stone-800" : "bg-stone-200"
+                    }`}
+                  >
+                    <span className={`inline-block h-4 w-4 rounded-full bg-white shadow transition-transform ${notifPrefs.dailySummary ? "translate-x-4" : "translate-x-0"}`} />
+                  </button>
+                  <div>
+                    <p className="text-sm text-stone-700">Daily summary email</p>
+                    <p className="text-xs text-stone-400">Sent each morning with all your upcoming slots and their current roster</p>
+                  </div>
+                </label>
+
+                {/* Unfilled alert */}
+                <label className="flex items-start gap-3 cursor-pointer">
+                  <button
+                    role="switch"
+                    aria-checked={notifPrefs.unfilledAlert24h}
+                    onClick={() => saveNotifPrefs({ ...notifPrefs, unfilledAlert24h: !notifPrefs.unfilledAlert24h })}
+                    className={`mt-0.5 relative inline-flex h-5 w-9 flex-shrink-0 rounded-full border-2 border-transparent transition-colors focus:outline-none ${
+                      notifPrefs.unfilledAlert24h ? "bg-stone-800" : "bg-stone-200"
+                    }`}
+                  >
+                    <span className={`inline-block h-4 w-4 rounded-full bg-white shadow transition-transform ${notifPrefs.unfilledAlert24h ? "translate-x-4" : "translate-x-0"}`} />
+                  </button>
+                  <div>
+                    <p className="text-sm text-stone-700">Unfilled slot alert (24 hrs before)</p>
+                    <p className="text-xs text-stone-400">Email if any sub-block is still open within 24 hours of the appointment</p>
+                  </div>
+                </label>
+
+                {/* Volunteer cancel window */}
+                <div className="pt-2 border-t border-stone-100">
+                  <p className="text-sm text-stone-700 mb-1">Volunteer cancellation alert</p>
+                  <p className="text-xs text-stone-400 mb-3">Get notified when a volunteer cancels within a certain window of the appointment</p>
+                  <div className="flex flex-wrap gap-2">
+                    {([null, 2, 4, 12, 24] as (number | null)[]).map((v) => (
+                      <button
+                        key={String(v)}
+                        onClick={() => saveNotifPrefs({ ...notifPrefs, volunteerCancelWindow: v })}
+                        className={`px-3 py-1.5 text-xs rounded-md border transition-colors ${
+                          notifPrefs.volunteerCancelWindow === v
+                            ? "bg-stone-800 text-white border-stone-800"
+                            : "bg-white text-stone-500 border-stone-200 hover:border-stone-300"
+                        }`}
+                      >
+                        {v === null ? "Don't notify" : `Within ${v}h`}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         )}
       </div>
 

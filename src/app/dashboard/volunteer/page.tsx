@@ -37,6 +37,15 @@ type VolunteerProfile = {
   hoursVolunteered: number;
 };
 
+type VolunteerNotifPrefs = {
+  signupReceipt: boolean;
+  cancellationReceipt: boolean;
+  reminder24h: boolean;
+  reminder8h: boolean;
+  reminder2h: boolean;
+  unfilledSlotAlert: boolean;
+};
+
 type Tab = "browse" | "signups" | "profile";
 
 const LANG_LABELS: Record<string, string> = {
@@ -82,6 +91,15 @@ export default function VolunteerDashboard() {
   const [dateTo, setDateTo] = useState("");
   const [availableOnly, setAvailableOnly] = useState(false);
   const [profileForm, setProfileForm] = useState<{ languages: string[] }>({ languages: [] });
+  const [notifPrefs, setNotifPrefs] = useState<VolunteerNotifPrefs>({
+    signupReceipt: true,
+    cancellationReceipt: true,
+    reminder24h: true,
+    reminder8h: false,
+    reminder2h: false,
+    unfilledSlotAlert: false,
+  });
+  const [notifSaved, setNotifSaved] = useState(false);
 
   const isAdmin = session?.user?.role === "ADMIN" || session?.user?.role === "SUPER_ADMIN";
 
@@ -92,10 +110,11 @@ export default function VolunteerDashboard() {
   }, [status, session, router]);
 
   const fetchAll = useCallback(async () => {
-    const [slotsRes, signupsRes, profileRes] = await Promise.all([
+    const [slotsRes, signupsRes, profileRes, notifRes] = await Promise.all([
       fetch("/api/volunteer/slots"),
       fetch("/api/volunteer/signups"),
       fetch("/api/volunteer/profile"),
+      fetch("/api/volunteer/notif-prefs"),
     ]);
     if (slotsRes.ok) setBrowseSlots(await slotsRes.json());
     if (signupsRes.ok) setMySignups(await signupsRes.json());
@@ -104,6 +123,7 @@ export default function VolunteerDashboard() {
       setProfile(p);
       setProfileForm({ languages: p.languages ?? [] });
     }
+    if (notifRes.ok) setNotifPrefs(await notifRes.json());
     setLoading(false);
   }, []);
 
@@ -155,6 +175,22 @@ export default function VolunteerDashboard() {
     });
     if (res.ok) setProfile(await res.json());
     setActionLoading(null);
+  };
+
+  const saveNotifPrefs = async (updated: VolunteerNotifPrefs) => {
+    await fetch("/api/volunteer/notif-prefs", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(updated),
+    });
+    setNotifPrefs(updated);
+    setNotifSaved(true);
+    setTimeout(() => setNotifSaved(false), 2000);
+  };
+
+  const toggleNotif = (key: keyof VolunteerNotifPrefs) => {
+    const updated = { ...notifPrefs, [key]: !notifPrefs[key] };
+    saveNotifPrefs(updated);
   };
 
   const toggleLanguage = (lang: string) => {
@@ -520,6 +556,78 @@ export default function VolunteerDashboard() {
               >
                 {actionLoading === "profile" ? "Saving..." : "Save Profile"}
               </button>
+            </div>
+
+            {/* Notification Preferences */}
+            <div className="bg-white rounded-xl border border-stone-200 p-6">
+              <div className="flex items-center justify-between mb-1">
+                <h3 className="text-sm font-medium text-stone-700">Email Notifications</h3>
+                {notifSaved && <span className="text-xs text-emerald-600">Saved ✓</span>}
+              </div>
+              <p className="text-xs text-stone-400 mb-5">Toggles save instantly. We&apos;ll never send you more than you want.</p>
+
+              <div className="space-y-1">
+                {/* Recommended */}
+                <p className="text-xs font-medium text-stone-400 uppercase tracking-wider mb-2">Recommended</p>
+
+                {([
+                  { key: "signupReceipt" as const, label: "Signup confirmation", desc: "Sent after you sign up (2 min delay so quick toggles don't flood your inbox)" },
+                  { key: "cancellationReceipt" as const, label: "Cancellation receipt", desc: "Confirms when you cancel a shift" },
+                  { key: "reminder24h" as const, label: "24-hour reminder", desc: "Email the day before your shift" },
+                ] as const).map(({ key, label, desc }) => (
+                  <label key={key} className="flex items-start gap-3 py-2.5 cursor-pointer group">
+                    <button
+                      role="switch"
+                      aria-checked={notifPrefs[key]}
+                      onClick={() => toggleNotif(key)}
+                      className={`mt-0.5 relative inline-flex h-5 w-9 flex-shrink-0 rounded-full border-2 border-transparent transition-colors focus:outline-none ${
+                        notifPrefs[key] ? "bg-stone-800" : "bg-stone-200"
+                      }`}
+                    >
+                      <span className={`inline-block h-4 w-4 rounded-full bg-white shadow transition-transform ${notifPrefs[key] ? "translate-x-4" : "translate-x-0"}`} />
+                    </button>
+                    <div>
+                      <p className="text-sm text-stone-700">{label}</p>
+                      <p className="text-xs text-stone-400">{desc}</p>
+                    </div>
+                  </label>
+                ))}
+
+                <div className="pt-3 border-t border-stone-100 mt-2">
+                  <p className="text-xs font-medium text-stone-400 uppercase tracking-wider mb-2">Optional</p>
+                  {([
+                    { key: "reminder8h" as const, label: "8-hour reminder", desc: "Email 8 hours before your shift" },
+                    { key: "reminder2h" as const, label: "2-hour reminder", desc: "Email 2 hours before your shift" },
+                    { key: "unfilledSlotAlert" as const, label: "Urgent: unfilled slot alerts", desc: "Notified when a qualifying slot within 24 hrs has a last-minute opening (5-min delay to confirm it's still open)" },
+                  ] as const).map(({ key, label, desc }) => (
+                    <label key={key} className="flex items-start gap-3 py-2.5 cursor-pointer group">
+                      <button
+                        role="switch"
+                        aria-checked={notifPrefs[key]}
+                        onClick={() => toggleNotif(key)}
+                        className={`mt-0.5 relative inline-flex h-5 w-9 flex-shrink-0 rounded-full border-2 border-transparent transition-colors focus:outline-none ${
+                          notifPrefs[key] ? "bg-stone-800" : "bg-stone-200"
+                        }`}
+                      >
+                        <span className={`inline-block h-4 w-4 rounded-full bg-white shadow transition-transform ${notifPrefs[key] ? "translate-x-4" : "translate-x-0"}`} />
+                      </button>
+                      <div>
+                        <p className="text-sm text-stone-700">{label}</p>
+                        <p className="text-xs text-stone-400">{desc}</p>
+                      </div>
+                    </label>
+                  ))}
+                </div>
+
+                <div className="pt-3 border-t border-stone-100 mt-2">
+                  <p className="text-xs font-medium text-stone-400 uppercase tracking-wider mb-2">Always On</p>
+                  <div className="space-y-1 text-xs text-stone-400 pl-1">
+                    <p>• Removed from a shift by an admin</p>
+                    <p>• Slot cancelled by a clinic</p>
+                    <p>• Slot edited and your signup was dropped</p>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         )}
