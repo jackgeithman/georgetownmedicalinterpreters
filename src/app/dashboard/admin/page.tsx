@@ -34,7 +34,44 @@ type Clinic = {
   _count?: { staff: number; slots: number };
 };
 
-type Tab = "pending" | "users" | "clinics";
+type AdminSignup = {
+  id: string;
+  subBlockHour: number;
+  slot: {
+    id: string;
+    language: string;
+    date: string;
+    startTime: number;
+    endTime: number;
+    clinic: { name: string };
+  };
+  volunteer: {
+    user: { name: string | null; email: string };
+  };
+};
+
+const LANG_LABELS: Record<string, string> = { ES: "Spanish", ZH: "Chinese", KO: "Korean", AR: "Arabic" };
+const LANG_COLORS: Record<string, string> = {
+  ES: "bg-amber-50 text-amber-700",
+  ZH: "bg-red-50 text-red-700",
+  KO: "bg-blue-50 text-blue-700",
+  AR: "bg-emerald-50 text-emerald-700",
+};
+
+function formatHour(h: number) {
+  if (h === 0) return "12 AM";
+  if (h < 12) return `${h} AM`;
+  if (h === 12) return "12 PM";
+  return `${h - 12} PM`;
+}
+
+function formatDate(s: string) {
+  return new Date(s.slice(0, 10) + "T12:00:00").toLocaleDateString("en-US", {
+    weekday: "short", month: "short", day: "numeric",
+  });
+}
+
+type Tab = "pending" | "users" | "clinics" | "signups";
 
 export default function AdminDashboard() {
   const { data: session, status } = useSession();
@@ -42,6 +79,7 @@ export default function AdminDashboard() {
   const [tab, setTab] = useState<Tab>("pending");
   const [users, setUsers] = useState<User[]>([]);
   const [clinics, setClinics] = useState<Clinic[]>([]);
+  const [signups, setSignups] = useState<AdminSignup[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [showClinicForm, setShowClinicForm] = useState(false);
@@ -56,12 +94,14 @@ export default function AdminDashboard() {
   }, [status, session, router]);
 
   const fetchData = useCallback(async () => {
-    const [usersRes, clinicsRes] = await Promise.all([
+    const [usersRes, clinicsRes, signupsRes] = await Promise.all([
       fetch("/api/admin/users"),
       fetch("/api/admin/clinics"),
+      fetch("/api/admin/signups"),
     ]);
     if (usersRes.ok) setUsers(await usersRes.json());
     if (clinicsRes.ok) setClinics(await clinicsRes.json());
+    if (signupsRes.ok) setSignups(await signupsRes.json());
     setLoading(false);
   }, []);
 
@@ -102,6 +142,14 @@ export default function AdminDashboard() {
       const data = await res.json().catch(() => ({}));
       setClinicFormError(data.error ?? `Error ${res.status} — please try again.`);
     }
+    setActionLoading(null);
+  };
+
+  const removeVolunteer = async (signupId: string) => {
+    if (!confirm("Remove this volunteer from the slot?")) return;
+    setActionLoading(signupId);
+    const res = await fetch(`/api/admin/signups/${signupId}`, { method: "DELETE" });
+    if (res.ok) await fetchData();
     setActionLoading(null);
   };
 
@@ -166,6 +214,7 @@ export default function AdminDashboard() {
             { key: "pending" as Tab, label: "Pending", count: pendingUsers.length },
             { key: "users" as Tab, label: "All Users", count: users.length },
             { key: "clinics" as Tab, label: "Clinics", count: clinics.length },
+            { key: "signups" as Tab, label: "Signups", count: signups.length },
           ].map((t) => (
             <button
               key={t.key}
@@ -445,6 +494,62 @@ export default function AdminDashboard() {
                     </div>
                   </div>
                 ))}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+        {/* Signups */}
+        {tab === "signups" && (
+          <div>
+            {signups.length === 0 ? (
+              <div className="bg-white rounded-xl border border-stone-200 p-12 text-center">
+                <p className="text-stone-400">No active volunteer signups.</p>
+              </div>
+            ) : (
+              <div className="bg-white rounded-xl border border-stone-200 overflow-hidden">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-stone-100">
+                      <th className="text-left text-xs font-medium text-stone-400 uppercase tracking-wider px-5 py-3">Volunteer</th>
+                      <th className="text-left text-xs font-medium text-stone-400 uppercase tracking-wider px-5 py-3">Clinic</th>
+                      <th className="text-left text-xs font-medium text-stone-400 uppercase tracking-wider px-5 py-3">Date</th>
+                      <th className="text-left text-xs font-medium text-stone-400 uppercase tracking-wider px-5 py-3">Language</th>
+                      <th className="text-left text-xs font-medium text-stone-400 uppercase tracking-wider px-5 py-3">Time</th>
+                      <th className="text-right text-xs font-medium text-stone-400 uppercase tracking-wider px-5 py-3">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {signups.map((signup) => (
+                      <tr key={signup.id} className="border-b border-stone-50 last:border-0">
+                        <td className="px-5 py-3.5">
+                          <p className="text-sm text-stone-800">{signup.volunteer.user.name ?? "—"}</p>
+                          <p className="text-xs text-stone-400">{signup.volunteer.user.email}</p>
+                        </td>
+                        <td className="px-5 py-3.5 text-sm text-stone-600">{signup.slot.clinic.name}</td>
+                        <td className="px-5 py-3.5 text-sm text-stone-600">{formatDate(signup.slot.date)}</td>
+                        <td className="px-5 py-3.5">
+                          <span className={`text-xs px-2 py-1 rounded-full font-medium ${LANG_COLORS[signup.slot.language]}`}>
+                            {LANG_LABELS[signup.slot.language]}
+                          </span>
+                        </td>
+                        <td className="px-5 py-3.5 text-sm text-stone-600">
+                          {formatHour(signup.subBlockHour)} – {formatHour(signup.subBlockHour + 1)}
+                        </td>
+                        <td className="px-5 py-3.5 text-right">
+                          <button
+                            disabled={actionLoading === signup.id}
+                            onClick={() => removeVolunteer(signup.id)}
+                            className="text-xs px-2 py-1 bg-red-50 text-red-600 hover:bg-red-100 rounded transition-colors disabled:opacity-50"
+                          >
+                            Remove
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             )}
           </div>
