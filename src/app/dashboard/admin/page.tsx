@@ -203,6 +203,19 @@ export default function AdminDashboard() {
     setActionLoading(null);
   };
 
+  const deleteClinic = async (clinicId: string, clinicName: string) => {
+    if (!confirm(`Delete "${clinicName}"? This cannot be undone.`)) return;
+    setActionLoading(`delete-clinic-${clinicId}`);
+    const res = await fetch(`/api/admin/clinics/${clinicId}`, { method: "DELETE" });
+    if (res.ok) {
+      await fetchData();
+    } else {
+      const data = await res.json().catch(() => ({}));
+      alert(data.error ?? "Could not delete clinic.");
+    }
+    setActionLoading(null);
+  };
+
   const regeneratePin = async (clinicId: string, clinicName: string) => {
     if (!confirm("Generate a new PIN for this clinic? The old PIN will stop working immediately.")) return;
     setActionLoading(`pin-${clinicId}`);
@@ -756,6 +769,13 @@ export default function AdminDashboard() {
                       </div>
                       <div className="flex items-center gap-3">
                         <span className="text-xs text-stone-400">{clinic._count?.slots || 0} slots</span>
+                        <button
+                          disabled={actionLoading === `delete-clinic-${clinic.id}`}
+                          onClick={() => deleteClinic(clinic.id, clinic.name)}
+                          className="text-xs px-2 py-1 bg-red-50 border border-red-100 hover:bg-red-100 text-red-600 rounded-md transition-colors disabled:opacity-50"
+                        >
+                          Delete
+                        </button>
                       </div>
                     </div>
                   </div>
