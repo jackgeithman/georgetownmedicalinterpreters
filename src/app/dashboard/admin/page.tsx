@@ -60,8 +60,8 @@ type AdminProfile = {
   hoursVolunteered: number;
 };
 
-type TimeFilter = "ALL" | "MORNING" | "AFTERNOON" | "EVENING";
-type Tab = "slots" | "pending" | "users" | "clinics" | "profile";
+type EmailRule = { id: string; email: string; type: "ALLOW" | "BLOCK"; note: string | null };
+type Tab = "slots" | "pending" | "users" | "clinics" | "profile" | "access";
 
 const LANG_LABELS: Record<string, string> = { ES: "Spanish", ZH: "Chinese", KO: "Korean" };
 const LANG_COLORS: Record<string, string> = {
@@ -99,40 +99,47 @@ export default function AdminDashboard() {
   const [assignModal, setAssignModal] = useState<{ userId: string; userName: string } | null>(null);
   const [pinReveal, setPinReveal] = useState<{ clinicName: string; pin: string } | null>(null);
   const [langFilter, setLangFilter] = useState("ALL");
-  const [timeFilter, setTimeFilter] = useState<TimeFilter>("ALL");
+  const [clinicFilter, setClinicFilter] = useState("ALL");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
   const [availableOnly, setAvailableOnly] = useState(false);
-  const [profileForm, setProfileForm] = useState<{ languages: string[]; backgroundInfo: string }>({
-    languages: [],
-    backgroundInfo: "",
-  });
+  const [profileForm, setProfileForm] = useState<{ languages: string[] }>({ languages: [] });
   const [profileSaved, setProfileSaved] = useState(false);
+  const [emailRules, setEmailRules] = useState<EmailRule[]>([]);
+  const [ruleEmail, setRuleEmail] = useState("");
+  const [ruleType, setRuleType] = useState<"ALLOW" | "BLOCK">("ALLOW");
+  const [ruleNote, setRuleNote] = useState("");
 
   useEffect(() => {
     if (status === "unauthenticated") router.push("/login");
     if (session?.user?.role && session.user.role !== "ADMIN" && session.user.role !== "SUPER_ADMIN") router.push("/dashboard");
   }, [status, session, router]);
 
-  const fetchData = useCallback(async () => {
-    const [usersRes, clinicsRes, slotsRes, profileRes] = await Promise.all([
+  const fetchData = useCallback(async (isSuperAdmin?: boolean) => {
+    const fetches: Promise<Response>[] = [
       fetch("/api/admin/users"),
       fetch("/api/admin/clinics"),
       fetch("/api/admin/slots"),
       fetch("/api/volunteer/profile"),
-    ]);
+    ];
+    if (isSuperAdmin) fetches.push(fetch("/api/admin/email-rules"));
+
+    const [usersRes, clinicsRes, slotsRes, profileRes, rulesRes] = await Promise.all(fetches);
     if (usersRes.ok) setUsers(await usersRes.json());
     if (clinicsRes.ok) setClinics(await clinicsRes.json());
     if (slotsRes.ok) setAdminSlots(await slotsRes.json());
     if (profileRes.ok) {
       const p = await profileRes.json();
       setAdminProfile(p);
-      setProfileForm({ languages: p.languages ?? [], backgroundInfo: p.backgroundInfo ?? "" });
+      setProfileForm({ languages: p.languages ?? [] });
     }
+    if (rulesRes?.ok) setEmailRules(await rulesRes.json());
     setLoading(false);
   }, []);
 
   useEffect(() => {
     if (session?.user?.role === "ADMIN" || session?.user?.role === "SUPER_ADMIN") {
-      fetchData();
+      fetchData(session.user.role === "SUPER_ADMIN");
     }
   }, [session, fetchData]);
 
@@ -233,12 +240,12 @@ export default function AdminDashboard() {
     const res = await fetch("/api/volunteer/profile", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(profileForm),
+      body: JSON.stringify({ languages: profileForm.languages }),
     });
     if (res.ok) {
       const p = await res.json();
       setAdminProfile(p);
-      setProfileForm({ languages: p.languages ?? [], backgroundInfo: p.backgroundInfo ?? "" });
+      setProfileForm({ languages: p.languages ?? [] });
       setProfileSaved(true);
       setTimeout(() => setProfileSaved(false), 3000);
     }
@@ -249,7 +256,30 @@ export default function AdminDashboard() {
     const langs = profileForm.languages.includes(lang)
       ? profileForm.languages.filter((l) => l !== lang)
       : [...profileForm.languages, lang];
-    setProfileForm({ ...profileForm, languages: langs });
+    setProfileForm({ languages: langs });
+  };
+
+  const addEmailRule = async () => {
+    if (!ruleEmail.trim()) return;
+    setActionLoading("email-rule");
+    const res = await fetch("/api/admin/email-rules", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: ruleEmail.trim(), type: ruleType, note: ruleNote.trim() || null }),
+    });
+    if (res.ok) {
+      const rule = await res.json();
+      setEmailRules((prev) => [rule, ...prev.filter((r) => r.email !== rule.email)]);
+      setRuleEmail(""); setRuleNote("");
+    }
+    setActionLoading(null);
+  };
+
+  const removeEmailRule = async (id: string) => {
+    setActionLoading(`rule-${id}`);
+    const res = await fetch(`/api/admin/email-rules/${id}`, { method: "DELETE" });
+    if (res.ok) setEmailRules((prev) => prev.filter((r) => r.id !== id));
+    setActionLoading(null);
   };
 
   const pendingUsers = users.filter((u) => u.status === "PENDING_APPROVAL");
@@ -268,9 +298,13 @@ export default function AdminDashboard() {
 
   const filteredSlots = adminSlots.filter((s) => {
     if (langFilter !== "ALL" && s.language !== langFilter) return false;
-    if (timeFilter === "MORNING" && s.startTime >= 12) return false;
-    if (timeFilter === "AFTERNOON" && (s.startTime < 12 || s.startTime >= 17)) return false;
-    if (timeFilter === "EVENING" && s.startTime < 17) return false;
+    if (clinicFilter !== "ALL" && s.clinic.name !== clinicFilter) return false;
+    if (dateFrom) {
+      if (new Date(s.date.slice(0, 10) + "T12:00:00") < new Date(dateFrom + "T00:00:00")) return false;
+    }
+    if (dateTo) {
+      if (new Date(s.date.slice(0, 10) + "T12:00:00") > new Date(dateTo + "T23:59:59")) return false;
+    }
     if (availableOnly) {
       const hasOpen = Array.from({ length: s.endTime - s.startTime }, (_, i) => s.startTime + i)
         .some((h) => s.signups.filter((sg) => sg.subBlockHour === h).length < s.interpreterCount);
@@ -278,6 +312,8 @@ export default function AdminDashboard() {
     }
     return true;
   });
+
+  const uniqueClinics = Array.from(new Set(adminSlots.map((s) => s.clinic.name))).sort();
 
   const upcomingSlots = filteredSlots.filter((s) => new Date(s.date.slice(0, 10) + "T12:00:00") >= today);
   const pastSlots = filteredSlots
@@ -419,6 +455,9 @@ export default function AdminDashboard() {
             { key: "users" as Tab, label: "All Users", count: users.length },
             { key: "clinics" as Tab, label: "Clinics", count: clinics.length },
             { key: "profile" as Tab, label: "My Profile", count: 0 },
+            ...(session?.user?.role === "SUPER_ADMIN"
+              ? [{ key: "access" as Tab, label: "Access Control", count: 0 }]
+              : []),
           ].map((t) => (
             <button
               key={t.key}
@@ -466,7 +505,8 @@ export default function AdminDashboard() {
             )}
 
             {/* Filters */}
-            <div className="flex flex-wrap gap-2 mb-5">
+            <div className="flex flex-wrap items-center gap-2 mb-5">
+              {/* Language */}
               {["ALL", "ES", "ZH", "KO"].map((lang) => (
                 <button
                   key={lang}
@@ -480,21 +520,52 @@ export default function AdminDashboard() {
                   {lang === "ALL" ? "All Languages" : LANG_LABELS[lang]}
                 </button>
               ))}
-              <div className="w-px bg-stone-200 mx-1" />
-              {(["ALL", "MORNING", "AFTERNOON", "EVENING"] as TimeFilter[]).map((t) => (
+
+              <div className="w-px bg-stone-200 mx-1 self-stretch" />
+
+              {/* Clinic */}
+              <select
+                value={clinicFilter}
+                onChange={(e) => setClinicFilter(e.target.value)}
+                className="px-2 py-1.5 text-xs border border-stone-200 rounded-md bg-white text-stone-600 focus:outline-none"
+              >
+                <option value="ALL">All Clinics</option>
+                {uniqueClinics.map((c) => <option key={c} value={c}>{c}</option>)}
+              </select>
+
+              <div className="w-px bg-stone-200 mx-1 self-stretch" />
+
+              {/* Date range */}
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs text-stone-400">From</span>
+                <input
+                  type="date"
+                  value={dateFrom}
+                  onChange={(e) => setDateFrom(e.target.value)}
+                  className="px-2 py-1.5 text-xs border border-stone-200 rounded-md bg-white text-stone-600 focus:outline-none"
+                />
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs text-stone-400">To</span>
+                <input
+                  type="date"
+                  value={dateTo}
+                  onChange={(e) => setDateTo(e.target.value)}
+                  className="px-2 py-1.5 text-xs border border-stone-200 rounded-md bg-white text-stone-600 focus:outline-none"
+                />
+              </div>
+              {(dateFrom || dateTo) && (
                 <button
-                  key={t}
-                  onClick={() => setTimeFilter(t)}
-                  className={`px-3 py-1.5 text-xs rounded-md transition-colors ${
-                    timeFilter === t
-                      ? "bg-stone-800 text-white"
-                      : "bg-white border border-stone-200 text-stone-500 hover:border-stone-300"
-                  }`}
+                  onClick={() => { setDateFrom(""); setDateTo(""); }}
+                  className="text-xs text-stone-400 hover:text-stone-600"
                 >
-                  {t === "ALL" ? "All Times" : t === "MORNING" ? "Morning" : t === "AFTERNOON" ? "Afternoon" : "Evening"}
+                  Clear
                 </button>
-              ))}
-              <div className="w-px bg-stone-200 mx-1" />
+              )}
+
+              <div className="w-px bg-stone-200 mx-1 self-stretch" />
+
+              {/* Available only */}
               <button
                 onClick={() => setAvailableOnly(!availableOnly)}
                 className={`px-3 py-1.5 text-xs rounded-md transition-colors ${
@@ -815,16 +886,7 @@ export default function AdminDashboard() {
                 ))}
               </div>
 
-              <h3 className="text-sm font-medium text-stone-700 mb-2">Background / Notes</h3>
-              <textarea
-                rows={3}
-                placeholder="Any relevant background, certifications, or notes..."
-                value={profileForm.backgroundInfo}
-                onChange={(e) => setProfileForm({ ...profileForm, backgroundInfo: e.target.value })}
-                className="w-full px-3 py-2 text-sm border border-stone-200 rounded-md focus:outline-none focus:ring-2 focus:ring-stone-300 resize-none"
-              />
-
-              <div className="mt-4 flex items-center gap-3">
+              <div className="flex items-center gap-3">
                 <button
                   disabled={actionLoading === "profile"}
                   onClick={saveProfile}
@@ -837,6 +899,89 @@ export default function AdminDashboard() {
                 )}
               </div>
             </div>
+          </div>
+        )}
+
+        {/* Access Control — SUPER_ADMIN only */}
+        {tab === "access" && session?.user?.role === "SUPER_ADMIN" && (
+          <div className="max-w-lg space-y-5">
+            <div className="bg-white rounded-xl border border-stone-200 p-6">
+              <h3 className="text-sm font-medium text-stone-700 mb-1">Add Email Rule</h3>
+              <p className="text-xs text-stone-400 mb-4">
+                <strong>Allow</strong> lets a non-Georgetown email sign in. <strong>Block</strong> prevents any email from signing in, including Georgetown addresses.
+              </p>
+              <div className="space-y-3">
+                <input
+                  type="email"
+                  placeholder="user@example.com"
+                  value={ruleEmail}
+                  onChange={(e) => setRuleEmail(e.target.value)}
+                  className="w-full px-3 py-2 text-sm border border-stone-200 rounded-md focus:outline-none focus:ring-2 focus:ring-stone-300"
+                />
+                <div className="flex gap-3">
+                  {(["ALLOW", "BLOCK"] as const).map((t) => (
+                    <button
+                      key={t}
+                      onClick={() => setRuleType(t)}
+                      className={`flex-1 py-2 text-sm rounded-md border transition-colors ${
+                        ruleType === t
+                          ? t === "ALLOW"
+                            ? "bg-emerald-700 text-white border-emerald-700"
+                            : "bg-red-600 text-white border-red-600"
+                          : "border-stone-200 text-stone-600 hover:border-stone-400"
+                      }`}
+                    >
+                      {t === "ALLOW" ? "Allow" : "Block"}
+                    </button>
+                  ))}
+                </div>
+                <input
+                  type="text"
+                  placeholder="Note (optional)"
+                  value={ruleNote}
+                  onChange={(e) => setRuleNote(e.target.value)}
+                  className="w-full px-3 py-2 text-sm border border-stone-200 rounded-md focus:outline-none focus:ring-2 focus:ring-stone-300"
+                />
+                <button
+                  disabled={!ruleEmail.trim() || actionLoading === "email-rule"}
+                  onClick={addEmailRule}
+                  className="w-full py-2 text-sm bg-stone-800 text-white hover:bg-stone-700 rounded-md transition-colors disabled:opacity-50"
+                >
+                  {actionLoading === "email-rule" ? "Saving..." : "Add Rule"}
+                </button>
+              </div>
+            </div>
+
+            {emailRules.length > 0 && (
+              <div className="bg-white rounded-xl border border-stone-200 divide-y divide-stone-100">
+                {emailRules.map((rule) => (
+                  <div key={rule.id} className="flex items-center justify-between px-5 py-3 gap-3">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <span className={`shrink-0 text-xs px-2 py-0.5 rounded-full font-medium ${
+                        rule.type === "ALLOW" ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-600"
+                      }`}>
+                        {rule.type}
+                      </span>
+                      <span className="text-sm text-stone-800 truncate">{rule.email}</span>
+                      {rule.note && <span className="text-xs text-stone-400 truncate">{rule.note}</span>}
+                    </div>
+                    <button
+                      disabled={actionLoading === `rule-${rule.id}`}
+                      onClick={() => removeEmailRule(rule.id)}
+                      className="shrink-0 text-xs px-2 py-1 bg-stone-100 hover:bg-stone-200 text-stone-500 rounded transition-colors disabled:opacity-50"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {emailRules.length === 0 && (
+              <div className="bg-white rounded-xl border border-stone-200 p-8 text-center">
+                <p className="text-stone-400 text-sm">No rules yet. All Georgetown emails can sign in by default.</p>
+              </div>
+            )}
           </div>
         )}
       </div>

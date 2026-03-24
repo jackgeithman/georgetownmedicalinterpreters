@@ -46,6 +46,11 @@ enum FeedbackAuthor {
   VOLUNTEER
 }
 
+enum EmailRuleType {
+  ALLOW
+  BLOCK
+}
+
 model User {
   id            String            @id @default(uuid())
   email         String            @unique
@@ -142,6 +147,14 @@ model SubBlockSignup {
   cancelledAt  DateTime?
   feedback     Feedback[]
   createdAt    DateTime     @default(now())
+}
+
+model EmailRule {
+  id        String        @id @default(uuid())
+  email     String        @unique
+  type      EmailRuleType
+  note      String?
+  createdAt DateTime      @default(now())
 }
 
 model Feedback {
