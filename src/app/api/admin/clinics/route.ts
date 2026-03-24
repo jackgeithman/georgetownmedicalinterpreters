@@ -2,12 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import bcrypt from "bcryptjs";
 
 async function getAdmin() {
   const session = await getServerSession(authOptions);
   if (!session?.user?.email) return null;
   const user = await prisma.user.findUnique({ where: { email: session.user.email } });
-  if (!user || user.role !== "ADMIN") return null;
+  if (!user || (user.role !== "ADMIN" && user.role !== "SUPER_ADMIN")) return null;
   return user;
 }
 
@@ -22,7 +23,9 @@ export async function GET() {
     },
   });
 
-  return NextResponse.json(clinics);
+  // Never return the hashed PIN over the wire
+  const safe = clinics.map(({ loginPin: _, ...c }) => c);
+  return NextResponse.json(safe);
 }
 
 function generatePin(): string {
@@ -40,9 +43,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Name and contact email required" }, { status: 400 });
   }
 
+  const plainPin = generatePin();
+  const hashedPin = await bcrypt.hash(plainPin, 10);
+
   const clinic = await prisma.clinic.create({
-    data: { name, address: address ?? "", contactName: contactName ?? "", contactEmail, loginPin: generatePin() },
+    data: { name, address: address ?? "", contactName: contactName ?? "", contactEmail, loginPin: hashedPin },
   });
 
-  return NextResponse.json(clinic);
+  const { loginPin: _, ...safe } = clinic;
+  // Return plaintext PIN once — admin must copy it now
+  return NextResponse.json({ ...safe, plainPin });
 }
