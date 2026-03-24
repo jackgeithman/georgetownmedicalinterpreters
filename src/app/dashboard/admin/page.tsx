@@ -31,7 +31,6 @@ type Clinic = {
   contactName: string;
   contactEmail: string;
   loginToken: string;
-  loginPin: string;
   _count?: { staff: number; slots: number };
 };
 
@@ -48,6 +47,7 @@ export default function AdminDashboard() {
   const [showClinicForm, setShowClinicForm] = useState(false);
   const [clinicForm, setClinicForm] = useState({ name: "", address: "", contactName: "", contactEmail: "" });
   const [assignModal, setAssignModal] = useState<{ userId: string; userName: string } | null>(null);
+  const [pinReveal, setPinReveal] = useState<{ clinicName: string; pin: string } | null>(null);
 
   useEffect(() => {
     if (status === "unauthenticated") router.push("/login");
@@ -65,8 +65,7 @@ export default function AdminDashboard() {
   }, []);
 
   useEffect(() => {
-    if (session?.user?.role === "ADMIN") {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (session?.user?.role === "ADMIN" || session?.user?.role === "SUPER_ADMIN") {
       fetchData();
     }
   }, [session, fetchData]);
@@ -90,18 +89,24 @@ export default function AdminDashboard() {
       body: JSON.stringify(clinicForm),
     });
     if (res.ok) {
+      const data = await res.json();
       await fetchData();
       setClinicForm({ name: "", address: "", contactName: "", contactEmail: "" });
       setShowClinicForm(false);
+      setPinReveal({ clinicName: data.name, pin: data.plainPin });
     }
     setActionLoading(null);
   };
 
-  const regeneratePin = async (clinicId: string) => {
+  const regeneratePin = async (clinicId: string, clinicName: string) => {
     if (!confirm("Generate a new PIN for this clinic? The old PIN will stop working immediately.")) return;
     setActionLoading(`pin-${clinicId}`);
     const res = await fetch(`/api/admin/clinics/${clinicId}`, { method: "PATCH" });
-    if (res.ok) await fetchData();
+    if (res.ok) {
+      const data = await res.json();
+      await fetchData();
+      setPinReveal({ clinicName, pin: data.plainPin });
+    }
     setActionLoading(null);
   };
 
@@ -394,8 +399,8 @@ export default function AdminDashboard() {
                         <div className="mt-3 flex items-center gap-3 flex-wrap">
                           <div className="flex items-center gap-1.5 bg-stone-50 border border-stone-200 rounded-md px-2 py-1">
                             <span className="text-xs text-stone-400">PIN</span>
-                            <span className="text-xs font-mono font-semibold text-stone-700 tracking-widest">
-                              {clinic.loginPin}
+                            <span className="text-xs font-mono font-semibold text-stone-400 tracking-widest">
+                              ••••••
                             </span>
                           </div>
                           <button
@@ -409,7 +414,7 @@ export default function AdminDashboard() {
                           </button>
                           <button
                             disabled={actionLoading === `pin-${clinic.id}`}
-                            onClick={() => regeneratePin(clinic.id)}
+                            onClick={() => regeneratePin(clinic.id, clinic.name)}
                             className="text-xs px-2 py-1 bg-amber-50 border border-amber-200 hover:bg-amber-100 text-amber-700 rounded-md transition-colors disabled:opacity-50"
                           >
                             Regenerate PIN
@@ -427,6 +432,35 @@ export default function AdminDashboard() {
           </div>
         )}
       </div>
+
+      {/* PIN Reveal Modal — shown once after create or regenerate */}
+      {pinReveal && (
+        <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl p-6 w-full max-w-sm shadow-xl">
+            <h3 className="text-sm font-semibold text-stone-800 mb-1">New PIN for {pinReveal.clinicName}</h3>
+            <p className="text-xs text-stone-400 mb-4">
+              Copy this PIN now — it cannot be shown again. Share it with the clinic directly.
+            </p>
+            <div className="flex items-center gap-3 bg-stone-50 border border-stone-200 rounded-lg px-4 py-3 mb-4">
+              <span className="text-2xl font-mono font-bold tracking-[0.3em] text-stone-800">
+                {pinReveal.pin}
+              </span>
+              <button
+                onClick={() => navigator.clipboard.writeText(pinReveal.pin)}
+                className="ml-auto text-xs px-2 py-1 bg-stone-200 hover:bg-stone-300 text-stone-600 rounded transition-colors"
+              >
+                Copy
+              </button>
+            </div>
+            <button
+              onClick={() => setPinReveal(null)}
+              className="w-full px-4 py-2 text-sm bg-stone-800 text-white hover:bg-stone-700 rounded-lg transition-colors"
+            >
+              Done
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Assign Clinic Modal */}
       {assignModal && (

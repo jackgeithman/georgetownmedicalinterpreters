@@ -2,12 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import bcrypt from "bcryptjs";
 
 async function getAdmin() {
   const session = await getServerSession(authOptions);
   if (!session?.user?.email) return null;
   const user = await prisma.user.findUnique({ where: { email: session.user.email } });
-  if (!user || user.role !== "ADMIN") return null;
+  if (!user || (user.role !== "ADMIN" && user.role !== "SUPER_ADMIN")) return null;
   return user;
 }
 
@@ -27,10 +28,15 @@ export async function PATCH(
   const clinic = await prisma.clinic.findUnique({ where: { id } });
   if (!clinic) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
+  const plainPin = generatePin();
+  const hashedPin = await bcrypt.hash(plainPin, 10);
+
   const updated = await prisma.clinic.update({
     where: { id },
-    data: { loginPin: generatePin() },
+    data: { loginPin: hashedPin },
   });
 
-  return NextResponse.json(updated);
+  const { loginPin: _, ...safe } = updated;
+  // Return plaintext PIN once — admin must copy it now
+  return NextResponse.json({ ...safe, plainPin });
 }
