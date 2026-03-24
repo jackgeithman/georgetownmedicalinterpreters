@@ -128,9 +128,12 @@ export default function ClinicDashboard() {
     const original = slots.find((s) => s.id === editSlot.id);
     if (!original) { void confirmSaveEdit(); return; }
 
+    const dateChanged = editSlot.date.split("T")[0] !== original.date.split("T")[0];
+    const langChanged = editSlot.language !== original.language;
+
     const cancelCount = original.signups.filter((s) => {
       if (s.status !== "ACTIVE") return false;
-      if (editSlot.language !== original.language) return true; // language change cancels all
+      if (langChanged || dateChanged) return true; // all signups affected
       return s.subBlockHour < editSlot.startTime || s.subBlockHour >= editSlot.endTime;
     }).length;
 
