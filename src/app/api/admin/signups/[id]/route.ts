@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { sendAdminRemovedNotice } from "@/lib/email";
 
 async function getAdmin() {
   const session = await getServerSession(authOptions);
@@ -20,7 +21,13 @@ export async function DELETE(
   if (!admin) return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
 
   const { id } = await params;
-  const signup = await prisma.subBlockSignup.findUnique({ where: { id } });
+  const signup = await prisma.subBlockSignup.findUnique({
+    where: { id },
+    include: {
+      slot: { include: { clinic: true } },
+      volunteer: { include: { user: true } },
+    },
+  });
   if (!signup || signup.status !== "ACTIVE") {
     return NextResponse.json({ error: "Signup not found" }, { status: 404 });
   }
@@ -29,6 +36,18 @@ export async function DELETE(
     where: { id },
     data: { status: "CANCELLED", cancelledAt: new Date() },
   });
+
+  // Automatic notification — no opt-in required
+  const email = signup.volunteer.user.email;
+  if (email) {
+    sendAdminRemovedNotice({
+      to: email,
+      volunteerName: signup.volunteer.user.name ?? "Volunteer",
+      clinicName: signup.slot.clinic.name,
+      date: signup.slot.date,
+      subBlockHour: signup.subBlockHour,
+    }).catch(() => {/* non-fatal */});
+  }
 
   return NextResponse.json({ ok: true });
 }
