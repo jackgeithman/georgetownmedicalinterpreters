@@ -1,5 +1,10 @@
 import { Resend } from "resend";
 
+// Set DISABLE_EMAIL=true in .env to suppress all sends during local development
+function emailDisabled() {
+  return process.env.DISABLE_EMAIL === "true";
+}
+
 // Lazy singleton — avoids instantiation at build time when env vars aren't present
 let _resend: Resend | null = null;
 function resend() {
@@ -19,6 +24,14 @@ function fmtTime(hour: number) {
   return `${h}:00 ${ampm}`;
 }
 
+async function send(payload: Parameters<ReturnType<typeof resend>["emails"]["send"]>[0]) {
+  if (emailDisabled()) {
+    console.log("[email disabled]", payload.subject, "→", payload.to);
+    return;
+  }
+  await resend().emails.send(payload);
+}
+
 // ── Volunteer emails ──────────────────────────────────────────────────────────
 
 export async function sendSignupReceipt(opts: {
@@ -29,7 +42,7 @@ export async function sendSignupReceipt(opts: {
   subBlockHour: number;
   language: string;
 }) {
-  await resend().emails.send({
+  await send({
     from: FROM(),
     to: opts.to,
     subject: `You're signed up — ${fmt(opts.date)} at ${fmtTime(opts.subBlockHour)}`,
@@ -52,7 +65,7 @@ export async function sendCancellationReceipt(opts: {
   date: Date;
   subBlockHour: number;
 }) {
-  await resend().emails.send({
+  await send({
     from: FROM(),
     to: opts.to,
     subject: `Signup cancelled — ${fmt(opts.date)} at ${fmtTime(opts.subBlockHour)}`,
@@ -78,7 +91,7 @@ export async function sendReminder(opts: {
   hoursUntil: number;
 }) {
   const label = opts.hoursUntil === 24 ? "24 hours" : opts.hoursUntil === 8 ? "8 hours" : "2 hours";
-  await resend().emails.send({
+  await send({
     from: FROM(),
     to: opts.to,
     subject: `Reminder: shift in ${label} — ${fmt(opts.date)}`,
@@ -102,7 +115,7 @@ export async function sendAdminRemovedNotice(opts: {
   date: Date;
   subBlockHour: number;
 }) {
-  await resend().emails.send({
+  await send({
     from: FROM(),
     to: opts.to,
     subject: `You've been removed from a shift — ${fmt(opts.date)}`,
@@ -124,7 +137,7 @@ export async function sendSlotCancelledNotice(opts: {
   date: Date;
   subBlockHour: number;
 }) {
-  await resend().emails.send({
+  await send({
     from: FROM(),
     to: opts.to,
     subject: `Shift cancelled — ${fmt(opts.date)}`,
@@ -146,7 +159,7 @@ export async function sendSlotEditedNotice(opts: {
   date: Date;
   subBlockHour: number;
 }) {
-  await resend().emails.send({
+  await send({
     from: FROM(),
     to: opts.to,
     subject: `Shift updated — your signup was affected — ${fmt(opts.date)}`,
@@ -170,7 +183,7 @@ export async function sendUnfilledSlotAlert(opts: {
   subBlockHour: number;
   language: string;
 }) {
-  await resend().emails.send({
+  await send({
     from: FROM(),
     to: opts.to,
     subject: `Urgent: open shift in less than 24 hrs — ${fmt(opts.date)} at ${fmtTime(opts.subBlockHour)}`,
@@ -217,7 +230,7 @@ export async function sendClinicDailySummary(opts: {
     )
     .join("");
 
-  await resend().emails.send({
+  await send({
     from: FROM(),
     to: opts.to,
     subject: `Daily summary — ${opts.clinicName}`,
@@ -248,7 +261,7 @@ export async function sendClinicVolunteerCancelAlert(opts: {
   filledAfterCancel: number;
   needed: number;
 }) {
-  await resend().emails.send({
+  await send({
     from: FROM(),
     to: opts.to,
     subject: `Volunteer cancelled — ${fmt(opts.date)} at ${fmtTime(opts.subBlockHour)}`,
@@ -278,7 +291,7 @@ export async function sendClinicUnfilledAlert(opts: {
     )
     .join("");
 
-  await resend().emails.send({
+  await send({
     from: FROM(),
     to: opts.to,
     subject: `Unfilled slots in less than 24 hrs — ${fmt(opts.date)}`,
@@ -303,7 +316,7 @@ export async function sendAdminPendingVolunteerAlert(opts: {
     )
     .join("");
 
-  await resend().emails.send({
+  await send({
     from: FROM(),
     to: opts.to,
     subject: `${opts.pendingCount} volunteer(s) awaiting approval`,
