@@ -12,6 +12,6 @@ export async function sendResendEmail(
   if (!process.env.RESEND_API_KEY) return;
   const resend = new Resend(process.env.RESEND_API_KEY);
   const from =
-    process.env.EMAIL_FROM ?? process.env.RESEND_FROM ?? "Georgetown Medical Interpreters <notifications@georgetownmedicalinterpreters.org>";
+    process.env.RESEND_FROM ?? "Georgetown Medical Interpreters <notifications@georgetownmedicalinterpreters.org>";
   await resend.emails.send({ from, to, subject, html });
 }
