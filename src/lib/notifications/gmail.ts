@@ -4,13 +4,14 @@ function getAuth() {
   const client = new google.auth.OAuth2(
     process.env.GOOGLE_CLIENT_ID,
     process.env.GOOGLE_CLIENT_SECRET,
+    "https://developers.google.com/oauthplayground",
   );
   client.setCredentials({ refresh_token: process.env.GOOGLE_GMAIL_REFRESH_TOKEN });
   return client;
 }
 
 function buildRaw(to: string, subject: string, html: string): string {
-  const from = `InterpretConnect <${process.env.GOOGLE_GMAIL_SENDER_EMAIL}>`;
+  const from = `Georgetown Medical Interpreters <${process.env.GOOGLE_GMAIL_SENDER_EMAIL}>`;
   const lines = [
     `From: ${from}`,
     `To: ${to}`,
@@ -33,5 +34,5 @@ export async function sendGmail(to: string, subject: string, html: string): Prom
   await gmail.users.messages.send({
     userId: "me",
     requestBody: { raw: buildRaw(to, subject, html) },
-  });
+  }).catch(console.error);
 }
