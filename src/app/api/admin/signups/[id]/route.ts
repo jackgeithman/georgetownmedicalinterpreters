@@ -40,7 +40,7 @@ export async function DELETE(
   // Automatic notification — no opt-in required
   const email = signup.volunteer.user.email;
   if (email) {
-    sendAdminRemovedNotice({
+    await sendAdminRemovedNotice({
       to: email,
       volunteerName: signup.volunteer.user.name ?? "Volunteer",
       clinicName: signup.slot.clinic.name,

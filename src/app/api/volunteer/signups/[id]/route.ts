@@ -73,9 +73,9 @@ export async function DELETE(
   // Load notif prefs separately so auth check stays simple
   const notifPrefs = await prisma.volunteerNotifPrefs.findUnique({ where: { volunteerId: user.volunteer.id } }).catch(() => null);
 
-  // ── Send cancellation receipt immediately ──
+  // ── Send cancellation receipt — awaited so serverless function doesn't exit first ──
   if ((notifPrefs?.cancellationReceipt ?? true) && user.email) {
-    sendCancellationReceipt({
+    await sendCancellationReceipt({
       to: user.email,
       volunteerName: user.name ?? "Volunteer",
       clinicName: clinic.name,
@@ -92,7 +92,7 @@ export async function DELETE(
       const filledAfterCancel = await prisma.subBlockSignup.count({
         where: { slotId: slot.id, subBlockHour: signup.subBlockHour, status: "ACTIVE" },
       });
-      sendClinicVolunteerCancelAlert({
+      await sendClinicVolunteerCancelAlert({
         to: clinic.contactEmail,
         clinicName: clinic.name,
         volunteerName: user.name ?? user.email ?? "A volunteer",
