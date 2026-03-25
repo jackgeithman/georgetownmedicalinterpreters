@@ -2,13 +2,19 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { sendSignupReceipt } from "@/lib/email";
+
+function langLabel(code: string) {
+  const map: Record<string, string> = { ES: "Spanish", ZH: "Mandarin", KO: "Korean", AR: "Arabic" };
+  return map[code] ?? code;
+}
 
 async function getActiveVolunteer() {
   const session = await getServerSession(authOptions);
   if (!session?.user?.email) return null;
   const user = await prisma.user.findUnique({
     where: { email: session.user.email },
-    include: { volunteer: true },
+    include: { volunteer: { include: { notifPrefs: true } } },
   });
   if (!user) return null;
   const isVolunteerRole = user.role === "VOLUNTEER" || user.role === "ADMIN" || user.role === "SUPER_ADMIN";
@@ -43,8 +49,10 @@ export async function POST(req: NextRequest) {
   if (!profile) {
     profile = await prisma.volunteerProfile.create({
       data: { userId: user.id, languages: [] },
+      include: { notifPrefs: true },
     });
   }
+  if (!profile) return NextResponse.json({ error: "Profile error" }, { status: 500 });
 
   const body = await req.json();
   const { slotId, subBlockHour } = body;
@@ -91,14 +99,20 @@ export async function POST(req: NextRequest) {
     data: { slotId, volunteerId: profile.id, subBlockHour: hour },
   });
 
-  // Queue signup receipt — delayed 2 min so toggle-happy signups don't flood emails
-  await prisma.pendingNotif.create({
-    data: {
-      type: "SIGNUP_RECEIPT",
-      signupId: signup.id,
-      scheduledFor: new Date(Date.now() + 2 * 60_000),
-    },
-  }).catch(() => {/* non-fatal */});
+  // Send signup receipt immediately if opted in
+  if (profile.notifPrefs?.signupReceipt && user.email) {
+    const clinic = await prisma.clinic.findUnique({ where: { id: slot.clinicId } });
+    if (clinic) {
+      sendSignupReceipt({
+        to: user.email,
+        volunteerName: user.name ?? "Volunteer",
+        clinicName: clinic.name,
+        date: slot.date,
+        subBlockHour: hour,
+        language: langLabel(slot.language),
+      }).catch(() => {/* non-fatal */});
+    }
+  }
 
   return NextResponse.json(signup, { status: 201 });
 }

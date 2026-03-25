@@ -184,16 +184,14 @@ model Feedback {
 }
 
 model VolunteerNotifPrefs {
-  id                 String           @id @default(uuid())
-  volunteerId        String           @unique
-  volunteer          VolunteerProfile @relation(fields: [volunteerId], references: [id])
-  signupReceipt      Boolean          @default(true)
-  cancellationReceipt Boolean         @default(true)
-  reminder24h        Boolean          @default(true)
-  reminder8h         Boolean          @default(false)
-  reminder2h         Boolean          @default(false)
-  unfilledSlotAlert  Boolean          @default(false)
-  updatedAt          DateTime         @updatedAt
+  id                  String           @id @default(uuid())
+  volunteerId         String           @unique
+  volunteer           VolunteerProfile @relation(fields: [volunteerId], references: [id])
+  signupReceipt       Boolean          @default(true)
+  cancellationReceipt Boolean          @default(true)
+  reminder24h         Boolean          @default(true)
+  unfilledSlotAlert   Boolean          @default(false)
+  updatedAt           DateTime         @updatedAt
 }
 
 model ClinicNotifPrefs {
@@ -204,18 +202,6 @@ model ClinicNotifPrefs {
   volunteerCancelWindow Int?
   unfilledAlert24h      Boolean  @default(true)
   updatedAt             DateTime @updatedAt
-}
-
-model PendingNotif {
-  id           String    @id @default(uuid())
-  type         NotifType
-  signupId     String?
-  slotId       String?
-  subBlockHour Int?
-  volunteerId  String?
-  scheduledFor DateTime
-  processed    Boolean   @default(false)
-  createdAt    DateTime  @default(now())
 }
 
 model NotifLog {

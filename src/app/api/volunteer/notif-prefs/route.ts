@@ -41,7 +41,7 @@ export async function PATCH(req: NextRequest) {
   }
 
   const body = await req.json();
-  const allowed = ["signupReceipt", "cancellationReceipt", "reminder24h", "reminder8h", "reminder2h", "unfilledSlotAlert"] as const;
+  const allowed = ["signupReceipt", "cancellationReceipt", "reminder24h", "unfilledSlotAlert"] as const;
   const data: Record<string, boolean> = {};
   for (const key of allowed) {
     if (typeof body[key] === "boolean") data[key] = body[key];
@@ -61,8 +61,6 @@ function defaultPrefs() {
     signupReceipt: true,
     cancellationReceipt: true,
     reminder24h: true,
-    reminder8h: false,
-    reminder2h: false,
     unfilledSlotAlert: false,
   };
 }
