@@ -29,7 +29,9 @@ async function send(payload: Parameters<ReturnType<typeof resend>["emails"]["sen
     console.log("[email disabled]", payload.subject, "→", payload.to);
     return;
   }
-  await resend().emails.send(payload);
+  console.log("[email] sending:", payload.subject, "→", payload.to);
+  const result = await resend().emails.send(payload);
+  console.log("[email] result:", JSON.stringify(result));
 }
 
 // ── Volunteer emails ──────────────────────────────────────────────────────────
