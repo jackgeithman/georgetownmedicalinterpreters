@@ -71,7 +71,7 @@ export async function DELETE(
   const clinic = slot.clinic;
 
   // ── Send cancellation receipt immediately ──
-  if (user.volunteer.notifPrefs?.cancellationReceipt && user.email) {
+  if ((user.volunteer.notifPrefs?.cancellationReceipt ?? true) && user.email) {
     sendCancellationReceipt({
       to: user.email,
       volunteerName: user.name ?? "Volunteer",

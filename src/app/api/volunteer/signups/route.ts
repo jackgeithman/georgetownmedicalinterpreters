@@ -99,8 +99,8 @@ export async function POST(req: NextRequest) {
     data: { slotId, volunteerId: profile.id, subBlockHour: hour },
   });
 
-  // Send signup receipt immediately if opted in
-  if (profile.notifPrefs?.signupReceipt && user.email) {
+  // Send signup receipt immediately — default true if no prefs row exists yet
+  if ((profile.notifPrefs?.signupReceipt ?? true) && user.email) {
     const clinic = await prisma.clinic.findUnique({ where: { id: slot.clinicId } });
     if (clinic) {
       sendSignupReceipt({
