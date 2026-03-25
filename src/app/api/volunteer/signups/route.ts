@@ -14,7 +14,7 @@ async function getActiveVolunteer() {
   if (!session?.user?.email) return null;
   const user = await prisma.user.findUnique({
     where: { email: session.user.email },
-    include: { volunteer: { include: { notifPrefs: true } } },
+    include: { volunteer: true },
   });
   if (!user) return null;
   const isVolunteerRole = user.role === "VOLUNTEER" || user.role === "ADMIN" || user.role === "SUPER_ADMIN";
@@ -49,7 +49,6 @@ export async function POST(req: NextRequest) {
   if (!profile) {
     profile = await prisma.volunteerProfile.create({
       data: { userId: user.id, languages: [] },
-      include: { notifPrefs: true },
     });
   }
   if (!profile) return NextResponse.json({ error: "Profile error" }, { status: 500 });
@@ -99,8 +98,11 @@ export async function POST(req: NextRequest) {
     data: { slotId, volunteerId: profile.id, subBlockHour: hour },
   });
 
+  // Load notif prefs separately — keeps getActiveVolunteer simple and robust
+  const notifPrefs = await prisma.volunteerNotifPrefs.findUnique({ where: { volunteerId: profile.id } }).catch(() => null);
+
   // Send signup receipt immediately — default true if no prefs row exists yet
-  if ((profile.notifPrefs?.signupReceipt ?? true) && user.email) {
+  if ((notifPrefs?.signupReceipt ?? true) && user.email) {
     const clinic = await prisma.clinic.findUnique({ where: { id: slot.clinicId } });
     if (clinic) {
       sendSignupReceipt({
