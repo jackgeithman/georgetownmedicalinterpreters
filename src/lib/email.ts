@@ -8,7 +8,9 @@ function emailDisabled() {
 // Lazy singleton — avoids instantiation at build time when env vars aren't present
 let _resend: Resend | null = null;
 function resend() {
-  if (!_resend) _resend = new Resend(process.env.RESEND_API_KEY);
+  const key = process.env.RESEND_API_KEY;
+  console.log("[email] RESEND_API_KEY present:", !!key, "length:", key?.length ?? 0, "prefix:", key?.slice(0, 6) ?? "none");
+  if (!_resend) _resend = new Resend(key);
   return _resend;
 }
 function FROM() {
