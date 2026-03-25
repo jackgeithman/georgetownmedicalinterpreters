@@ -113,7 +113,7 @@ export async function POST(req: NextRequest) {
         date: slot.date,
         subBlockHour: hour,
         language: langLabel(slot.language),
-      }).catch(() => {/* non-fatal — email failure never blocks signup */});
+      }).catch((err) => console.error("[email] signup receipt failed:", err));
     }
   }
 

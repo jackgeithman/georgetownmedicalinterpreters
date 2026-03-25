@@ -81,7 +81,7 @@ export async function DELETE(
       clinicName: clinic.name,
       date: slot.date,
       subBlockHour: signup.subBlockHour,
-    }).catch(() => {/* non-fatal */});
+    }).catch((err) => console.error("[email] cancel receipt failed:", err));
   }
 
   // ── If within 24h of the slot, handle clinic alert + unfilled volunteer alerts ──
