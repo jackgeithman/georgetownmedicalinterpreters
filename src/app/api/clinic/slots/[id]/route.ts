@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { sendSlotCancelledNotice, sendSlotEditedNotice } from "@/lib/email";
+import { notifySlotUpdated, notifySlotCancelled, type AffectedSignup } from "@/lib/notifications";
 
 async function getClinicUser() {
   const session = await getServerSession(authOptions);
@@ -10,29 +10,14 @@ async function getClinicUser() {
   return { clinicId: session.user.clinicId };
 }
 
-type AffectedSignup = {
-  id: string;
-  subBlockHour: number;
-  slot: { date: Date; clinic: { name: string } };
-  volunteer: { user: { email: string | null; name: string | null } };
-};
-
-async function notifyAffectedSignups(signups: AffectedSignup[], type: "edited" | "cancelled") {
-  for (const s of signups) {
-    const email = s.volunteer.user.email;
-    if (!email) continue;
-    const opts = {
-      to: email,
-      volunteerName: s.volunteer.user.name ?? "Volunteer",
-      clinicName: s.slot.clinic.name,
-      date: s.slot.date,
-      subBlockHour: s.subBlockHour,
-    };
-    try {
-      if (type === "cancelled") await sendSlotCancelledNotice(opts);
-      else await sendSlotEditedNotice(opts);
-    } catch {/* non-fatal */}
-  }
+async function fetchActiveSignups(slotIds: string[]) {
+  return prisma.subBlockSignup.findMany({
+    where: { slotId: { in: slotIds }, status: "ACTIVE" },
+    include: {
+      volunteer: { include: { user: { select: { email: true, name: true } } } },
+      slot: { select: { date: true } },
+    },
+  });
 }
 
 export async function PATCH(
@@ -52,7 +37,6 @@ export async function PATCH(
   }
 
   const body = await req.json();
-  // editScope: "single" | "this_and_future" — defaults to "single"
   const { editScope = "single", ...fields } = body;
 
   const updateData: Record<string, unknown> = {};
@@ -65,39 +49,45 @@ export async function PATCH(
 
   const newStart = updateData.startTime != null ? (updateData.startTime as number) : slot.startTime;
   const newEnd = updateData.endTime != null ? (updateData.endTime as number) : slot.endTime;
+  const newDate = updateData.date ? (updateData.date as Date) : undefined;
+  const newLanguage = (updateData.language as string | undefined) ?? slot.language;
+  const newNotes = updateData.notes !== undefined ? (updateData.notes as string | null) : slot.notes;
 
   if (newEnd <= newStart) {
     return NextResponse.json({ error: "End time must be after start time" }, { status: 400 });
   }
 
-  // If language or date changed, ALL active signups must be cancelled
+  // If language or date changed, cancel ALL active signups
   const languageChanged = updateData.language != null && updateData.language !== slot.language;
-  const dateChanged =
-    updateData.date != null &&
-    (updateData.date as Date).toDateString() !== slot.date.toDateString();
+  const dateChanged = updateData.date != null && (updateData.date as Date).toDateString() !== slot.date.toDateString();
   const cancelAll = languageChanged || dateChanged;
 
   if (editScope === "this_and_future" && slot.recurrenceGroupId) {
     const futureSlots = await prisma.slot.findMany({
       where: { recurrenceGroupId: slot.recurrenceGroupId, status: "ACTIVE", date: { gte: slot.date } },
-      include: { clinic: true },
+      select: { id: true },
     });
     const futureIds = futureSlots.map((s) => s.id);
 
-    // Collect affected signups before cancelling
-    const affected = await prisma.subBlockSignup.findMany({
-      where: {
-        slotId: { in: futureIds },
-        status: "ACTIVE",
-        ...(cancelAll ? {} : { OR: [{ subBlockHour: { lt: newStart } }, { subBlockHour: { gte: newEnd } }] }),
-      },
-      include: {
-        slot: { include: { clinic: true } },
-        volunteer: { include: { user: true } },
-      },
-    });
+    const allSignups = await fetchActiveSignups(futureIds);
+    const toCancel: AffectedSignup[] = [];
+    const toUpdate: AffectedSignup[] = [];
 
-    await prisma.subBlockSignup.updateMany({
+    for (const s of allSignups) {
+      const entry: AffectedSignup = {
+        signupId: s.id,
+        volunteerEmail: s.volunteer.user.email,
+        volunteerName: s.volunteer.user.name ?? s.volunteer.user.email,
+        subBlockHour: s.subBlockHour,
+      };
+      if (cancelAll || s.subBlockHour < newStart || s.subBlockHour >= newEnd) {
+        toCancel.push(entry);
+      } else {
+        toUpdate.push(entry);
+      }
+    }
+
+    const { count: cancelledCount } = await prisma.subBlockSignup.updateMany({
       where: {
         slotId: { in: futureIds },
         status: "ACTIVE",
@@ -108,25 +98,40 @@ export async function PATCH(
 
     await prisma.slot.updateMany({ where: { id: { in: futureIds } }, data: updateData });
 
-    await notifyAffectedSignups(affected, "edited").catch(() => {/* non-fatal */});
+    await notifySlotUpdated({
+      cancelledSignups: toCancel,
+      updatedSignups: toUpdate,
+      clinicName: slot.clinic.name,
+      clinicAddress: slot.clinic.address,
+      language: newLanguage,
+      date: slot.date,
+      newDate,
+      notes: newNotes,
+    }).catch(console.error);
 
-    return NextResponse.json({ updatedCount: futureIds.length });
+    return NextResponse.json({ updatedCount: futureIds.length, cancelledCount });
   }
 
-  // Single slot edit — collect affected signups before cancelling
-  const affected = await prisma.subBlockSignup.findMany({
-    where: {
-      slotId: id,
-      status: "ACTIVE",
-      ...(cancelAll ? {} : { OR: [{ subBlockHour: { lt: newStart } }, { subBlockHour: { gte: newEnd } }] }),
-    },
-    include: {
-      slot: { include: { clinic: true } },
-      volunteer: { include: { user: true } },
-    },
-  });
+  // Single slot edit
+  const allSignups = await fetchActiveSignups([id]);
+  const toCancel: AffectedSignup[] = [];
+  const toUpdate: AffectedSignup[] = [];
 
-  await prisma.subBlockSignup.updateMany({
+  for (const s of allSignups) {
+    const entry: AffectedSignup = {
+      signupId: s.id,
+      volunteerEmail: s.volunteer.user.email,
+      volunteerName: s.volunteer.user.name ?? s.volunteer.user.email,
+      subBlockHour: s.subBlockHour,
+    };
+    if (cancelAll || s.subBlockHour < newStart || s.subBlockHour >= newEnd) {
+      toCancel.push(entry);
+    } else {
+      toUpdate.push(entry);
+    }
+  }
+
+  const { count: cancelledCount } = await prisma.subBlockSignup.updateMany({
     where: {
       slotId: id,
       status: "ACTIVE",
@@ -137,9 +142,18 @@ export async function PATCH(
 
   const updated = await prisma.slot.update({ where: { id }, data: updateData });
 
-  await notifyAffectedSignups(affected, "edited").catch(() => {/* non-fatal */});
+  await notifySlotUpdated({
+    cancelledSignups: toCancel,
+    updatedSignups: toUpdate,
+    clinicName: slot.clinic.name,
+    clinicAddress: slot.clinic.address,
+    language: newLanguage,
+    date: slot.date,
+    newDate,
+    notes: newNotes,
+  }).catch(console.error);
 
-  return NextResponse.json({ slot: updated });
+  return NextResponse.json({ slot: updated, cancelledCount });
 }
 
 export async function DELETE(
@@ -150,29 +164,26 @@ export async function DELETE(
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
 
   const { id } = await params;
-  const slot = await prisma.slot.findUnique({ where: { id } });
+  const slot = await prisma.slot.findUnique({
+    where: { id },
+    include: { clinic: true },
+  });
   if (!slot || slot.clinicId !== user.clinicId) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  // deleteScope: "single" | "this_and_future" — read from query param or body
   const url = new URL(req.url);
   const deleteScope = url.searchParams.get("deleteScope") ?? "single";
 
   if (deleteScope === "this_and_future" && slot.recurrenceGroupId) {
     const futureSlots = await prisma.slot.findMany({
       where: { recurrenceGroupId: slot.recurrenceGroupId, status: "ACTIVE", date: { gte: slot.date } },
-      select: { id: true },
+      select: { id: true, date: true, language: true },
     });
     const futureIds = futureSlots.map((s) => s.id);
 
-    const affected = await prisma.subBlockSignup.findMany({
-      where: { slotId: { in: futureIds }, status: "ACTIVE" },
-      include: {
-        slot: { include: { clinic: true } },
-        volunteer: { include: { user: true } },
-      },
-    });
+    const allSignups = await fetchActiveSignups(futureIds);
+    const slotDateMap = new Map(futureSlots.map((s) => [s.id, s.date]));
 
     await prisma.subBlockSignup.updateMany({
       where: { slotId: { in: futureIds }, status: "ACTIVE" },
@@ -184,19 +195,32 @@ export async function DELETE(
       data: { status: "CANCELLED" },
     });
 
-    await notifyAffectedSignups(affected, "cancelled").catch(() => {/* non-fatal */});
+    const bySlot = new Map<string, AffectedSignup[]>();
+    for (const s of allSignups) {
+      if (!bySlot.has(s.slotId)) bySlot.set(s.slotId, []);
+      bySlot.get(s.slotId)!.push({
+        signupId: s.id,
+        volunteerEmail: s.volunteer.user.email,
+        volunteerName: s.volunteer.user.name ?? s.volunteer.user.email,
+        subBlockHour: s.subBlockHour,
+      });
+    }
+
+    await Promise.all(
+      [...bySlot.entries()].map(([slotId, affected]) =>
+        notifySlotCancelled({
+          affectedSignups: affected,
+          clinicName: slot.clinic.name,
+          language: slot.language,
+          date: slotDateMap.get(slotId) ?? slot.date,
+        }).catch(console.error)
+      )
+    );
 
     return NextResponse.json({ cancelledCount: futureIds.length });
   }
 
-  // Single delete
-  const affected = await prisma.subBlockSignup.findMany({
-    where: { slotId: id, status: "ACTIVE" },
-    include: {
-      slot: { include: { clinic: true } },
-      volunteer: { include: { user: true } },
-    },
-  });
+  const affectedSignups = await fetchActiveSignups([id]);
 
   await prisma.subBlockSignup.updateMany({
     where: { slotId: id, status: "ACTIVE" },
@@ -205,7 +229,17 @@ export async function DELETE(
 
   await prisma.slot.update({ where: { id }, data: { status: "CANCELLED" } });
 
-  await notifyAffectedSignups(affected, "cancelled").catch(() => {/* non-fatal */});
+  await notifySlotCancelled({
+    affectedSignups: affectedSignups.map((s) => ({
+      signupId: s.id,
+      volunteerEmail: s.volunteer.user.email,
+      volunteerName: s.volunteer.user.name ?? s.volunteer.user.email,
+      subBlockHour: s.subBlockHour,
+    })),
+    clinicName: slot.clinic.name,
+    language: slot.language,
+    date: slot.date,
+  }).catch(console.error);
 
   return NextResponse.json({ ok: true });
 }

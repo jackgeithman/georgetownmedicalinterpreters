@@ -5,7 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
 
 const ERROR_MESSAGES: Record<string, string> = {
-  DomainNotAllowed: "Only Georgetown University accounts (@georgetown.edu) may sign in here.",
+  DomainNotAllowed: "Sign-in not allowed. Please contact your coordinator.",
   OAuthAccountNotLinked: "An account with this email already exists. Use your original sign-in method.",
   Default: "Something went wrong. Please try again.",
 };
@@ -23,7 +23,6 @@ function LoginContent() {
     setClinicError("");
     setClinicLoading(true);
 
-    // Look up which clinic this PIN belongs to
     const lookupRes = await fetch("/api/clinic-pin-lookup", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -39,7 +38,6 @@ function LoginContent() {
 
     const { token } = await lookupRes.json();
 
-    // Sign in using the found token + PIN
     const result = await signIn("credentials", { token, pin, redirect: false });
     setClinicLoading(false);
 
@@ -58,7 +56,7 @@ function LoginContent() {
           <h1 className="text-xl font-semibold text-stone-800 tracking-tight">
             Georgetown Medical Interpreters
           </h1>
-          <p className="text-sm text-stone-400 mt-1">InterpretConnect</p>
+          <p className="text-sm text-stone-400 mt-1">GMI Volunteer Platform</p>
         </div>
 
         {errorKey && (
@@ -74,7 +72,7 @@ function LoginContent() {
               Volunteers &amp; Admins
             </p>
             <p className="text-sm text-stone-400 mb-4">
-              Sign in with your Georgetown University account.
+              Sign in with your Google account.
             </p>
             <button
               onClick={() => signIn("google", { callbackUrl: "/dashboard" })}
@@ -86,7 +84,7 @@ function LoginContent() {
                 <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
                 <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
               </svg>
-              Sign in with Georgetown Google
+              Sign in with Google
             </button>
           </div>
 
@@ -96,7 +94,7 @@ function LoginContent() {
               Clinic Staff
             </p>
             <p className="text-sm text-stone-400 mb-4">
-              Enter your clinic&apos;s 8-digit PIN to sign in.
+              Enter your clinic&apos;s PIN to sign in.
             </p>
 
             {clinicError && (
@@ -109,9 +107,9 @@ function LoginContent() {
               <input
                 type="password"
                 inputMode="numeric"
-                pattern="[0-9]{8}"
+                pattern="[0-9]{6,8}"
                 maxLength={8}
-                placeholder="8-digit PIN"
+                placeholder="PIN"
                 value={pin}
                 onChange={(e) => setPin(e.target.value.replace(/\D/g, ""))}
                 disabled={clinicLoading}
@@ -119,7 +117,7 @@ function LoginContent() {
               />
               <button
                 type="submit"
-                disabled={pin.length !== 8 || clinicLoading}
+                disabled={pin.length < 6 || clinicLoading}
                 className="w-full px-4 py-2.5 bg-stone-800 hover:bg-stone-700 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50"
               >
                 {clinicLoading ? "Signing in..." : "Sign In"}

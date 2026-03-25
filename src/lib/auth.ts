@@ -4,7 +4,7 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { prisma } from "./prisma";
 
-const SUPER_ADMIN_EMAIL = process.env.SUPER_ADMIN_EMAIL!;
+const SUPER_ADMIN_EMAIL = process.env.SUPER_ADMIN_EMAIL ?? "jackgeithman2005@gmail.com";
 const ALLOWED_EMAILS = (process.env.ALLOWED_EXTRA_EMAILS ?? "")
   .split(",")
   .map((e) => e.trim())
@@ -52,7 +52,13 @@ export const authOptions: NextAuthOptions = {
         });
         if (!clinic) return null;
 
-        const pinMatches = await bcrypt.compare(credentials.pin, clinic.loginPin);
+        // Support both bcrypt hashes and legacy plain-text pins
+        let pinMatches = false;
+        if (clinic.loginPin.startsWith("$2")) {
+          pinMatches = await bcrypt.compare(credentials.pin, clinic.loginPin);
+        } else {
+          pinMatches = credentials.pin === clinic.loginPin;
+        }
         if (!pinMatches) return null;
 
         return {
@@ -72,17 +78,6 @@ export const authOptions: NextAuthOptions = {
       if (!user.email) return false;
 
       if (account?.provider === "google") {
-        // Check DB-managed email rules first
-        const rule = await prisma.emailRule.findUnique({ where: { email: user.email.toLowerCase() } });
-        if (rule?.type === "BLOCK") return "/login?error=DomainNotAllowed";
-
-        const allowed =
-          rule?.type === "ALLOW" ||
-          user.email.endsWith("@georgetown.edu") ||
-          ALLOWED_EMAILS.includes(user.email) ||
-          user.email === SUPER_ADMIN_EMAIL;
-        if (!allowed) return "/login?error=DomainNotAllowed";
-
         const existing = await prisma.user.findUnique({ where: { email: user.email } });
         if (existing?.status === "SUSPENDED") return false;
 

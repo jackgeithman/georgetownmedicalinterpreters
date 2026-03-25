@@ -2,15 +2,38 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import {
-  sendCancellationReceipt,
-  sendClinicVolunteerCancelAlert,
-  sendUnfilledSlotAlert,
-} from "@/lib/email";
+import { notifyVolunteerCancellation, notifyNoShow } from "@/lib/notifications";
+import { sendGmail } from "@/lib/notifications/gmail";
+import { sendResendEmail } from "@/lib/notifications/resend";
 
-function langLabel(code: string) {
-  const map: Record<string, string> = { ES: "Spanish", ZH: "Mandarin", KO: "Korean", AR: "Arabic" };
-  return map[code] ?? code;
+const LANG_NAMES: Record<string, string> = {
+  ES: "Spanish", ZH: "Chinese (Mandarin)", KO: "Korean", AR: "Arabic",
+};
+
+function fmt12(h: number) {
+  const period = h < 12 ? "AM" : "PM";
+  const h12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
+  return `${h12}:00 ${period}`;
+}
+
+function fmtDate(d: Date) {
+  return d.toLocaleDateString("en-US", {
+    weekday: "long", year: "numeric", month: "long", day: "numeric",
+    timeZone: "America/New_York",
+  });
+}
+
+function wrap(title: string, body: string) {
+  return `<!DOCTYPE html><html><body style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:24px;color:#1a1a1a">
+<div style="border-bottom:3px solid #002147;padding-bottom:12px;margin-bottom:24px">
+  <h2 style="color:#002147;margin:0;font-size:20px">Georgetown Medical Interpreters</h2>
+</div>
+<h3 style="color:#002147;margin-top:0">${title}</h3>
+${body}
+<div style="margin-top:32px;padding-top:16px;border-top:1px solid #e5e7eb;font-size:11px;color:#9ca3af">
+  Georgetown Medical Interpreters &middot; georgetownmedicalinterpreters.org
+</div>
+</body></html>`;
 }
 
 async function getActiveVolunteer() {
@@ -37,9 +60,7 @@ export async function DELETE(
   const { id } = await params;
   const signup = await prisma.subBlockSignup.findUnique({
     where: { id },
-    include: {
-      slot: { include: { clinic: { include: { notifPrefs: true } } } },
-    },
+    include: { slot: { include: { clinic: true } } },
   });
   if (!signup || signup.volunteerId !== user.volunteer.id || signup.status !== "ACTIVE") {
     return NextResponse.json({ error: "Signup not found" }, { status: 404 });
@@ -54,7 +75,6 @@ export async function DELETE(
     data: { status: "CANCELLED", cancelledAt: new Date() },
   });
 
-  // Increment cancellation counters
   const counterUpdate: { cancellationsWithin24h?: { increment: number }; cancellationsWithin2h?: { increment: number } } = {};
   if (hoursUntilSlot < 24) {
     counterUpdate.cancellationsWithin24h = { increment: 1 };
@@ -70,45 +90,36 @@ export async function DELETE(
   const slot = signup.slot;
   const clinic = slot.clinic;
 
-  // Load notif prefs separately so auth check stays simple
-  const notifPrefs = await prisma.volunteerNotifPrefs.findUnique({ where: { volunteerId: user.volunteer.id } }).catch(() => null);
+  // Check volunteer notif prefs
+  const notifPrefs = await prisma.volunteerNotifPrefs.findUnique({
+    where: { volunteerId: user.volunteer.id },
+  }).catch(() => null);
 
-  // ── Send cancellation receipt — awaited so serverless function doesn't exit first ──
   if ((notifPrefs?.cancellationReceipt ?? true) && user.email) {
-    await sendCancellationReceipt({
-      to: user.email,
-      volunteerName: user.name ?? "Volunteer",
+    await notifyVolunteerCancellation({
+      signupId: signup.id,
+      volunteerEmail: user.email,
+      volunteerName: user.name ?? user.email,
       clinicName: clinic.name,
+      clinicContactEmail: clinic.contactEmail,
+      clinicUrgentAlerts: clinic.urgentCancellationAlerts,
+      language: slot.language,
       date: slot.date,
       subBlockHour: signup.subBlockHour,
-    }).catch((err) => console.error("[email] cancel receipt failed:", err));
+      hoursUntilSlot,
+    }).catch(console.error);
+  } else {
+    // Even if receipt is off, still delete the calendar event
+    const { deleteCalEvent } = await import("@/lib/notifications/gcal");
+    await deleteCalEvent(signup.id).catch(() => {});
   }
 
-  // ── If within 24h of the slot, handle clinic alert + unfilled volunteer alerts ──
+  // If within 24h and slot is now underfilled, alert qualified volunteers
   if (hoursUntilSlot > 0 && hoursUntilSlot <= 24) {
-    // Clinic volunteer-cancel alert (check their window preference)
-    const clinicPrefs = clinic.notifPrefs;
-    if (clinicPrefs?.volunteerCancelWindow != null && hoursUntilSlot <= clinicPrefs.volunteerCancelWindow) {
-      const filledAfterCancel = await prisma.subBlockSignup.count({
-        where: { slotId: slot.id, subBlockHour: signup.subBlockHour, status: "ACTIVE" },
-      });
-      await sendClinicVolunteerCancelAlert({
-        to: clinic.contactEmail,
-        clinicName: clinic.name,
-        volunteerName: user.name ?? user.email ?? "A volunteer",
-        date: slot.date,
-        subBlockHour: signup.subBlockHour,
-        filledAfterCancel,
-        needed: slot.interpreterCount,
-      }).catch(() => {/* non-fatal */});
-    }
-
-    // Unfilled slot alert — check if sub-block is now underfilled
     const filledCount = await prisma.subBlockSignup.count({
       where: { slotId: slot.id, subBlockHour: signup.subBlockHour, status: "ACTIVE" },
     });
     if (filledCount < slot.interpreterCount) {
-      // Find opted-in volunteers who qualify and aren't already signed up for this block
       const alreadySignedUpIds = (
         await prisma.subBlockSignup.findMany({
           where: { slotId: slot.id, subBlockHour: signup.subBlockHour, status: "ACTIVE" },
@@ -126,9 +137,10 @@ export async function DELETE(
         include: { user: true },
       });
 
+      const lang = LANG_NAMES[slot.language] ?? slot.language;
+
       for (const vol of candidates) {
         if (!vol.user.email) continue;
-        // Deduplicate: don't email same volunteer for same slot+hour within 3h
         const recentLog = await prisma.notifLog.findFirst({
           where: {
             type: "UNFILLED_ALERT",
@@ -139,19 +151,24 @@ export async function DELETE(
         });
         if (recentLog) continue;
 
-        sendUnfilledSlotAlert({
-          to: vol.user.email,
-          volunteerName: vol.user.name ?? "Volunteer",
-          clinicName: clinic.name,
-          clinicAddress: clinic.address,
-          date: slot.date,
-          subBlockHour: signup.subBlockHour,
-          language: langLabel(slot.language),
-        }).catch(() => {/* non-fatal */});
+        const html = wrap(
+          "Open Interpreter Slot",
+          `<p>Hi ${vol.user.name ?? "Volunteer"},</p>
+<p>A <strong>${lang}</strong> interpreter slot has opened up and you match the requirements.</p>
+<table style="margin:16px 0;border-collapse:collapse">
+  <tr><td style="padding:4px 12px 4px 0;color:#6b7280;font-size:13px">Date</td><td style="font-size:13px;font-weight:600">${fmtDate(slot.date)}</td></tr>
+  <tr><td style="padding:4px 12px 4px 0;color:#6b7280;font-size:13px">Time</td><td style="font-size:13px;font-weight:600">${fmt12(signup.subBlockHour)} – ${fmt12(signup.subBlockHour + 1)}</td></tr>
+  <tr><td style="padding:4px 12px 4px 0;color:#6b7280;font-size:13px">Clinic</td><td style="font-size:13px;font-weight:600">${clinic.name}</td></tr>
+</table>
+<p style="font-size:13px;color:#6b7280">Sign in to InterpretConnect to claim this slot.</p>`
+        );
+
+        sendGmail(vol.user.email, `Open Slot: ${lang} at ${clinic.name} on ${fmtDate(slot.date)}`, html)
+          .catch(() => {});
 
         prisma.notifLog.create({
           data: { type: "UNFILLED_ALERT", recipientEmail: vol.user.email, slotId: slot.id },
-        }).catch(() => {/* non-fatal */});
+        }).catch(() => {});
       }
     }
   }

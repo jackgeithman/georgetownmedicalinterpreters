@@ -2,12 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { sendSignupReceipt } from "@/lib/email";
-
-function langLabel(code: string) {
-  const map: Record<string, string> = { ES: "Spanish", ZH: "Mandarin", KO: "Korean", AR: "Arabic" };
-  return map[code] ?? code;
-}
+import { notifyVolunteerSignup } from "@/lib/notifications";
 
 async function getActiveVolunteer() {
   const session = await getServerSession(authOptions);
@@ -44,7 +39,6 @@ export async function POST(req: NextRequest) {
   const user = await getActiveVolunteer();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
 
-  // Auto-create volunteer profile if needed
   let profile = user.volunteer;
   if (!profile) {
     profile = await prisma.volunteerProfile.create({
@@ -60,12 +54,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "slotId and subBlockHour required" }, { status: 400 });
   }
 
-  const slot = await prisma.slot.findUnique({ where: { id: slotId } });
+  const slot = await prisma.slot.findUnique({
+    where: { id: slotId },
+    include: { clinic: true },
+  });
   if (!slot || slot.status !== "ACTIVE") {
     return NextResponse.json({ error: "Slot not found or inactive" }, { status: 404 });
   }
 
-  // Enforce language match — profile.languages must include the slot's language
   if (!profile.languages.includes(slot.language)) {
     return NextResponse.json(
       { error: "Your language profile does not include this slot's language. Update your profile first." },
@@ -78,7 +74,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid sub-block hour" }, { status: 400 });
   }
 
-  // Check capacity
   const filledCount = await prisma.subBlockSignup.count({
     where: { slotId, subBlockHour: hour, status: "ACTIVE" },
   });
@@ -86,7 +81,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Sub-block is full" }, { status: 409 });
   }
 
-  // Check duplicate
   const duplicate = await prisma.subBlockSignup.findFirst({
     where: { slotId, volunteerId: profile.id, subBlockHour: hour, status: "ACTIVE" },
   });
@@ -98,23 +92,24 @@ export async function POST(req: NextRequest) {
     data: { slotId, volunteerId: profile.id, subBlockHour: hour },
   });
 
-  // Load notif prefs separately — keeps getActiveVolunteer simple and robust
-  const notifPrefs = await prisma.volunteerNotifPrefs.findUnique({ where: { volunteerId: profile.id } }).catch(() => null);
+  // Check notif prefs
+  const notifPrefs = await prisma.volunteerNotifPrefs.findUnique({
+    where: { volunteerId: profile.id },
+  }).catch(() => null);
 
-  // Send signup receipt — must be awaited before returning (serverless functions
-  // are killed immediately after response, so fire-and-forget never completes)
   if ((notifPrefs?.signupReceipt ?? true) && user.email) {
-    const clinic = await prisma.clinic.findUnique({ where: { id: slot.clinicId } });
-    if (clinic) {
-      await sendSignupReceipt({
-        to: user.email,
-        volunteerName: user.name ?? "Volunteer",
-        clinicName: clinic.name,
-        date: slot.date,
-        subBlockHour: hour,
-        language: langLabel(slot.language),
-      }).catch((err) => console.error("[email] signup receipt failed:", err));
-    }
+    await notifyVolunteerSignup({
+      signupId: signup.id,
+      volunteerEmail: user.email,
+      volunteerName: user.name ?? user.email,
+      clinicName: slot.clinic.name,
+      clinicAddress: slot.clinic.address,
+      clinicContactEmail: slot.clinic.contactEmail,
+      language: slot.language,
+      date: slot.date,
+      subBlockHour: hour,
+      notes: slot.notes,
+    }).catch(console.error);
   }
 
   return NextResponse.json(signup, { status: 201 });

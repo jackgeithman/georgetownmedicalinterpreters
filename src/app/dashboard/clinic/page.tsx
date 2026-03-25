@@ -435,8 +435,9 @@ export default function ClinicDashboard() {
           </div>
         )}
 
+
         {/* Slot List */}
-        {displaySlots.length === 0 ? (
+        {tab !== "settings" && (displaySlots.length === 0 ? (
           <div className="bg-white rounded-xl border border-stone-200 p-12 text-center">
             <p className="text-stone-400">
               {tab === "upcoming" ? "No upcoming slots. Post one to get started." : "No past slots."}
@@ -575,7 +576,7 @@ export default function ClinicDashboard() {
               </div>
             );
           })
-        )}
+        ))}
         {/* Notification Settings */}
         {tab === "settings" && (
           <div className="max-w-lg space-y-6">
