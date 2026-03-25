@@ -101,18 +101,19 @@ export async function POST(req: NextRequest) {
   // Load notif prefs separately — keeps getActiveVolunteer simple and robust
   const notifPrefs = await prisma.volunteerNotifPrefs.findUnique({ where: { volunteerId: profile.id } }).catch(() => null);
 
-  // Send signup receipt immediately — default true if no prefs row exists yet
+  // Send signup receipt — must be awaited before returning (serverless functions
+  // are killed immediately after response, so fire-and-forget never completes)
   if ((notifPrefs?.signupReceipt ?? true) && user.email) {
     const clinic = await prisma.clinic.findUnique({ where: { id: slot.clinicId } });
     if (clinic) {
-      sendSignupReceipt({
+      await sendSignupReceipt({
         to: user.email,
         volunteerName: user.name ?? "Volunteer",
         clinicName: clinic.name,
         date: slot.date,
         subBlockHour: hour,
         language: langLabel(slot.language),
-      }).catch(() => {/* non-fatal */});
+      }).catch(() => {/* non-fatal — email failure never blocks signup */});
     }
   }
 

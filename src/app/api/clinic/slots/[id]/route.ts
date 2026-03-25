@@ -108,7 +108,7 @@ export async function PATCH(
 
     await prisma.slot.updateMany({ where: { id: { in: futureIds } }, data: updateData });
 
-    notifyAffectedSignups(affected, "edited").catch(() => {/* background */});
+    await notifyAffectedSignups(affected, "edited").catch(() => {/* non-fatal */});
 
     return NextResponse.json({ updatedCount: futureIds.length });
   }
@@ -137,7 +137,7 @@ export async function PATCH(
 
   const updated = await prisma.slot.update({ where: { id }, data: updateData });
 
-  notifyAffectedSignups(affected, "edited").catch(() => {/* background */});
+  await notifyAffectedSignups(affected, "edited").catch(() => {/* non-fatal */});
 
   return NextResponse.json({ slot: updated });
 }
@@ -184,7 +184,7 @@ export async function DELETE(
       data: { status: "CANCELLED" },
     });
 
-    notifyAffectedSignups(affected, "cancelled").catch(() => {/* background */});
+    await notifyAffectedSignups(affected, "cancelled").catch(() => {/* non-fatal */});
 
     return NextResponse.json({ cancelledCount: futureIds.length });
   }
@@ -205,7 +205,7 @@ export async function DELETE(
 
   await prisma.slot.update({ where: { id }, data: { status: "CANCELLED" } });
 
-  notifyAffectedSignups(affected, "cancelled").catch(() => {/* background */});
+  await notifyAffectedSignups(affected, "cancelled").catch(() => {/* non-fatal */});
 
   return NextResponse.json({ ok: true });
 }
