@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { notifyUserApproved, notifyUserSuspended } from "@/lib/notifications";
 
 async function getAdminUser() {
   const session = await getServerSession(authOptions);
@@ -70,6 +71,29 @@ export async function PATCH(req: NextRequest) {
     where: { id: userId },
     data: updateData,
   });
+
+  // Send status-change notifications — only for Google-authenticated users (volunteers/admins)
+  if (target.email && data.status) {
+    const wasApproved =
+      target.status === "PENDING_APPROVAL" &&
+      data.status === "ACTIVE";
+    const wasSuspended =
+      target.status !== "SUSPENDED" &&
+      data.status === "SUSPENDED";
+
+    if (wasApproved) {
+      await notifyUserApproved({
+        email: target.email,
+        name: target.name ?? target.email,
+        role: updated.role,
+      }).catch(console.error);
+    } else if (wasSuspended) {
+      await notifyUserSuspended({
+        email: target.email,
+        name: target.name ?? target.email,
+      }).catch(console.error);
+    }
+  }
 
   return NextResponse.json(updated);
 }

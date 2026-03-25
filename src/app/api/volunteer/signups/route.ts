@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { notifyVolunteerSignup } from "@/lib/notifications";
 
 async function getActiveVolunteer() {
   const session = await getServerSession(authOptions);
@@ -51,7 +52,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "slotId and subBlockHour required" }, { status: 400 });
   }
 
-  const slot = await prisma.slot.findUnique({ where: { id: slotId } });
+  const slot = await prisma.slot.findUnique({
+    where: { id: slotId },
+    include: { clinic: true },
+  });
   if (!slot || slot.status !== "ACTIVE") {
     return NextResponse.json({ error: "Slot not found or inactive" }, { status: 404 });
   }
@@ -88,6 +92,19 @@ export async function POST(req: NextRequest) {
   const signup = await prisma.subBlockSignup.create({
     data: { slotId, volunteerId: profile.id, subBlockHour: hour },
   });
+
+  await notifyVolunteerSignup({
+    signupId: signup.id,
+    volunteerEmail: user.email,
+    volunteerName: user.name ?? user.email,
+    clinicName: slot.clinic.name,
+    clinicAddress: slot.clinic.address,
+    clinicContactEmail: slot.clinic.contactEmail,
+    language: slot.language,
+    date: slot.date,
+    subBlockHour: hour,
+    notes: slot.notes,
+  }).catch(console.error);
 
   return NextResponse.json(signup, { status: 201 });
 }

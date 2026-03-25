@@ -3,8 +3,6 @@ import GoogleProvider from "next-auth/providers/google";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { prisma } from "./prisma";
 
-// Emails outside @georgetown.edu that are explicitly allowed
-const ALLOWED_EMAILS = ["jackgeithman2005@gmail.com"];
 // This account always holds the SUPER_ADMIN role
 const SUPER_ADMIN_EMAIL = "jackgeithman2005@gmail.com";
 
@@ -44,11 +42,6 @@ export const authOptions: NextAuthOptions = {
       if (!user.email) return false;
 
       if (account?.provider === "google") {
-        const allowed =
-          user.email.endsWith("@georgetown.edu") ||
-          ALLOWED_EMAILS.includes(user.email);
-        if (!allowed) return "/login?error=DomainNotAllowed";
-
         const existing = await prisma.user.findUnique({ where: { email: user.email } });
         if (existing?.status === "SUSPENDED") return false;
 

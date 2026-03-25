@@ -28,7 +28,7 @@ type Slot = {
   signups: SubBlockSignup[];
 };
 
-type Tab = "upcoming" | "past";
+type Tab = "upcoming" | "past" | "settings";
 type CancelConfirm = { slotId: string; isRecurring: boolean };
 
 const LANG_LABELS: Record<string, string> = {
@@ -80,6 +80,9 @@ export default function ClinicDashboard() {
   const [editSlot, setEditSlot] = useState<Slot | null>(null);
   const [editScope, setEditScope] = useState<"single" | "this_and_future">("single");
   const [cancelConfirm, setCancelConfirm] = useState<CancelConfirm | null>(null);
+  const [urgentAlerts, setUrgentAlerts] = useState(true);
+  const [settingsLoading, setSettingsLoading] = useState(false);
+  const [settingsSaved, setSettingsSaved] = useState(false);
   const [form, setForm] = useState({
     language: "ES",
     date: "",
@@ -105,6 +108,27 @@ export default function ClinicDashboard() {
   useEffect(() => {
     if (session?.user?.role === "CLINIC") fetchSlots();
   }, [session, fetchSlots]);
+
+  useEffect(() => {
+    if (session?.user?.role !== "CLINIC") return;
+    fetch("/api/clinic/settings")
+      .then((r) => r.json())
+      .then((d) => { if (typeof d.urgentCancellationAlerts === "boolean") setUrgentAlerts(d.urgentCancellationAlerts); })
+      .catch(() => {});
+  }, [session]);
+
+  const saveSettings = async () => {
+    setSettingsLoading(true);
+    setSettingsSaved(false);
+    await fetch("/api/clinic/settings", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ urgentCancellationAlerts: urgentAlerts }),
+    });
+    setSettingsLoading(false);
+    setSettingsSaved(true);
+    setTimeout(() => setSettingsSaved(false), 2500);
+  };
 
   const postSlot = async () => {
     if (!form.date) return;
@@ -227,6 +251,7 @@ export default function ClinicDashboard() {
           {[
             { key: "upcoming" as Tab, label: "Upcoming", count: upcoming.length },
             { key: "past" as Tab, label: "Past", count: past.length },
+            { key: "settings" as Tab, label: "Settings", count: 0 },
           ].map((t) => (
             <button
               key={t.key}
@@ -383,8 +408,54 @@ export default function ClinicDashboard() {
           </div>
         )}
 
+        {/* Settings Panel */}
+        {tab === "settings" && (
+          <div className="bg-white rounded-xl border border-stone-200 p-6 max-w-lg">
+            <h3 className="text-sm font-semibold text-stone-800 mb-1">Notification Preferences</h3>
+            <p className="text-xs text-stone-400 mb-6">Control which emails InterpretConnect sends to your clinic.</p>
+
+            <div className="space-y-4">
+              <div className="flex items-start justify-between gap-4 py-4 border-b border-stone-100">
+                <div>
+                  <p className="text-sm font-medium text-stone-700">Urgent cancellation alerts</p>
+                  <p className="text-xs text-stone-400 mt-0.5">
+                    Email you when a volunteer cancels within 24 hours of their shift.
+                  </p>
+                </div>
+                <button
+                  role="switch"
+                  aria-checked={urgentAlerts}
+                  onClick={() => setUrgentAlerts(!urgentAlerts)}
+                  className={`relative shrink-0 w-10 h-6 rounded-full transition-colors ${
+                    urgentAlerts ? "bg-stone-800" : "bg-stone-200"
+                  }`}
+                >
+                  <span
+                    className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full shadow transition-transform ${
+                      urgentAlerts ? "translate-x-4" : "translate-x-0"
+                    }`}
+                  />
+                </button>
+              </div>
+            </div>
+
+            <div className="mt-6 flex items-center gap-3">
+              <button
+                disabled={settingsLoading}
+                onClick={saveSettings}
+                className="px-4 py-2 text-sm bg-stone-800 text-white hover:bg-stone-700 rounded-md transition-colors disabled:opacity-50"
+              >
+                {settingsLoading ? "Saving..." : "Save"}
+              </button>
+              {settingsSaved && (
+                <span className="text-xs text-emerald-600 font-medium">Saved</span>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Slot List */}
-        {displaySlots.length === 0 ? (
+        {tab !== "settings" && (displaySlots.length === 0 ? (
           <div className="bg-white rounded-xl border border-stone-200 p-12 text-center">
             <p className="text-stone-400">
               {tab === "upcoming" ? "No upcoming slots. Post one to get started." : "No past slots."}
@@ -523,7 +594,7 @@ export default function ClinicDashboard() {
               </div>
             );
           })
-        )}
+        ))}
       </div>
 
       {/* Edit Slot Modal */}

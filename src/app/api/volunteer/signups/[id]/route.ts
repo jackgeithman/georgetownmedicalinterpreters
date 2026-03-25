@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { notifyVolunteerCancellation } from "@/lib/notifications";
 
 async function getActiveVolunteer() {
   const session = await getServerSession(authOptions);
@@ -25,7 +26,7 @@ export async function DELETE(
   const { id } = await params;
   const signup = await prisma.subBlockSignup.findUnique({
     where: { id },
-    include: { slot: true },
+    include: { slot: { include: { clinic: true } } },
   });
   if (!signup || signup.volunteerId !== user.volunteer.id || signup.status !== "ACTIVE") {
     return NextResponse.json({ error: "Signup not found" }, { status: 404 });
@@ -56,6 +57,19 @@ export async function DELETE(
       data: counterUpdate,
     });
   }
+
+  await notifyVolunteerCancellation({
+    signupId: signup.id,
+    volunteerEmail: user.email,
+    volunteerName: user.name ?? user.email,
+    clinicName: signup.slot.clinic.name,
+    clinicContactEmail: signup.slot.clinic.contactEmail,
+    clinicUrgentAlerts: signup.slot.clinic.urgentCancellationAlerts,
+    language: signup.slot.language,
+    date: signup.slot.date,
+    subBlockHour: signup.subBlockHour,
+    hoursUntilSlot,
+  }).catch(console.error);
 
   return NextResponse.json({ ok: true });
 }

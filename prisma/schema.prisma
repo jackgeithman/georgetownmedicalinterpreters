@@ -88,16 +88,17 @@ model VerificationToken {
 }
 
 model Clinic {
-  id           String   @id @default(uuid())
-  name         String
-  address      String
-  contactName  String
-  contactEmail String
-  loginToken   String   @unique @default(uuid())
-  loginPin     String   @default("000000")
-  staff        User[]
-  slots        Slot[]
-  createdAt    DateTime @default(now())
+  id                       String   @id @default(uuid())
+  name                     String
+  address                  String
+  contactName              String
+  contactEmail             String
+  loginToken               String   @unique @default(uuid())
+  loginPin                 String   @default("000000")
+  urgentCancellationAlerts Boolean  @default(true)
+  staff                    User[]
+  slots                    Slot[]
+  createdAt                DateTime @default(now())
 }
 
 model VolunteerProfile {
