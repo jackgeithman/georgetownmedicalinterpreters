@@ -11,7 +11,9 @@ async function getActiveVolunteer() {
     where: { email: session.user.email },
     include: { volunteer: true },
   });
-  if (!user || user.role !== "VOLUNTEER" || user.status !== "ACTIVE") return null;
+  if (!user) return null;
+  const isVolunteerRole = user.role === "VOLUNTEER" || user.role === "ADMIN" || user.role === "SUPER_ADMIN";
+  if (!isVolunteerRole || user.status !== "ACTIVE") return null;
   return user;
 }
 
@@ -37,13 +39,13 @@ export async function POST(req: NextRequest) {
   const user = await getActiveVolunteer();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
 
-  // Auto-create volunteer profile if needed
   let profile = user.volunteer;
   if (!profile) {
     profile = await prisma.volunteerProfile.create({
       data: { userId: user.id, languages: [] },
     });
   }
+  if (!profile) return NextResponse.json({ error: "Profile error" }, { status: 500 });
 
   const body = await req.json();
   const { slotId, subBlockHour } = body;
@@ -60,7 +62,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Slot not found or inactive" }, { status: 404 });
   }
 
-  // Enforce language match — profile.languages must include the slot's language
   if (!profile.languages.includes(slot.language)) {
     return NextResponse.json(
       { error: "Your language profile does not include this slot's language. Update your profile first." },
@@ -73,7 +74,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid sub-block hour" }, { status: 400 });
   }
 
-  // Check capacity
   const filledCount = await prisma.subBlockSignup.count({
     where: { slotId, subBlockHour: hour, status: "ACTIVE" },
   });
@@ -81,7 +81,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Sub-block is full" }, { status: 409 });
   }
 
-  // Check duplicate
   const duplicate = await prisma.subBlockSignup.findFirst({
     where: { slotId, volunteerId: profile.id, subBlockHour: hour, status: "ACTIVE" },
   });
@@ -93,18 +92,25 @@ export async function POST(req: NextRequest) {
     data: { slotId, volunteerId: profile.id, subBlockHour: hour },
   });
 
-  await notifyVolunteerSignup({
-    signupId: signup.id,
-    volunteerEmail: user.email,
-    volunteerName: user.name ?? user.email,
-    clinicName: slot.clinic.name,
-    clinicAddress: slot.clinic.address,
-    clinicContactEmail: slot.clinic.contactEmail,
-    language: slot.language,
-    date: slot.date,
-    subBlockHour: hour,
-    notes: slot.notes,
-  }).catch(console.error);
+  // Check notif prefs
+  const notifPrefs = await prisma.volunteerNotifPrefs.findUnique({
+    where: { volunteerId: profile.id },
+  }).catch(() => null);
+
+  if ((notifPrefs?.signupReceipt ?? true) && user.email) {
+    await notifyVolunteerSignup({
+      signupId: signup.id,
+      volunteerEmail: user.email,
+      volunteerName: user.name ?? user.email,
+      clinicName: slot.clinic.name,
+      clinicAddress: slot.clinic.address,
+      clinicContactEmail: slot.clinic.contactEmail,
+      language: slot.language,
+      date: slot.date,
+      subBlockHour: hour,
+      notes: slot.notes,
+    }).catch(console.error);
+  }
 
   return NextResponse.json(signup, { status: 201 });
 }

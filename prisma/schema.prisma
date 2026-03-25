@@ -3,8 +3,9 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 enum Role {
@@ -44,6 +45,26 @@ enum SignupStatus {
 enum FeedbackAuthor {
   CLINIC
   VOLUNTEER
+}
+
+enum EmailRuleType {
+  ALLOW
+  BLOCK
+}
+
+enum NotifType {
+  SIGNUP_RECEIPT
+  CANCEL_RECEIPT
+  REMINDER_24H
+  REMINDER_8H
+  REMINDER_2H
+  UNFILLED_ALERT
+  ADMIN_REMOVED
+  SLOT_CANCELLED
+  SLOT_EDITED
+  CLINIC_VOLUNTEER_CANCEL
+  CLINIC_UNFILLED_24H
+  ADMIN_PENDING_VOLUNTEER
 }
 
 model User {
@@ -102,47 +123,56 @@ model Clinic {
 }
 
 model VolunteerProfile {
-  id                String          @id @default(uuid())
-  userId            String          @unique
-  user              User            @relation(fields: [userId], references: [id])
-  languages         Language[]
-  backgroundInfo    String?
-  hoursVolunteered       Int @default(0)
-  cancellationsWithin24h Int @default(0)
-  cancellationsWithin2h  Int @default(0)
-  noShows                Int @default(0)
-  signups           SubBlockSignup[]
-  createdAt         DateTime        @default(now())
+  id                     String               @id @default(uuid())
+  userId                 String               @unique
+  user                   User                 @relation(fields: [userId], references: [id])
+  languages              Language[]
+  backgroundInfo         String?
+  hoursVolunteered       Int                  @default(0)
+  cancellationsWithin24h Int                  @default(0)
+  cancellationsWithin2h  Int                  @default(0)
+  noShows                Int                  @default(0)
+  signups                SubBlockSignup[]
+  notifPrefs             VolunteerNotifPrefs?
+  createdAt              DateTime             @default(now())
 }
 
 model Slot {
-  id                String     @id @default(uuid())
+  id                String         @id @default(uuid())
   clinicId          String
-  clinic            Clinic     @relation(fields: [clinicId], references: [id])
+  clinic            Clinic         @relation(fields: [clinicId], references: [id])
   language          Language
   date              DateTime
   startTime         Int
   endTime           Int
   interpreterCount  Int
-  isRecurring       Boolean    @default(false)
+  isRecurring       Boolean        @default(false)
   recurrenceGroupId String?
   notes             String?
-  status            SlotStatus @default(ACTIVE)
+  status            SlotStatus     @default(ACTIVE)
   signups           SubBlockSignup[]
-  createdAt         DateTime   @default(now())
+  createdAt         DateTime       @default(now())
 }
 
 model SubBlockSignup {
-  id           String       @id @default(uuid())
-  slotId       String
-  slot         Slot         @relation(fields: [slotId], references: [id])
-  volunteerId  String
-  volunteer    VolunteerProfile @relation(fields: [volunteerId], references: [id])
+  id          String           @id @default(uuid())
+  slotId      String
+  slot        Slot             @relation(fields: [slotId], references: [id])
+  volunteerId String
+  volunteer   VolunteerProfile @relation(fields: [volunteerId], references: [id])
   subBlockHour Int
-  status       SignupStatus @default(ACTIVE)
-  cancelledAt  DateTime?
-  feedback     Feedback[]
-  createdAt    DateTime     @default(now())
+  status      SignupStatus     @default(ACTIVE)
+  cancelledAt DateTime?
+  feedback    Feedback[]
+  createdAt   DateTime         @default(now())
+}
+
+model EmailRule {
+  id        String        @id @default(uuid())
+  email     String        @unique
+  type      EmailRuleType
+  note      String?
+  createdAt DateTime      @default(now())
 }
 
 model Feedback {
@@ -152,4 +182,24 @@ model Feedback {
   authorRole FeedbackAuthor
   note       String
   createdAt  DateTime       @default(now())
+}
+
+model VolunteerNotifPrefs {
+  id                  String           @id @default(uuid())
+  volunteerId         String           @unique
+  volunteer           VolunteerProfile @relation(fields: [volunteerId], references: [id])
+  signupReceipt       Boolean          @default(true)
+  cancellationReceipt Boolean          @default(true)
+  reminder24h         Boolean          @default(true)
+  unfilledSlotAlert   Boolean          @default(false)
+  updatedAt           DateTime         @updatedAt
+}
+
+model NotifLog {
+  id             String    @id @default(uuid())
+  type           NotifType
+  recipientEmail String
+  signupId       String?
+  slotId         String?
+  sentAt         DateTime  @default(now())
 }

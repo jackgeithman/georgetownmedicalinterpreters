@@ -1,10 +1,29 @@
 import { NextAuthOptions } from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
 import CredentialsProvider from "next-auth/providers/credentials";
+import bcrypt from "bcryptjs";
 import { prisma } from "./prisma";
 
-// This account always holds the SUPER_ADMIN role
-const SUPER_ADMIN_EMAIL = "jackgeithman2005@gmail.com";
+const SUPER_ADMIN_EMAIL = process.env.SUPER_ADMIN_EMAIL ?? "jackgeithman2005@gmail.com";
+const ALLOWED_EMAILS = (process.env.ALLOWED_EXTRA_EMAILS ?? "")
+  .split(",")
+  .map((e) => e.trim())
+  .filter(Boolean);
+
+// In-memory rate limiter: max 10 PIN attempts per IP per 15 minutes
+const loginAttempts = new Map<string, { count: number; resetAt: number }>();
+
+function isRateLimited(ip: string): boolean {
+  const now = Date.now();
+  const entry = loginAttempts.get(ip);
+  if (!entry || entry.resetAt < now) {
+    loginAttempts.set(ip, { count: 1, resetAt: now + 15 * 60 * 1000 });
+    return false;
+  }
+  if (entry.count >= 10) return true;
+  entry.count++;
+  return false;
+}
 
 export const authOptions: NextAuthOptions = {
   session: { strategy: "jwt" },
@@ -19,12 +38,29 @@ export const authOptions: NextAuthOptions = {
         token: { label: "Token", type: "text" },
         pin: { label: "PIN", type: "password" },
       },
-      async authorize(credentials) {
+      async authorize(credentials, req) {
         if (!credentials?.token || !credentials?.pin) return null;
+
+        const ip =
+          (req.headers as Record<string, string | undefined>)["x-forwarded-for"]?.split(",")[0].trim() ??
+          "unknown";
+
+        if (isRateLimited(ip)) return null;
+
         const clinic = await prisma.clinic.findUnique({
           where: { loginToken: credentials.token },
         });
-        if (!clinic || clinic.loginPin !== credentials.pin) return null;
+        if (!clinic) return null;
+
+        // Support both bcrypt hashes and legacy plain-text pins
+        let pinMatches = false;
+        if (clinic.loginPin.startsWith("$2")) {
+          pinMatches = await bcrypt.compare(credentials.pin, clinic.loginPin);
+        } else {
+          pinMatches = credentials.pin === clinic.loginPin;
+        }
+        if (!pinMatches) return null;
+
         return {
           id: clinic.id,
           name: clinic.name,
@@ -46,7 +82,6 @@ export const authOptions: NextAuthOptions = {
         if (existing?.status === "SUSPENDED") return false;
 
         if (existing) {
-          // Ensure the super admin email always has the SUPER_ADMIN role (handles re-login after manual changes)
           if (user.email === SUPER_ADMIN_EMAIL && existing.role !== "SUPER_ADMIN") {
             await prisma.user.update({ where: { email: user.email }, data: { role: "SUPER_ADMIN" } });
           }
@@ -56,7 +91,6 @@ export const authOptions: NextAuthOptions = {
               data: { email: user.email, name: user.name ?? user.email, role: "SUPER_ADMIN", status: "ACTIVE" },
             });
           } else {
-            // First non-super-admin becomes ADMIN; all others start as PENDING
             const adminCount = await prisma.user.count({
               where: { role: { in: ["ADMIN", "SUPER_ADMIN"] } },
             });
@@ -78,7 +112,6 @@ export const authOptions: NextAuthOptions = {
     },
 
     async jwt({ token, user, account }) {
-      // On credentials sign-in, embed clinic info directly in the token
       if (account?.provider === "credentials" && user) {
         token.isClinicSession = true;
         token.role = (user as unknown as { role: string }).role;

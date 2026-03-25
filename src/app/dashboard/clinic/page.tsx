@@ -31,18 +31,22 @@ type Slot = {
 type Tab = "upcoming" | "past" | "settings";
 type CancelConfirm = { slotId: string; isRecurring: boolean };
 
+type ClinicNotifPrefs = {
+  dailySummary: boolean;
+  volunteerCancelWindow: number | null;
+  unfilledAlert24h: boolean;
+};
+
 const LANG_LABELS: Record<string, string> = {
   ES: "Spanish",
   ZH: "Chinese",
   KO: "Korean",
-  AR: "Arabic",
 };
 
 const LANG_COLORS: Record<string, string> = {
   ES: "bg-amber-50 text-amber-700",
   ZH: "bg-red-50 text-red-700",
   KO: "bg-blue-50 text-blue-700",
-  AR: "bg-emerald-50 text-emerald-700",
 };
 
 function formatHour(h: number): string {
@@ -80,9 +84,13 @@ export default function ClinicDashboard() {
   const [editSlot, setEditSlot] = useState<Slot | null>(null);
   const [editScope, setEditScope] = useState<"single" | "this_and_future">("single");
   const [cancelConfirm, setCancelConfirm] = useState<CancelConfirm | null>(null);
-  const [urgentAlerts, setUrgentAlerts] = useState(true);
-  const [settingsLoading, setSettingsLoading] = useState(false);
-  const [settingsSaved, setSettingsSaved] = useState(false);
+  const [editWarning, setEditWarning] = useState<{ cancelCount: number } | null>(null);
+  const [notifPrefs, setNotifPrefs] = useState<ClinicNotifPrefs>({
+    dailySummary: true,
+    volunteerCancelWindow: null,
+    unfilledAlert24h: true,
+  });
+  const [notifSaved, setNotifSaved] = useState(false);
   const [form, setForm] = useState({
     language: "ES",
     date: "",
@@ -100,8 +108,12 @@ export default function ClinicDashboard() {
   }, [status, session, router]);
 
   const fetchSlots = useCallback(async () => {
-    const res = await fetch("/api/clinic/slots");
-    if (res.ok) setSlots(await res.json());
+    const [slotsRes, notifRes] = await Promise.all([
+      fetch("/api/clinic/slots"),
+      fetch("/api/clinic/notif-prefs"),
+    ]);
+    if (slotsRes.ok) setSlots(await slotsRes.json());
+    if (notifRes.ok) setNotifPrefs(await notifRes.json());
     setLoading(false);
   }, []);
 
@@ -109,25 +121,15 @@ export default function ClinicDashboard() {
     if (session?.user?.role === "CLINIC") fetchSlots();
   }, [session, fetchSlots]);
 
-  useEffect(() => {
-    if (session?.user?.role !== "CLINIC") return;
-    fetch("/api/clinic/settings")
-      .then((r) => r.json())
-      .then((d) => { if (typeof d.urgentCancellationAlerts === "boolean") setUrgentAlerts(d.urgentCancellationAlerts); })
-      .catch(() => {});
-  }, [session]);
-
-  const saveSettings = async () => {
-    setSettingsLoading(true);
-    setSettingsSaved(false);
-    await fetch("/api/clinic/settings", {
+  const saveNotifPrefs = async (updated: ClinicNotifPrefs) => {
+    await fetch("/api/clinic/notif-prefs", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ urgentCancellationAlerts: urgentAlerts }),
+      body: JSON.stringify(updated),
     });
-    setSettingsLoading(false);
-    setSettingsSaved(true);
-    setTimeout(() => setSettingsSaved(false), 2500);
+    setNotifPrefs(updated);
+    setNotifSaved(true);
+    setTimeout(() => setNotifSaved(false), 2000);
   };
 
   const postSlot = async () => {
@@ -147,8 +149,32 @@ export default function ClinicDashboard() {
     setActionLoading(null);
   };
 
-  const saveEdit = async () => {
+  // Called when the clinic clicks "Save Changes" — checks for affected volunteers first.
+  const requestSaveEdit = () => {
     if (!editSlot) return;
+    const original = slots.find((s) => s.id === editSlot.id);
+    if (!original) { void confirmSaveEdit(); return; }
+
+    const dateChanged = editSlot.date.split("T")[0] !== original.date.split("T")[0];
+    const langChanged = editSlot.language !== original.language;
+
+    const cancelCount = original.signups.filter((s) => {
+      if (s.status !== "ACTIVE") return false;
+      if (langChanged || dateChanged) return true; // all signups affected
+      return s.subBlockHour < editSlot.startTime || s.subBlockHour >= editSlot.endTime;
+    }).length;
+
+    if (cancelCount > 0) {
+      setEditWarning({ cancelCount });
+    } else {
+      void confirmSaveEdit();
+    }
+  };
+
+  // Actually sends the PATCH request — called after confirmation.
+  const confirmSaveEdit = async () => {
+    if (!editSlot) return;
+    setEditWarning(null);
     setActionLoading("edit");
     const res = await fetch(`/api/clinic/slots/${editSlot.id}`, {
       method: "PATCH",
@@ -164,15 +190,8 @@ export default function ClinicDashboard() {
       }),
     });
     if (res.ok) {
-      const data = await res.json();
       await fetchSlots();
       setEditSlot(null);
-      const cancelled = data.cancelledCount ?? 0;
-      const updated = data.updatedCount;
-      if (cancelled > 0) {
-        const slotsMsg = updated ? ` across ${updated} slots` : "";
-        alert(`${cancelled} volunteer signup(s) were automatically cancelled${slotsMsg} due to the time change.`);
-      }
     }
     setActionLoading(null);
   };
@@ -251,7 +270,7 @@ export default function ClinicDashboard() {
           {[
             { key: "upcoming" as Tab, label: "Upcoming", count: upcoming.length },
             { key: "past" as Tab, label: "Past", count: past.length },
-            { key: "settings" as Tab, label: "Settings", count: 0 },
+            { key: "settings" as Tab, label: "Notifications", count: 0 },
           ].map((t) => (
             <button
               key={t.key}
@@ -271,12 +290,20 @@ export default function ClinicDashboard() {
             </button>
           ))}
         </div>
-        {tab === "upcoming" && (
+        {tab === "upcoming" && !showPostForm && (
           <button
-            onClick={() => setShowPostForm(!showPostForm)}
+            onClick={() => setShowPostForm(true)}
             className="px-4 py-2 text-sm bg-stone-800 text-white hover:bg-stone-700 rounded-md transition-colors"
           >
-            {showPostForm ? "Cancel" : "+ Post Slot"}
+            + Post Slot
+          </button>
+        )}
+        {tab === "upcoming" && showPostForm && (
+          <button
+            onClick={() => setShowPostForm(false)}
+            className="px-4 py-2 text-sm bg-stone-100 hover:bg-stone-200 text-stone-600 rounded-md transition-colors"
+          >
+            Cancel
           </button>
         )}
       </div>
@@ -408,51 +435,6 @@ export default function ClinicDashboard() {
           </div>
         )}
 
-        {/* Settings Panel */}
-        {tab === "settings" && (
-          <div className="bg-white rounded-xl border border-stone-200 p-6 max-w-lg">
-            <h3 className="text-sm font-semibold text-stone-800 mb-1">Notification Preferences</h3>
-            <p className="text-xs text-stone-400 mb-6">Control which emails InterpretConnect sends to your clinic.</p>
-
-            <div className="space-y-4">
-              <div className="flex items-start justify-between gap-4 py-4 border-b border-stone-100">
-                <div>
-                  <p className="text-sm font-medium text-stone-700">Urgent cancellation alerts</p>
-                  <p className="text-xs text-stone-400 mt-0.5">
-                    Email you when a volunteer cancels within 24 hours of their shift.
-                  </p>
-                </div>
-                <button
-                  role="switch"
-                  aria-checked={urgentAlerts}
-                  onClick={() => setUrgentAlerts(!urgentAlerts)}
-                  className={`relative shrink-0 w-10 h-6 rounded-full transition-colors ${
-                    urgentAlerts ? "bg-stone-800" : "bg-stone-200"
-                  }`}
-                >
-                  <span
-                    className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full shadow transition-transform ${
-                      urgentAlerts ? "translate-x-4" : "translate-x-0"
-                    }`}
-                  />
-                </button>
-              </div>
-            </div>
-
-            <div className="mt-6 flex items-center gap-3">
-              <button
-                disabled={settingsLoading}
-                onClick={saveSettings}
-                className="px-4 py-2 text-sm bg-stone-800 text-white hover:bg-stone-700 rounded-md transition-colors disabled:opacity-50"
-              >
-                {settingsLoading ? "Saving..." : "Save"}
-              </button>
-              {settingsSaved && (
-                <span className="text-xs text-emerald-600 font-medium">Saved</span>
-              )}
-            </div>
-          </div>
-        )}
 
         {/* Slot List */}
         {tab !== "settings" && (displaySlots.length === 0 ? (
@@ -594,7 +576,78 @@ export default function ClinicDashboard() {
               </div>
             );
           })
-        ))}
+        )}
+        {/* Notification Settings */}
+        {tab === "settings" && (
+          <div className="max-w-lg space-y-6">
+            <div className="bg-white rounded-xl border border-stone-200 p-6">
+              <div className="flex items-center justify-between mb-1">
+                <h3 className="text-sm font-medium text-stone-700">Email Notifications</h3>
+                {notifSaved && <span className="text-xs text-emerald-600">Saved ✓</span>}
+              </div>
+              <p className="text-xs text-stone-400 mb-5">Changes save instantly.</p>
+
+              <div className="space-y-4">
+                {/* Daily summary */}
+                <label className="flex items-start gap-3 cursor-pointer">
+                  <button
+                    role="switch"
+                    aria-checked={notifPrefs.dailySummary}
+                    onClick={() => saveNotifPrefs({ ...notifPrefs, dailySummary: !notifPrefs.dailySummary })}
+                    className={`mt-0.5 relative inline-flex h-5 w-9 flex-shrink-0 rounded-full border-2 border-transparent transition-colors focus:outline-none ${
+                      notifPrefs.dailySummary ? "bg-stone-800" : "bg-stone-200"
+                    }`}
+                  >
+                    <span className={`inline-block h-4 w-4 rounded-full bg-white shadow transition-transform ${notifPrefs.dailySummary ? "translate-x-4" : "translate-x-0"}`} />
+                  </button>
+                  <div>
+                    <p className="text-sm text-stone-700">Daily summary email</p>
+                    <p className="text-xs text-stone-400">Sent each morning with all your upcoming slots and their current roster</p>
+                  </div>
+                </label>
+
+                {/* Unfilled alert */}
+                <label className="flex items-start gap-3 cursor-pointer">
+                  <button
+                    role="switch"
+                    aria-checked={notifPrefs.unfilledAlert24h}
+                    onClick={() => saveNotifPrefs({ ...notifPrefs, unfilledAlert24h: !notifPrefs.unfilledAlert24h })}
+                    className={`mt-0.5 relative inline-flex h-5 w-9 flex-shrink-0 rounded-full border-2 border-transparent transition-colors focus:outline-none ${
+                      notifPrefs.unfilledAlert24h ? "bg-stone-800" : "bg-stone-200"
+                    }`}
+                  >
+                    <span className={`inline-block h-4 w-4 rounded-full bg-white shadow transition-transform ${notifPrefs.unfilledAlert24h ? "translate-x-4" : "translate-x-0"}`} />
+                  </button>
+                  <div>
+                    <p className="text-sm text-stone-700">Unfilled slot alert (24 hrs before)</p>
+                    <p className="text-xs text-stone-400">Email if any sub-block is still open within 24 hours of the appointment</p>
+                  </div>
+                </label>
+
+                {/* Volunteer cancel window */}
+                <div className="pt-2 border-t border-stone-100">
+                  <p className="text-sm text-stone-700 mb-1">Volunteer cancellation alert</p>
+                  <p className="text-xs text-stone-400 mb-3">Get notified when a volunteer cancels within a certain window of the appointment</p>
+                  <div className="flex flex-wrap gap-2">
+                    {([null, 2, 4, 12, 24] as (number | null)[]).map((v) => (
+                      <button
+                        key={String(v)}
+                        onClick={() => saveNotifPrefs({ ...notifPrefs, volunteerCancelWindow: v })}
+                        className={`px-3 py-1.5 text-xs rounded-md border transition-colors ${
+                          notifPrefs.volunteerCancelWindow === v
+                            ? "bg-stone-800 text-white border-stone-800"
+                            : "bg-white text-stone-500 border-stone-200 hover:border-stone-300"
+                        }`}
+                      >
+                        {v === null ? "Don't notify" : `Within ${v}h`}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Edit Slot Modal */}
@@ -622,9 +675,6 @@ export default function ClinicDashboard() {
               </div>
             )}
 
-            <p className="text-xs text-amber-600 bg-amber-50 px-3 py-2 rounded-md mb-4">
-              Volunteers outside the new time window will be automatically unassigned.
-            </p>
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs text-stone-500 mb-1">Language</label>
@@ -694,7 +744,7 @@ export default function ClinicDashboard() {
             <div className="flex gap-2 mt-4">
               <button
                 disabled={actionLoading === "edit" || editSlot.endTime <= editSlot.startTime}
-                onClick={saveEdit}
+                onClick={requestSaveEdit}
                 className="px-4 py-2 text-sm bg-stone-800 text-white hover:bg-stone-700 rounded-md transition-colors disabled:opacity-50"
               >
                 {actionLoading === "edit" ? "Saving..." : "Save Changes"}
@@ -704,6 +754,44 @@ export default function ClinicDashboard() {
                 className="px-4 py-2 text-sm bg-stone-100 hover:bg-stone-200 text-stone-600 rounded-md transition-colors"
               >
                 Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit — Volunteer Cancellation Warning Modal */}
+      {editWarning && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-[60]">
+          <div className="bg-white rounded-xl p-6 w-full max-w-sm shadow-xl">
+            <div className="flex items-start gap-3 mb-4">
+              <div className="shrink-0 w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+                </svg>
+              </div>
+              <div>
+                <h3 className="text-sm font-semibold text-stone-800">Volunteers will be removed</h3>
+                <p className="text-sm text-stone-500 mt-1">
+                  {editWarning.cancelCount} volunteer signup{editWarning.cancelCount !== 1 ? "s" : ""}{" "}
+                  conflict{editWarning.cancelCount === 1 ? "s" : ""} with your changes and will be cancelled
+                  if you proceed.
+                </p>
+              </div>
+            </div>
+            <div className="flex flex-col gap-2">
+              <button
+                disabled={actionLoading === "edit"}
+                onClick={confirmSaveEdit}
+                className="w-full px-4 py-2.5 text-sm bg-stone-800 hover:bg-stone-700 text-white font-medium rounded-lg transition-colors disabled:opacity-50"
+              >
+                {actionLoading === "edit" ? "Saving..." : "Save Changes Anyway"}
+              </button>
+              <button
+                onClick={() => setEditWarning(null)}
+                className="w-full px-4 py-2.5 text-sm bg-stone-100 hover:bg-stone-200 text-stone-700 font-medium rounded-lg transition-colors"
+              >
+                Go Back &amp; Edit
               </button>
             </div>
           </div>

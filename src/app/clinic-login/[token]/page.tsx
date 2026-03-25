@@ -75,7 +75,7 @@ export default function ClinicLoginPage({
           <p className="text-xs font-medium text-stone-500 uppercase tracking-wider mb-1">
             Clinic Sign In
           </p>
-          <p className="text-sm text-stone-400 mb-4">Enter your 6-digit PIN to continue.</p>
+          <p className="text-sm text-stone-400 mb-4">Enter your 8-digit PIN to continue.</p>
 
           {error && (
             <div className="mb-3 px-3 py-2 bg-red-50 border border-red-100 rounded-lg text-sm text-red-600">
@@ -87,9 +87,9 @@ export default function ClinicLoginPage({
             <input
               type="password"
               inputMode="numeric"
-              pattern="[0-9]{6}"
-              maxLength={6}
-              placeholder="6-digit PIN"
+              pattern="[0-9]{8}"
+              maxLength={8}
+              placeholder="8-digit PIN"
               value={pin}
               onChange={(e) => setPin(e.target.value.replace(/\D/g, ""))}
               disabled={!clinicName || loading}
@@ -97,7 +97,7 @@ export default function ClinicLoginPage({
             />
             <button
               type="submit"
-              disabled={pin.length !== 6 || loading || !clinicName}
+              disabled={pin.length !== 8 || loading || !clinicName}
               className="w-full px-4 py-2.5 bg-stone-800 hover:bg-stone-700 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50"
             >
               {loading ? "Signing in..." : "Sign In"}
