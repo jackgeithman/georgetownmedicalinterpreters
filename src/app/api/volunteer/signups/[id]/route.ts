@@ -18,7 +18,7 @@ async function getActiveVolunteer() {
   if (!session?.user?.email) return null;
   const user = await prisma.user.findUnique({
     where: { email: session.user.email },
-    include: { volunteer: { include: { notifPrefs: true } } },
+    include: { volunteer: true },
   });
   if (!user) return null;
   const isVolunteerRole = user.role === "VOLUNTEER" || user.role === "ADMIN" || user.role === "SUPER_ADMIN";
@@ -70,8 +70,11 @@ export async function DELETE(
   const slot = signup.slot;
   const clinic = slot.clinic;
 
+  // Load notif prefs separately so auth check stays simple
+  const notifPrefs = await prisma.volunteerNotifPrefs.findUnique({ where: { volunteerId: user.volunteer.id } }).catch(() => null);
+
   // ── Send cancellation receipt immediately ──
-  if ((user.volunteer.notifPrefs?.cancellationReceipt ?? true) && user.email) {
+  if ((notifPrefs?.cancellationReceipt ?? true) && user.email) {
     sendCancellationReceipt({
       to: user.email,
       volunteerName: user.name ?? "Volunteer",
