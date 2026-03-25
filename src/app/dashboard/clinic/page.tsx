@@ -576,7 +576,7 @@ export default function ClinicDashboard() {
               </div>
             );
           })
-        )}
+        ))}
         {/* Notification Settings */}
         {tab === "settings" && (
           <div className="max-w-lg space-y-6">
