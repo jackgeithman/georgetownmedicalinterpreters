@@ -109,17 +109,18 @@ model VerificationToken {
 }
 
 model Clinic {
-  id                       String   @id @default(uuid())
+  id                       String            @id @default(uuid())
   name                     String
   address                  String
   contactName              String
   contactEmail             String
-  loginToken               String   @unique @default(uuid())
-  loginPin                 String   @default("000000")
-  urgentCancellationAlerts Boolean  @default(true)
+  loginToken               String            @unique @default(uuid())
+  loginPin                 String            @default("000000")
+  urgentCancellationAlerts Boolean           @default(true)
   staff                    User[]
   slots                    Slot[]
-  createdAt                DateTime @default(now())
+  notifPrefs               ClinicNotifPrefs?
+  createdAt                DateTime          @default(now())
 }
 
 model VolunteerProfile {
@@ -202,4 +203,14 @@ model NotifLog {
   signupId       String?
   slotId         String?
   sentAt         DateTime  @default(now())
+}
+
+model ClinicNotifPrefs {
+  id                    String   @id @default(uuid())
+  clinicId              String   @unique
+  clinic                Clinic   @relation(fields: [clinicId], references: [id])
+  dailySummary          Boolean  @default(true)
+  unfilledAlert24h      Boolean  @default(true)
+  volunteerCancelWindow Int?
+  updatedAt             DateTime @updatedAt
 }
