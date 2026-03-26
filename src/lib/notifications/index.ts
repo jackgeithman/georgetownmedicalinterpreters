@@ -30,8 +30,7 @@ function fmtDate(d: Date): string {
 function wrap(title: string, body: string): string {
   return `<!DOCTYPE html><html><body style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:24px;color:#1a1a1a">
 <div style="border-bottom:3px solid #002147;padding-bottom:12px;margin-bottom:24px">
-  <h2 style="color:#002147;margin:0;font-size:20px">InterpretConnect</h2>
-  <p style="color:#666;margin:4px 0 0;font-size:12px">Georgetown Medical Interpreters</p>
+  <h2 style="color:#002147;margin:0;font-size:20px">Georgetown Medical Interpreters</h2>
 </div>
 <h3 style="color:#002147;margin-top:0">${title}</h3>
 ${body}
@@ -65,7 +64,6 @@ export async function notifyVolunteerSignup(params: {
   volunteerName: string;
   clinicName: string;
   clinicAddress: string;
-  clinicContactEmail: string;
   language: string;
   date: Date;
   subBlockHour: number;
@@ -77,7 +75,6 @@ export async function notifyVolunteerSignup(params: {
     volunteerName,
     clinicName,
     clinicAddress,
-    clinicContactEmail,
     language,
     date,
     subBlockHour,
@@ -98,7 +95,7 @@ ${table(
   notes ? detail("Notes", notes) : "",
 )}
 <p style="font-size:13px;color:#6b7280">A Google Calendar invite has been sent to your Georgetown calendar.
-If you need to cancel, please do so in InterpretConnect as early as possible.</p>`,
+If you need to cancel, please do so in Georgetown Medical Interpreters as early as possible.</p>`,
   );
 
   const slot: SlotInfo = { date, subBlockHour, clinicName, clinicAddress, language, notes };
@@ -107,24 +104,6 @@ If you need to cancel, please do so in InterpretConnect as early as possible.</p
     sendGmail(volunteerEmail, `Shift Confirmed: ${lang} at ${clinicName} on ${fmtDate(date)}`, html).catch(console.error),
     createCalEvent(signupId, volunteerEmail, slot).catch(console.error),
   ]);
-
-  // Notify clinic via Resend
-  const clinicHtml = wrap(
-    "New Interpreter Signed Up",
-    `<p>A volunteer has signed up for an interpreter slot at your clinic.</p>
-${table(
-  detail("Volunteer", volunteerName),
-  detail("Language", lang),
-  detail("Date", fmtDate(date)),
-  detail("Time", `${fmt12(subBlockHour)} &ndash; ${fmt12(subBlockHour + 1)}`),
-)}`,
-  );
-
-  await sendResendEmail(
-    clinicContactEmail,
-    `New Interpreter Signup: ${lang} on ${fmtDate(date)}`,
-    clinicHtml,
-  ).catch(console.error);
 }
 
 /**
@@ -245,7 +224,7 @@ ${table(
   detail("Your Time", `${fmt12(subBlockHour)} &ndash; ${fmt12(subBlockHour + 1)}`),
   detail("Clinic", clinicName),
 )}
-<p style="font-size:13px;color:#6b7280">The calendar event has been removed. Check InterpretConnect for updated availability.</p>`,
+<p style="font-size:13px;color:#6b7280">The calendar event has been removed. Check Georgetown Medical Interpreters for updated availability.</p>`,
       );
       return Promise.all([
         sendGmail(volunteerEmail, `Shift Removed: ${clinicName} on ${fmtDate(date)}`, html).catch(console.error),
@@ -373,14 +352,14 @@ export async function notifyUserApproved(params: {
   const html = wrap(
     "Your Account Has Been Approved",
     `<p>Hi ${name},</p>
-<p>Your InterpretConnect account has been <strong>approved</strong>. You can now sign in as a <strong>${roleLabel}</strong>.</p>
+<p>Your Georgetown Medical Interpreters account has been <strong>approved</strong>. You can now sign in as a <strong>${roleLabel}</strong>.</p>
 <p><a href="${process.env.NEXTAUTH_URL ?? "https://georgetownmedicalinterpreters.org"}/login"
    style="display:inline-block;background:#002147;color:#fff;padding:10px 20px;border-radius:6px;text-decoration:none;font-size:14px;font-weight:600">
-  Sign In to InterpretConnect
+  Sign In to Georgetown Medical Interpreters
 </a></p>`,
   );
 
-  await sendGmail(email, "Your InterpretConnect Account Has Been Approved", html).catch(console.error);
+  await sendGmail(email, "Your Georgetown Medical Interpreters Account Has Been Approved", html).catch(console.error);
 }
 
 /**
@@ -395,9 +374,9 @@ export async function notifyUserSuspended(params: {
   const html = wrap(
     "Account Suspended",
     `<p>Hi ${name},</p>
-<p>Your InterpretConnect account has been <strong>suspended</strong>. You will no longer be able to sign in.</p>
+<p>Your Georgetown Medical Interpreters account has been <strong>suspended</strong>. You will no longer be able to sign in.</p>
 <p style="font-size:13px;color:#6b7280">If you believe this is an error, please contact your program coordinator.</p>`,
   );
 
-  await sendGmail(email, "Your InterpretConnect Account Has Been Suspended", html).catch(console.error);
+  await sendGmail(email, "Your Georgetown Medical Interpreters Account Has Been Suspended", html).catch(console.error);
 }

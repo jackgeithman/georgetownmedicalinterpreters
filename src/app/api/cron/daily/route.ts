@@ -112,7 +112,6 @@ export async function GET(req: Request) {
   });
 
   for (const clinic of clinicsForSummary) {
-    if (clinic.slots.length === 0) continue;
     if (!clinic.contactEmail) continue;
 
     const slotSummaries = clinic.slots.map((s) => ({

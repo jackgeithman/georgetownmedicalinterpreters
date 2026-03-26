@@ -221,25 +221,10 @@ export async function sendClinicDailySummary(opts: {
   clinicName: string;
   slots: SlotSummaryItem[];
 }) {
-  const rows = opts.slots
-    .map(
-      (s) =>
-        `<tr>
-          <td style="padding:4px 8px">${fmt(s.date)}</td>
-          <td style="padding:4px 8px">${fmtTime(s.startTime)} – ${fmtTime(s.endTime)}</td>
-          <td style="padding:4px 8px">${s.language}</td>
-          <td style="padding:4px 8px">${s.signedUp} / ${s.interpreterCount}</td>
-          <td style="padding:4px 8px">${s.notes ?? "—"}</td>
-        </tr>`
-    )
-    .join("");
+  const hasSlots = opts.slots.length > 0;
 
-  await send({
-    from: FROM(),
-    to: opts.to,
-    subject: `Daily summary — ${opts.clinicName}`,
-    html: `<p>Hi ${opts.clinicName} team,</p>
-<p>Here is today's summary of your upcoming interpreter slots:</p>
+  const body = hasSlots
+    ? `<p>Here is today's summary of your upcoming interpreter slots:</p>
 <table border="1" cellspacing="0" style="border-collapse:collapse;font-size:14px">
   <thead>
     <tr style="background:#f5f5f0">
@@ -250,9 +235,24 @@ export async function sendClinicDailySummary(opts: {
       <th style="padding:4px 8px">Notes</th>
     </tr>
   </thead>
-  <tbody>${rows}</tbody>
-</table>
-<p><a href="${process.env.NEXTAUTH_URL}/dashboard">View dashboard →</a></p>`,
+  <tbody>${opts.slots.map((s) => `<tr>
+          <td style="padding:4px 8px">${fmt(s.date)}</td>
+          <td style="padding:4px 8px">${fmtTime(s.startTime)} – ${fmtTime(s.endTime)}</td>
+          <td style="padding:4px 8px">${s.language}</td>
+          <td style="padding:4px 8px">${s.signedUp} / ${s.interpreterCount}</td>
+          <td style="padding:4px 8px">${s.notes ?? "—"}</td>
+        </tr>`).join("")}</tbody>
+</table>`
+    : `<p>You have no upcoming interpreter slots scheduled.</p>
+<p>Log in to Georgetown Medical Interpreters to create slots so volunteers can sign up!</p>`;
+
+  await send({
+    from: FROM(),
+    to: opts.to,
+    subject: `Daily summary — ${opts.clinicName}`,
+    html: `<p>Hi ${opts.clinicName} team,</p>
+${body}
+<p><a href="${process.env.NEXTAUTH_URL}/dashboard">Go to dashboard →</a></p>`,
   });
 }
 
