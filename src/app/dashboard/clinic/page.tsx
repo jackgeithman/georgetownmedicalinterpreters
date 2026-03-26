@@ -255,12 +255,20 @@ export default function ClinicDashboard() {
               )}
             </p>
           </div>
-          <button
-            onClick={() => signOut({ callbackUrl: "/login" })}
-            className="text-sm px-3 py-1.5 bg-stone-100 hover:bg-stone-200 text-stone-600 rounded-md transition-colors"
-          >
-            Sign Out
-          </button>
+          <div className="flex items-center gap-3">
+            <a
+              href="mailto:georgetownmedicalinterpreters@gmail.com"
+              className="text-sm px-3 py-1.5 bg-stone-100 hover:bg-stone-200 text-stone-600 rounded-md transition-colors"
+            >
+              Contact Us
+            </a>
+            <button
+              onClick={() => signOut({ callbackUrl: "/login" })}
+              className="text-sm px-3 py-1.5 bg-stone-100 hover:bg-stone-200 text-stone-600 rounded-md transition-colors"
+            >
+              Sign Out
+            </button>
+          </div>
         </div>
       </header>
 

@@ -132,6 +132,15 @@ function LoginContent() {
           {" "}and{" "}
           <a href="/privacy" className="underline hover:text-stone-600">Privacy Policy</a>.
         </p>
+        <p className="text-center text-xs text-stone-400 mt-2">
+          Questions?{" "}
+          <a
+            href="mailto:georgetownmedicalinterpreters@gmail.com"
+            className="underline hover:text-stone-600"
+          >
+            Contact Us
+          </a>
+        </p>
       </div>
     </div>
   );
