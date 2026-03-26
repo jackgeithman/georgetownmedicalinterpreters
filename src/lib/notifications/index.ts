@@ -94,8 +94,7 @@ ${table(
   detail("Location", clinicAddress),
   notes ? detail("Notes", notes) : "",
 )}
-<p style="font-size:13px;color:#6b7280">A Google Calendar invite has been sent to your Georgetown calendar.
-If you need to cancel, please do so in Georgetown Medical Interpreters as early as possible.</p>`,
+<p style="font-size:13px;color:#6b7280">If you need to cancel, please do so as early as possible.</p>`,
   );
 
   const slot: SlotInfo = { date, subBlockHour, clinicName, clinicAddress, language, notes };

@@ -92,7 +92,7 @@ export async function createCalEvent(
   const cal = google.calendar({ version: "v3", auth: getAuth() });
   await cal.events.insert({
     calendarId: gmiCalendarId(),
-    sendUpdates: "all",
+    sendUpdates: "none",
     requestBody: { id: calEventId(signupId), ...buildEventBody(volunteerEmail, slot) },
   });
 }
@@ -111,7 +111,7 @@ export async function updateCalEvent(
   await cal.events.update({
     calendarId: gmiCalendarId(),
     eventId: calEventId(signupId),
-    sendUpdates: "all",
+    sendUpdates: "none",
     requestBody: {
       id: calEventId(signupId),
       ...buildEventBody(volunteerEmail, slot, "[Updated] "),
@@ -130,7 +130,7 @@ export async function deleteCalEvent(signupId: string): Promise<void> {
     await cal.events.delete({
       calendarId: gmiCalendarId(),
       eventId: calEventId(signupId),
-      sendUpdates: "all",
+      sendUpdates: "none",
     });
   } catch {
     // 404 means event was never created (e.g. Calendar API was not configured at signup time)
