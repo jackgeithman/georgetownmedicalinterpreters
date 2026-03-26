@@ -98,6 +98,13 @@ export default function AdminDashboard() {
   const [clinicFormError, setClinicFormError] = useState("");
   const [assignModal, setAssignModal] = useState<{ userId: string; userName: string } | null>(null);
   const [pinReveal, setPinReveal] = useState<{ clinicName: string; pin: string } | null>(null);
+  const [volunteerAssignTarget, setVolunteerAssignTarget] = useState<{
+    slotId: string; hour: number; language: string; date: string; clinicName: string;
+  } | null>(null);
+  const [assignSearch, setAssignSearch] = useState("");
+  const [assignSelected, setAssignSelected] = useState<{ userId: string; name: string; email: string } | null>(null);
+  const [assignLoading, setAssignLoading] = useState(false);
+  const [assignError, setAssignError] = useState("");
   const [langFilter, setLangFilter] = useState("ALL");
   const [clinicFilter, setClinicFilter] = useState("ALL");
   const [dateFrom, setDateFrom] = useState("");
@@ -206,6 +213,39 @@ export default function AdminDashboard() {
     const res = await fetch(`/api/volunteer/signups/${signupId}`, { method: "DELETE" });
     if (res.ok) await fetchData();
     setActionLoading(null);
+  };
+
+  const assignVolunteer = async () => {
+    if (!volunteerAssignTarget || !assignSelected) return;
+    setAssignLoading(true);
+    setAssignError("");
+    const res = await fetch("/api/admin/signups", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        slotId: volunteerAssignTarget.slotId,
+        subBlockHour: volunteerAssignTarget.hour,
+        userId: assignSelected.userId,
+      }),
+    });
+    if (res.ok) {
+      await fetchData();
+      setVolunteerAssignTarget(null);
+      setAssignSelected(null);
+      setAssignSearch("");
+      setAssignError("");
+    } else {
+      const err = await res.json().catch(() => ({}));
+      setAssignError(err.error ?? "Could not assign volunteer.");
+    }
+    setAssignLoading(false);
+  };
+
+  const closeAssignModal = () => {
+    setVolunteerAssignTarget(null);
+    setAssignSelected(null);
+    setAssignSearch("");
+    setAssignError("");
   };
 
   const deleteClinic = async (clinicId: string, clinicName: string) => {
@@ -358,29 +398,44 @@ export default function AdminDashboard() {
                     <span className="text-xs text-stone-600 w-28">{formatHour(hour)} – {formatHour(hour + 1)}</span>
                     <span className="text-xs text-stone-400">{filled}/{slot.interpreterCount} filled</span>
                   </div>
-                  {isPast ? (
-                    <span className="text-xs px-2 py-1 bg-stone-100 text-stone-400 rounded-md">Past</span>
-                  ) : mySignup ? (
-                    <button
-                      disabled={actionLoading === mySignup.id}
-                      onClick={() => cancelMySignup(mySignup.id)}
-                      className="text-xs px-2 py-1 bg-emerald-50 text-emerald-700 hover:bg-red-50 hover:text-red-600 border border-emerald-200 hover:border-red-200 rounded-md font-medium transition-colors disabled:opacity-50"
-                      title="Click to cancel"
-                    >
-                      {actionLoading === mySignup.id ? "..." : "Signed Up ✓"}
-                    </button>
-                  ) : isFull ? (
-                    <span className="text-xs px-2 py-1 bg-stone-100 text-stone-400 rounded-md">Full</span>
-                  ) : (
-                    <button
-                      disabled={actionLoading === signupKey || !canSignUp}
-                      onClick={() => signUp(slot.id, hour)}
-                      title={!canSignUp ? "Add this language to your volunteer profile first" : undefined}
-                      className="text-xs px-3 py-1 bg-stone-800 text-white hover:bg-stone-700 rounded-md transition-colors disabled:opacity-40"
-                    >
-                      {actionLoading === signupKey ? "..." : "Sign Up"}
-                    </button>
-                  )}
+                  <div className="flex items-center gap-2">
+                    {!isPast && (
+                      <button
+                        onClick={() => {
+                          setVolunteerAssignTarget({ slotId: slot.id, hour, language: slot.language, date: slot.date, clinicName: slot.clinic.name });
+                          setAssignSearch("");
+                          setAssignSelected(null);
+                          setAssignError("");
+                        }}
+                        className="text-xs px-2 py-1 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200 rounded-md transition-colors"
+                      >
+                        Assign
+                      </button>
+                    )}
+                    {isPast ? (
+                      <span className="text-xs px-2 py-1 bg-stone-100 text-stone-400 rounded-md">Past</span>
+                    ) : mySignup ? (
+                      <button
+                        disabled={actionLoading === mySignup.id}
+                        onClick={() => cancelMySignup(mySignup.id)}
+                        className="text-xs px-2 py-1 bg-emerald-50 text-emerald-700 hover:bg-red-50 hover:text-red-600 border border-emerald-200 hover:border-red-200 rounded-md font-medium transition-colors disabled:opacity-50"
+                        title="Click to cancel"
+                      >
+                        {actionLoading === mySignup.id ? "..." : "Signed Up ✓"}
+                      </button>
+                    ) : isFull ? (
+                      <span className="text-xs px-2 py-1 bg-stone-100 text-stone-400 rounded-md">Full</span>
+                    ) : (
+                      <button
+                        disabled={actionLoading === signupKey || !canSignUp}
+                        onClick={() => signUp(slot.id, hour)}
+                        title={!canSignUp ? "Add this language to your volunteer profile first" : undefined}
+                        className="text-xs px-3 py-1 bg-stone-800 text-white hover:bg-stone-700 rounded-md transition-colors disabled:opacity-40"
+                      >
+                        {actionLoading === signupKey ? "..." : "Sign Up"}
+                      </button>
+                    )}
+                  </div>
                 </div>
                 {/* Other volunteers signed up this hour */}
                 {hoursSignups
@@ -991,6 +1046,135 @@ export default function AdminDashboard() {
           </div>
         )}
       </div>
+
+      {/* Assign Volunteer to Shift Modal */}
+      {volunteerAssignTarget && (() => {
+        const activeVolunteers = users.filter(
+          (u) =>
+            (u.role === "VOLUNTEER" || u.role === "ADMIN" || u.role === "SUPER_ADMIN") &&
+            u.status === "ACTIVE"
+        );
+        const searchLower = assignSearch.toLowerCase();
+        const filtered = activeVolunteers.filter(
+          (u) =>
+            (u.name?.toLowerCase().includes(searchLower) ?? false) ||
+            u.email.toLowerCase().includes(searchLower)
+        );
+        const targetSlot = adminSlots.find((s) => s.id === volunteerAssignTarget.slotId);
+
+        return (
+          <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-xl shadow-xl w-full max-w-md">
+              {/* Header */}
+              <div className="px-6 py-4 border-b border-stone-100">
+                <h3 className="text-sm font-semibold text-stone-800">Assign a Volunteer</h3>
+                <p className="text-xs text-stone-400 mt-0.5">
+                  {LANG_LABELS[volunteerAssignTarget.language]} &middot; {formatDate(volunteerAssignTarget.date)} &middot; {formatHour(volunteerAssignTarget.hour)}–{formatHour(volunteerAssignTarget.hour + 1)} &middot; {volunteerAssignTarget.clinicName}
+                </p>
+              </div>
+
+              {!assignSelected ? (
+                /* Step 1: search and select */
+                <div className="px-6 py-4">
+                  <input
+                    autoFocus
+                    type="text"
+                    placeholder="Search by name or email..."
+                    value={assignSearch}
+                    onChange={(e) => setAssignSearch(e.target.value)}
+                    className="w-full px-3 py-2 text-sm border border-stone-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-stone-300 mb-3"
+                  />
+                  <div className="max-h-64 overflow-y-auto space-y-1">
+                    {filtered.length === 0 && (
+                      <p className="text-xs text-stone-400 text-center py-6">No volunteers found.</p>
+                    )}
+                    {filtered.map((u) => {
+                      const alreadySigned = targetSlot?.signups.some(
+                        (sg) =>
+                          sg.subBlockHour === volunteerAssignTarget.hour &&
+                          sg.volunteer.user.email === u.email
+                      );
+                      return (
+                        <button
+                          key={u.id}
+                          disabled={!!alreadySigned}
+                          onClick={() =>
+                            setAssignSelected({ userId: u.id, name: u.name ?? u.email, email: u.email })
+                          }
+                          className="w-full text-left px-3 py-2.5 rounded-lg hover:bg-stone-50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed border border-transparent hover:border-stone-200"
+                        >
+                          <div className="flex items-center justify-between gap-3">
+                            <div className="min-w-0">
+                              <p className="text-sm font-medium text-stone-800 truncate">{u.name ?? "—"}</p>
+                              <p className="text-xs text-stone-400 truncate">{u.email}</p>
+                            </div>
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              {alreadySigned && (
+                                <span className="text-xs px-2 py-0.5 bg-emerald-50 text-emerald-600 rounded-full">Signed up</span>
+                              )}
+                              {u.volunteer?.languages?.map((l) => (
+                                <span key={l} className={`text-xs px-1.5 py-0.5 rounded-full ${LANG_COLORS[l] ?? "bg-stone-100 text-stone-500"}`}>
+                                  {LANG_LABELS[l] ?? l}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <button
+                    onClick={closeAssignModal}
+                    className="mt-4 text-xs text-stone-400 hover:text-stone-600"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              ) : (
+                /* Step 2: confirm */
+                <div className="px-6 py-4">
+                  <div className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 mb-4">
+                    <p className="text-xs font-semibold text-amber-800 mb-2">Confirm Assignment</p>
+                    <p className="text-sm text-amber-900">
+                      Assign <strong>{assignSelected.name}</strong> to this shift?
+                    </p>
+                    <p className="text-xs text-amber-700 mt-0.5">{assignSelected.email}</p>
+                    <div className="mt-2 pt-2 border-t border-amber-200 text-xs text-amber-700 space-y-0.5">
+                      <p>{LANG_LABELS[volunteerAssignTarget.language]} · {volunteerAssignTarget.clinicName}</p>
+                      <p>{formatDate(volunteerAssignTarget.date)} · {formatHour(volunteerAssignTarget.hour)}–{formatHour(volunteerAssignTarget.hour + 1)}</p>
+                      <p className="mt-1 text-amber-600">They will receive a calendar invite.</p>
+                    </div>
+                  </div>
+                  {assignError && (
+                    <p className="text-xs text-red-600 mb-3">{assignError}</p>
+                  )}
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => { setAssignSelected(null); setAssignError(""); }}
+                      className="flex-1 px-4 py-2 text-sm border border-stone-200 text-stone-600 rounded-lg hover:bg-stone-50 transition-colors"
+                    >
+                      ← Back
+                    </button>
+                    <button
+                      disabled={assignLoading}
+                      onClick={assignVolunteer}
+                      className="flex-1 px-4 py-2 text-sm bg-stone-800 text-white rounded-lg hover:bg-stone-700 transition-colors disabled:opacity-50"
+                    >
+                      {assignLoading ? "Assigning..." : "Confirm Assignment"}
+                    </button>
+                  </div>
+                  <button
+                    onClick={closeAssignModal}
+                    className="mt-3 text-xs text-stone-400 hover:text-stone-600 w-full text-center"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      })()}
 
       {/* PIN Reveal Modal */}
       {pinReveal && (
