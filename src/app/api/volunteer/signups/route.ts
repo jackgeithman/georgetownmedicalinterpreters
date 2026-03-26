@@ -101,7 +101,6 @@ export async function POST(req: NextRequest) {
     await notifyVolunteerSignup({
       signupId: signup.id,
       volunteerEmail: user.email,
-      volunteerName: user.name ?? user.email,
       clinicName: slot.clinic.name,
       clinicAddress: slot.clinic.address,
       language: slot.language,

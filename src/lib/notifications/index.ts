@@ -52,16 +52,17 @@ function table(...rows: string[]): string {
   return `<table style="margin:16px 0;border-collapse:collapse">${rows.join("")}</table>`;
 }
 
-// ─── Volunteer Notifications (Gmail + Google Calendar) ───────────────────────
+// ─── Volunteer Notifications (Google Calendar) ───────────────────────────────
 
 /**
  * Volunteer signs up for a slot.
- * Sends a Gmail confirmation and creates a Google Calendar event.
+ * Creates a Google Calendar event with full shift details — GCal sends its
+ * own invite email to the volunteer, which serves as the confirmation.
+ * No separate GMI email is sent to avoid duplicates.
  */
 export async function notifyVolunteerSignup(params: {
   signupId: string;
   volunteerEmail: string;
-  volunteerName: string;
   clinicName: string;
   clinicAddress: string;
   language: string;
@@ -69,40 +70,9 @@ export async function notifyVolunteerSignup(params: {
   subBlockHour: number;
   notes?: string | null;
 }): Promise<void> {
-  const {
-    signupId,
-    volunteerEmail,
-    volunteerName,
-    clinicName,
-    clinicAddress,
-    language,
-    date,
-    subBlockHour,
-    notes,
-  } = params;
-
-  const lang = LANG_NAMES[language] ?? language;
-
-  const html = wrap(
-    "Shift Confirmed",
-    `<p>Hi ${volunteerName},</p>
-<p>You&rsquo;re confirmed for a <strong>${lang}</strong> interpreter shift.</p>
-${table(
-  detail("Date", fmtDate(date)),
-  detail("Time", `${fmt12(subBlockHour)} &ndash; ${fmt12(subBlockHour + 1)}`),
-  detail("Clinic", clinicName),
-  detail("Location", clinicAddress),
-  notes ? detail("Notes", notes) : "",
-)}
-<p style="font-size:13px;color:#6b7280">If you need to cancel, please do so as early as possible.</p>`,
-  );
-
+  const { signupId, volunteerEmail, clinicName, clinicAddress, language, date, subBlockHour, notes } = params;
   const slot: SlotInfo = { date, subBlockHour, clinicName, clinicAddress, language, notes };
-
-  await Promise.all([
-    sendGmail(volunteerEmail, `Shift Confirmed: ${lang} at ${clinicName} on ${fmtDate(date)}`, html).catch(console.error),
-    createCalEvent(signupId, volunteerEmail, slot).catch(console.error),
-  ]);
+  await createCalEvent(signupId, volunteerEmail, slot).catch(console.error);
 }
 
 /**
@@ -116,6 +86,7 @@ export async function notifyVolunteerCancellation(params: {
   volunteerEmail: string;
   volunteerName: string;
   clinicName: string;
+  clinicAddress: string;
   clinicContactEmail: string;
   clinicUrgentAlerts: boolean;
   language: string;
@@ -128,6 +99,7 @@ export async function notifyVolunteerCancellation(params: {
     volunteerEmail,
     volunteerName,
     clinicName,
+    clinicAddress,
     clinicContactEmail,
     clinicUrgentAlerts,
     language,
@@ -139,21 +111,9 @@ export async function notifyVolunteerCancellation(params: {
   const lang = LANG_NAMES[language] ?? language;
   const isUrgent = hoursUntilSlot < 24;
 
-  const volunteerHtml = wrap(
-    "Shift Cancelled",
-    `<p>Hi ${volunteerName},</p>
-<p>Your cancellation has been recorded for the following shift:</p>
-${table(
-  detail("Date", fmtDate(date)),
-  detail("Time", `${fmt12(subBlockHour)} &ndash; ${fmt12(subBlockHour + 1)}`),
-  detail("Clinic", clinicName),
-  detail("Language", lang),
-)}
-<p style="font-size:13px;color:#6b7280">The calendar event has been removed from your Georgetown calendar.</p>`,
-  );
-
+  // GCal sends its own cancellation email to the volunteer when the event is
+  // deleted with sendUpdates: "all" — no separate GMI email needed.
   const notifications: Promise<void>[] = [
-    sendGmail(volunteerEmail, `Shift Cancellation Confirmed: ${clinicName} on ${fmtDate(date)}`, volunteerHtml).catch(console.error),
     deleteCalEvent(signupId).catch(console.error),
   ];
 

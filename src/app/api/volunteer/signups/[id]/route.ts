@@ -101,6 +101,7 @@ export async function DELETE(
       volunteerEmail: user.email,
       volunteerName: user.name ?? user.email,
       clinicName: clinic.name,
+      clinicAddress: clinic.address,
       clinicContactEmail: clinic.contactEmail,
       clinicUrgentAlerts: clinic.urgentCancellationAlerts,
       language: slot.language,
