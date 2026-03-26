@@ -1,30 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
-  <defs>
-    <linearGradient id="shieldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#003070"/>
-      <stop offset="100%" stop-color="#001530"/>
-    </linearGradient>
-    <filter id="shieldShadow" x="-10%" y="-10%" width="120%" height="120%">
-      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#000" flood-opacity="0.3"/>
-    </filter>
-  </defs>
-  <!-- Shield shape -->
-  <path d="M 64 6 L 110 22 L 110 70 Q 110 104 64 122 Q 18 104 18 70 L 18 22 Z"
-        fill="url(#shieldGrad)" filter="url(#shieldShadow)"/>
-  <!-- Gold outer border -->
-  <path d="M 64 13 L 103 27 L 103 70 Q 103 99 64 115 Q 25 99 25 70 L 25 27 Z"
-        fill="none" stroke="#C0A85C" stroke-width="1.8"/>
-  <!-- "GEORGETOWN" small-caps top -->
-  <text x="64" y="42" font-family="Georgia, 'Times New Roman', serif"
-        font-size="7" fill="#C0A85C" text-anchor="middle" letter-spacing="2">GEORGETOWN</text>
-  <!-- Gold divider line -->
-  <line x1="30" y1="47" x2="98" y2="47" stroke="#C0A85C" stroke-width="0.8" opacity="0.7"/>
-  <!-- GMI monogram -->
-  <text x="64" y="78" font-family="Georgia, 'Times New Roman', serif"
-        font-size="30" font-weight="bold" fill="white" text-anchor="middle" letter-spacing="2">GMI</text>
-  <!-- Gold divider line -->
-  <line x1="30" y1="84" x2="98" y2="84" stroke="#C0A85C" stroke-width="0.8" opacity="0.7"/>
-  <!-- "MEDICAL INTERPRETERS" small-caps bottom -->
-  <text x="64" y="96" font-family="Georgia, 'Times New Roman', serif"
-        font-size="5.5" fill="#C0A85C" text-anchor="middle" letter-spacing="1.5">MEDICAL INTERPRETERS</text>
+  <rect width="128" height="128" rx="24" fill="#002147"/>
+  <text x="64" y="76" font-family="Georgia, 'Times New Roman', serif"
+        font-size="48" font-weight="bold" fill="white"
+        text-anchor="middle" letter-spacing="4">GMI</text>
 </svg>
