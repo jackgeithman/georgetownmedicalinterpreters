@@ -515,9 +515,17 @@ export default function AdminDashboard() {
       {/* Header */}
       <header className="bg-white border-b border-stone-200">
         <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div>
-            <h1 className="text-lg font-semibold text-stone-800 tracking-tight">Georgetown Medical Interpreters</h1>
-            <p className="text-xs text-stone-400">Admin Dashboard</p>
+          <div className="flex items-center gap-4">
+            <div>
+              <h1 className="text-lg font-semibold text-stone-800 tracking-tight">Georgetown Medical Interpreters</h1>
+              <p className="text-xs text-stone-400">Admin Dashboard</p>
+            </div>
+            <a
+              href="mailto:georgetownmedicalinterpreters@gmail.com"
+              className="text-xs text-stone-400 hover:text-stone-600 underline underline-offset-2 transition-colors"
+            >
+              Contact Us
+            </a>
           </div>
           <div className="flex items-center gap-3">
             <span className="text-sm text-stone-500">{session?.user?.email}</span>
@@ -536,12 +544,6 @@ export default function AdminDashboard() {
               </svg>
               Volunteer View
             </button>
-            <a
-              href="mailto:georgetownmedicalinterpreters@gmail.com"
-              className="text-sm px-3 py-1.5 bg-stone-100 hover:bg-stone-200 text-stone-600 rounded-md transition-colors"
-            >
-              Contact Us
-            </a>
             <button
               onClick={() => signOut({ callbackUrl: "/login" })}
               className="text-sm px-3 py-1.5 bg-stone-100 hover:bg-stone-200 text-stone-600 rounded-md transition-colors"
