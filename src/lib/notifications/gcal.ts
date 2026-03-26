@@ -34,6 +34,12 @@ const LANG_NAMES: Record<string, string> = {
   AR: "Arabic",
 };
 
+function fmt12(h: number): string {
+  const period = h < 12 ? "AM" : "PM";
+  const h12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
+  return `${h12}:00 ${period}`;
+}
+
 function buildEventBody(volunteerEmail: string, slot: SlotInfo, titlePrefix = "") {
   const lang = LANG_NAMES[slot.language] ?? slot.language;
   const senderEmail = process.env.GOOGLE_GMAIL_SENDER_EMAIL!;
@@ -46,12 +52,24 @@ function buildEventBody(volunteerEmail: string, slot: SlotInfo, titlePrefix = ""
   const startStr = `${dateStr}T${pad(slot.subBlockHour)}:00:00`;
   const endStr = `${dateStr}T${pad(slot.subBlockHour + 1)}:00:00`;
 
+  // Rich description so all shift details are visible in the GCal invite email
+  const lines = [
+    `Language: ${lang}`,
+    `Time: ${fmt12(slot.subBlockHour)} – ${fmt12(slot.subBlockHour + 1)}`,
+    `Clinic: ${slot.clinicName}`,
+    `Address: ${slot.clinicAddress}`,
+    ...(slot.notes ? [`Notes: ${slot.notes}`] : []),
+    "",
+    "Georgetown Medical Interpreters",
+    "georgetownmedicalinterpreters.org",
+    "",
+    "If you need to cancel, please do so as early as possible via the volunteer dashboard.",
+  ];
+
   return {
     summary: `${titlePrefix}Medical Interpreter — ${lang} at ${slot.clinicName}`,
     location: slot.clinicAddress,
-    description:
-      (slot.notes ? `Notes: ${slot.notes}\n\n` : "") +
-      "Managed by Georgetown Medical Interpreters",
+    description: lines.join("\n"),
     start: { dateTime: startStr, timeZone: "America/New_York" },
     end: { dateTime: endStr, timeZone: "America/New_York" },
     attendees: [
@@ -78,10 +96,10 @@ function gmiCalendarId(): string {
 }
 
 /**
- * Creates a Google Calendar event in the GMI calendar for a volunteer signup.
- * The volunteer is added as an attendee — they receive an invite and the event
- * appears in their own Google Calendar. No one else can see it unless they have
- * access to either the GMI calendar or the volunteer's calendar.
+ * Creates a Google Calendar event for a volunteer signup.
+ * sendUpdates: "all" causes GCal to email the volunteer the full invite —
+ * this serves as their signup confirmation. The event also appears on their
+ * personal calendar once accepted.
  */
 export async function createCalEvent(
   signupId: string,
@@ -120,7 +138,9 @@ export async function updateCalEvent(
 }
 
 /**
- * Deletes a GMI calendar event (cancellation). Sends cancellation emails to all attendees.
+ * Deletes a GMI calendar event (cancellation).
+ * sendUpdates: "all" causes GCal to email the volunteer a cancellation notice —
+ * this serves as their cancellation receipt.
  * Silently ignores 404 if the event was never created.
  */
 export async function deleteCalEvent(signupId: string): Promise<void> {

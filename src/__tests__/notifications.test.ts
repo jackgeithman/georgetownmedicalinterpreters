@@ -2,9 +2,8 @@
  * Tests for src/lib/notifications/index.ts
  *
  * Covers:
- *  - notifyVolunteerSignup  → should NOT email clinic (removed feature)
- *  - notifyVolunteerCancellation → urgent alert logic (clinic only gets email
- *    when cancellation is <24h AND urgentCancellationAlerts is true)
+ *  - notifyVolunteerSignup  → only creates a GCal event (no GMI email)
+ *  - notifyVolunteerCancellation → only deletes GCal event + urgent clinic alert logic
  */
 
 jest.mock("../lib/notifications/gmail", () => ({
@@ -37,7 +36,6 @@ const mockSendResendEmail = sendResendEmail as jest.Mock;
 const baseSignupParams = {
   signupId: "signup-123",
   volunteerEmail: "volunteer@georgetown.edu",
-  volunteerName: "Jane Doe",
   clinicName: "MedStar Clinic",
   clinicAddress: "123 Main St, Washington DC",
   language: "ES",
@@ -51,6 +49,7 @@ const baseCancelParams = {
   volunteerEmail: "volunteer@georgetown.edu",
   volunteerName: "Jane Doe",
   clinicName: "MedStar Clinic",
+  clinicAddress: "123 Main St, Washington DC",
   clinicContactEmail: "clinic@medstar.org",
   clinicUrgentAlerts: true,
   language: "ES",
@@ -66,16 +65,6 @@ beforeEach(() => {
 // ── notifyVolunteerSignup ─────────────────────────────────────────────────────
 
 describe("notifyVolunteerSignup", () => {
-  it("sends a confirmation email to the volunteer", async () => {
-    await notifyVolunteerSignup(baseSignupParams);
-    expect(mockSendGmail).toHaveBeenCalledTimes(1);
-    expect(mockSendGmail).toHaveBeenCalledWith(
-      "volunteer@georgetown.edu",
-      expect.stringContaining("Shift Confirmed"),
-      expect.any(String),
-    );
-  });
-
   it("creates a Google Calendar event for the volunteer", async () => {
     await notifyVolunteerSignup(baseSignupParams);
     expect(mockCreateCalEvent).toHaveBeenCalledTimes(1);
@@ -86,41 +75,28 @@ describe("notifyVolunteerSignup", () => {
     );
   });
 
-  it("does NOT email the clinic when a volunteer signs up", async () => {
+  it("does NOT send a separate GMI email — GCal invite is the confirmation", async () => {
+    await notifyVolunteerSignup(baseSignupParams);
+    expect(mockSendGmail).not.toHaveBeenCalled();
+  });
+
+  it("does NOT email the clinic", async () => {
     await notifyVolunteerSignup(baseSignupParams);
     expect(mockSendResendEmail).not.toHaveBeenCalled();
-  });
-
-  it("email subject includes the language and clinic name", async () => {
-    await notifyVolunteerSignup(baseSignupParams);
-    const [, subject] = mockSendGmail.mock.calls[0];
-    expect(subject).toContain("Spanish");
-    expect(subject).toContain("MedStar Clinic");
-  });
-
-  it("email body does not contain 'InterpretConnect'", async () => {
-    await notifyVolunteerSignup(baseSignupParams);
-    const [, , html] = mockSendGmail.mock.calls[0];
-    expect(html).not.toContain("InterpretConnect");
   });
 });
 
 // ── notifyVolunteerCancellation ───────────────────────────────────────────────
 
 describe("notifyVolunteerCancellation", () => {
-  it("always sends a cancellation email to the volunteer", async () => {
-    await notifyVolunteerCancellation(baseCancelParams);
-    expect(mockSendGmail).toHaveBeenCalledTimes(1);
-    expect(mockSendGmail).toHaveBeenCalledWith(
-      "volunteer@georgetown.edu",
-      expect.stringContaining("Shift Cancellation Confirmed"),
-      expect.any(String),
-    );
-  });
-
-  it("always deletes the Google Calendar event", async () => {
+  it("deletes the Google Calendar event — GCal sends the cancellation notice", async () => {
     await notifyVolunteerCancellation(baseCancelParams);
     expect(mockDeleteCalEvent).toHaveBeenCalledWith("signup-123");
+  });
+
+  it("does NOT send a separate GMI cancellation email", async () => {
+    await notifyVolunteerCancellation(baseCancelParams);
+    expect(mockSendGmail).not.toHaveBeenCalled();
   });
 
   it("does NOT alert the clinic when cancellation is more than 24h out", async () => {
@@ -147,18 +123,16 @@ describe("notifyVolunteerCancellation", () => {
     );
   });
 
-  it("urgent clinic email body includes the volunteer name and language", async () => {
+  it("urgent clinic email body includes volunteer name and language", async () => {
     await notifyVolunteerCancellation({ ...baseCancelParams, hoursUntilSlot: 6 });
     const [, , html] = mockSendResendEmail.mock.calls[0];
     expect(html).toContain("Jane Doe");
     expect(html).toContain("Spanish");
   });
 
-  it("cancellation email body does not contain 'InterpretConnect'", async () => {
+  it("urgent clinic email body does not contain 'InterpretConnect'", async () => {
     await notifyVolunteerCancellation({ ...baseCancelParams, hoursUntilSlot: 6 });
-    const [, , volunteerHtml] = mockSendGmail.mock.calls[0];
-    expect(volunteerHtml).not.toContain("InterpretConnect");
-    const [, , clinicHtml] = mockSendResendEmail.mock.calls[0];
-    expect(clinicHtml).not.toContain("InterpretConnect");
+    const [, , html] = mockSendResendEmail.mock.calls[0];
+    expect(html).not.toContain("InterpretConnect");
   });
 });
