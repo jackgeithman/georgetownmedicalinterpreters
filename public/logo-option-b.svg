@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <defs>
+    <linearGradient id="bgGradB" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#002d60"/>
+      <stop offset="100%" stop-color="#001530"/>
+    </linearGradient>
+    <filter id="shadowB" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#000" flood-opacity="0.3"/>
+    </filter>
+    <clipPath id="circleClip">
+      <circle cx="64" cy="64" r="58"/>
+    </clipPath>
+  </defs>
+
+  <!-- Background circle -->
+  <circle cx="64" cy="64" r="60" fill="url(#bgGradB)" filter="url(#shadowB)"/>
+  <circle cx="64" cy="64" r="59" fill="none" stroke="#1a3a6e" stroke-width="1.5" opacity="0.7"/>
+
+  <!-- Left speech bubble (navy-tinted white, slightly behind) -->
+  <g clip-path="url(#circleClip)">
+    <path d="M 14 26 Q 14 17 23 17 L 72 17 Q 81 17 81 26 L 81 58 Q 81 67 72 67 L 46 67 L 36 80 L 38 67 L 23 67 Q 14 67 14 58 Z"
+          fill="white" opacity="0.92"/>
+
+    <!-- Right speech bubble (white, overlapping, slightly lower) -->
+    <path d="M 47 42 Q 47 33 56 33 L 105 33 Q 114 33 114 42 L 114 74 Q 114 83 105 83 L 90 83 L 91 96 L 80 83 L 56 83 Q 47 83 47 74 Z"
+          fill="white" opacity="0.75"/>
+
+    <!-- Left bubble subtle shading line -->
+    <path d="M 17 28 Q 17 20 25 20 L 70 20" fill="none" stroke="#c8d8ea" stroke-width="1" opacity="0.5"/>
+    <!-- Right bubble subtle shading line -->
+    <path d="M 50 44 Q 50 36 58 36 L 103 36" fill="none" stroke="#c8d8ea" stroke-width="1" opacity="0.4"/>
+  </g>
+
+  <!-- Stethoscope icon, centered between the two bubbles -->
+  <!-- Stethoscope drawn as: two earpiece lines, a curve, and a chest piece circle -->
+  <!-- Ear tips -->
+  <line x1="51" y1="37" x2="49" y2="30" stroke="#002147" stroke-width="2.5" stroke-linecap="round"/>
+  <line x1="67" y1="37" x2="69" y2="30" stroke="#002147" stroke-width="2.5" stroke-linecap="round"/>
+  <!-- Ear tips dots -->
+  <circle cx="49" cy="29" r="2.5" fill="#002147"/>
+  <circle cx="69" cy="29" r="2.5" fill="#002147"/>
+  <!-- Tube arch connecting ear pieces -->
+  <path d="M 51 37 Q 51 48 59 50 Q 67 52 67 37"
+        fill="none" stroke="#002147" stroke-width="2.5" stroke-linecap="round"/>
+  <!-- Tube going down to chest piece -->
+  <path d="M 59 50 Q 59 62 64 66"
+        fill="none" stroke="#002147" stroke-width="2.5" stroke-linecap="round"/>
+  <!-- Chest piece (diaphragm) -->
+  <circle cx="64" cy="70" r="5.5" fill="#002147"/>
+  <circle cx="64" cy="70" r="3" fill="white" opacity="0.5"/>
+
+  <!-- "GMI" label at bottom -->
+  <text x="64" y="115" font-family="Georgia, 'Times New Roman', serif" font-size="10"
+        font-weight="bold" fill="white" text-anchor="middle" letter-spacing="2.5" opacity="0.85">GMI</text>
+</svg>

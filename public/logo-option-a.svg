@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <defs>
+    <radialGradient id="bgGrad" cx="50%" cy="45%" r="50%">
+      <stop offset="0%" stop-color="#003580"/>
+      <stop offset="100%" stop-color="#001830"/>
+    </radialGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#000" flood-opacity="0.25"/>
+    </filter>
+    <filter id="innerGlow" x="-5%" y="-5%" width="110%" height="110%">
+      <feGaussianBlur stdDeviation="1.5" result="blur"/>
+      <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+    </filter>
+  </defs>
+
+  <!-- Navy blue circle background -->
+  <circle cx="64" cy="64" r="60" fill="url(#bgGrad)" filter="url(#shadow)"/>
+
+  <!-- Subtle ring border -->
+  <circle cx="64" cy="64" r="59" fill="none" stroke="#1a4080" stroke-width="1.5" opacity="0.6"/>
+
+  <!-- Speech bubble body (white) -->
+  <path d="M 28 30 Q 28 20 38 20 L 90 20 Q 100 20 100 30 L 100 72 Q 100 82 90 82 L 54 82 L 42 96 L 44 82 L 38 82 Q 28 82 28 72 Z"
+        fill="white" filter="url(#innerGlow)" opacity="0.97"/>
+
+  <!-- Speech bubble subtle inner shadow at top -->
+  <path d="M 30 32 Q 30 22 40 22 L 88 22 Q 97 22 98 30"
+        fill="none" stroke="#e0e8f0" stroke-width="1" opacity="0.5"/>
+
+  <!-- Medical cross — red with white border for polish -->
+  <!-- Horizontal bar -->
+  <rect x="48" y="54" width="32" height="11" rx="2" fill="#CC2200"/>
+  <!-- Vertical bar -->
+  <rect x="58.5" y="43.5" width="11" height="32" rx="2" fill="#CC2200"/>
+
+  <!-- White highlight on cross -->
+  <rect x="48" y="54" width="32" height="3" rx="1" fill="white" opacity="0.18"/>
+  <rect x="58.5" y="43.5" width="3" height="32" rx="1" fill="white" opacity="0.18"/>
+
+  <!-- Small "GMI" text at bottom of circle -->
+  <text x="64" y="115" font-family="Georgia, 'Times New Roman', serif" font-size="10"
+        font-weight="bold" fill="white" text-anchor="middle" letter-spacing="2.5" opacity="0.85">GMI</text>
+</svg>
