@@ -160,7 +160,7 @@ export async function DELETE(
   <tr><td style="padding:4px 12px 4px 0;color:#6b7280;font-size:13px">Time</td><td style="font-size:13px;font-weight:600">${fmt12(signup.subBlockHour)} – ${fmt12(signup.subBlockHour + 1)}</td></tr>
   <tr><td style="padding:4px 12px 4px 0;color:#6b7280;font-size:13px">Clinic</td><td style="font-size:13px;font-weight:600">${clinic.name}</td></tr>
 </table>
-<p style="font-size:13px;color:#6b7280">Sign in to InterpretConnect to claim this slot.</p>`
+<p style="font-size:13px;color:#6b7280">Sign in to Georgetown Medical Interpreters to claim this slot.</p>`
         );
 
         sendGmail(vol.user.email, `Open Slot: ${lang} at ${clinic.name} on ${fmtDate(slot.date)}`, html)

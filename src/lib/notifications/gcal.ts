@@ -49,7 +49,7 @@ function buildEventBody(volunteerEmail: string, slot: SlotInfo, titlePrefix = ""
     location: slot.clinicAddress,
     description:
       (slot.notes ? `Notes: ${slot.notes}\n\n` : "") +
-      "Managed via InterpretConnect · Georgetown Medical Interpreters",
+      "Managed by Georgetown Medical Interpreters",
     start: { dateTime: start.toISOString() },
     end: { dateTime: end.toISOString() },
     attendees: [

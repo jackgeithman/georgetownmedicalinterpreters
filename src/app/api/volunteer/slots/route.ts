@@ -54,7 +54,9 @@ export async function GET(req: NextRequest) {
       clinic: { select: { name: true, address: true } },
       signups: {
         where: { status: "ACTIVE" },
-        select: { subBlockHour: true, volunteerId: true },
+        include: {
+          volunteer: { include: { user: { select: { name: true } } } },
+        },
       },
     },
   });

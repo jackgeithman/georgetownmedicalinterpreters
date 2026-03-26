@@ -13,7 +13,7 @@ type BrowseSlot = {
   interpreterCount: number;
   notes: string | null;
   clinic: { name: string; address: string };
-  signups: { subBlockHour: number; volunteerId: string }[];
+  signups: { subBlockHour: number; volunteerId: string; volunteer: { user: { name: string | null } } }[];
 };
 
 type MySignup = {
@@ -319,20 +319,27 @@ export default function VolunteerDashboard() {
                 {slot.notes && <p className="text-xs text-stone-400 italic mb-3">{slot.notes}</p>}
                 <div className="space-y-2">
                   {subBlocks.map((hour) => {
-                    const filled = slot.signups.filter((s) => s.subBlockHour === hour).length;
+                    const hourSignups = slot.signups.filter((s) => s.subBlockHour === hour);
+                    const filled = hourSignups.length;
                     const mySignupEntry = profile
                       ? mySignups.find((s) => s.slot.id === slot.id && s.subBlockHour === hour)
                       : undefined;
                     const isMine = !!mySignupEntry;
                     const isFull = filled >= slot.interpreterCount;
                     const key = `${slot.id}-${hour}`;
+                    const signedUpNames = hourSignups.map((s) => s.volunteer.user.name ?? "Unknown");
                     return (
                       <div key={hour} className="flex items-center justify-between px-3 py-2 rounded-md bg-stone-50">
                         <div className="flex items-center gap-3">
                           <span className="text-xs text-stone-600 w-28">
                             {formatHour(hour)} – {formatHour(hour + 1)}
                           </span>
-                          <span className="text-xs text-stone-400">{filled}/{slot.interpreterCount} filled</span>
+                          <div>
+                            <span className="text-xs text-stone-400">{filled}/{slot.interpreterCount} filled</span>
+                            {signedUpNames.length > 0 && (
+                              <p className="text-xs text-stone-500">{signedUpNames.join(", ")}</p>
+                            )}
+                          </div>
                         </div>
                         {isPast ? (
                           <span className="text-xs px-2 py-1 bg-stone-100 text-stone-400 rounded-md">Past</span>
