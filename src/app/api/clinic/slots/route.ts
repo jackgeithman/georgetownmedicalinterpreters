@@ -46,6 +46,24 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "End time must be after start time" }, { status: 400 });
   }
 
+  // Date validation
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const slotDate = new Date(date + "T12:00:00");
+  if (slotDate < today) {
+    return NextResponse.json({ error: "Cannot create a slot in the past." }, { status: 400 });
+  }
+  const oneYearFromNow = new Date();
+  oneYearFromNow.setFullYear(oneYearFromNow.getFullYear() + 1);
+  if (slotDate > oneYearFromNow) {
+    return NextResponse.json({ error: "Cannot create a slot more than 1 year in the future." }, { status: 400 });
+  }
+
+  // Slot limit: max 100 active slots per clinic
+  const existingCount = await prisma.slot.count({
+    where: { clinicId: user.clinicId!, status: "ACTIVE" },
+  });
+
   const commonData = {
     clinicId: user.clinicId!,
     language,
@@ -71,6 +89,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Recurrence end date must be on or after start date" }, { status: 400 });
     }
 
+    if (existingCount + dates.length > 100) {
+      return NextResponse.json(
+        { error: `Adding ${dates.length} recurring slots would exceed the 100-slot limit. You currently have ${existingCount} active slots.` },
+        { status: 400 }
+      );
+    }
+
     await prisma.slot.createMany({
       data: dates.map((d) => ({
         ...commonData,
@@ -81,6 +106,10 @@ export async function POST(req: NextRequest) {
     });
 
     return NextResponse.json({ count: dates.length }, { status: 201 });
+  }
+
+  if (existingCount >= 100) {
+    return NextResponse.json({ error: "You have reached the maximum of 100 active slots." }, { status: 400 });
   }
 
   const slot = await prisma.slot.create({

@@ -96,6 +96,13 @@ export default function VolunteerDashboard() {
     unfilledSlotAlert: false,
   });
   const [notifSaved, setNotifSaved] = useState(false);
+  // Anti-spam: track cancel counts per slotId-hour key
+  const [cancelCounts, setCancelCounts] = useState<Record<string, number>>({});
+  const [spamModal, setSpamModal] = useState<{ onProceed: (() => void) | null; isBlocked: boolean } | null>(null);
+  // Easter egg state
+  const [easterBg, setEasterBg] = useState("transparent");
+  const [easterOpen, setEasterOpen] = useState(false);
+  const [easterCount, setEasterCount] = useState(0);
 
   const isAdmin = session?.user?.role === "ADMIN" || session?.user?.role === "SUPER_ADMIN";
 
@@ -155,11 +162,34 @@ export default function VolunteerDashboard() {
     setActionLoading(null);
   };
 
-  const cancelSignup = async (id: string) => {
+  const doCancel = async (id: string, slotHourKey: string) => {
     setActionLoading(id);
     const res = await fetch(`/api/volunteer/signups/${id}`, { method: "DELETE" });
-    if (res.ok) await fetchAll();
+    if (res.ok) {
+      setCancelCounts((prev) => ({ ...prev, [slotHourKey]: (prev[slotHourKey] ?? 0) + 1 }));
+      await fetchAll();
+    }
     setActionLoading(null);
+  };
+
+  const cancelSignup = (id: string, slotHourKey: string) => {
+    const count = cancelCounts[slotHourKey] ?? 0;
+    if (count >= 3) {
+      // Redirect to Easter egg
+      setSpamModal({ onProceed: null, isBlocked: true });
+      return;
+    }
+    if (count >= 1) {
+      setSpamModal({
+        isBlocked: false,
+        onProceed: () => {
+          setSpamModal(null);
+          void doCancel(id, slotHourKey);
+        },
+      });
+      return;
+    }
+    void doCancel(id, slotHourKey);
   };
 
   const saveProfile = async () => {
@@ -230,6 +260,12 @@ export default function VolunteerDashboard() {
                 Admin Dashboard
               </button>
             )}
+            <a
+              href="mailto:georgetownmedicalinterpreters@gmail.com"
+              className="text-sm px-3 py-1.5 bg-stone-100 hover:bg-stone-200 text-stone-600 rounded-md transition-colors"
+            >
+              Contact Us
+            </a>
             <button
               onClick={() => signOut({ callbackUrl: "/login" })}
               className="text-sm px-3 py-1.5 bg-stone-100 hover:bg-stone-200 text-stone-600 rounded-md transition-colors"
@@ -349,7 +385,7 @@ export default function VolunteerDashboard() {
                         ) : isMine ? (
                           <button
                             disabled={actionLoading === mySignupEntry.id}
-                            onClick={() => cancelSignup(mySignupEntry.id)}
+                            onClick={() => cancelSignup(mySignupEntry.id, `${slot.id}-${hour}`)}
                             className="text-xs px-2 py-1 bg-emerald-50 text-emerald-700 hover:bg-red-50 hover:text-red-600 border border-emerald-200 hover:border-red-200 rounded-md font-medium transition-colors disabled:opacity-50"
                             title="Click to cancel"
                           >
@@ -510,7 +546,7 @@ export default function VolunteerDashboard() {
                               </span>
                               <button
                                 disabled={actionLoading === sig.id}
-                                onClick={() => cancelSignup(sig.id)}
+                                onClick={() => cancelSignup(sig.id, `${sig.slot.id}-${sig.subBlockHour}`)}
                                 className="text-xs px-2 py-1 bg-red-50 text-red-600 hover:bg-red-100 rounded transition-colors disabled:opacity-50"
                               >
                                 Cancel
@@ -629,9 +665,84 @@ export default function VolunteerDashboard() {
                 </div>
               </div>
             </div>
+
+            {/* Easter egg */}
+            <div className="mt-2 text-right">
+              <button
+                onClick={() => setEasterOpen(!easterOpen)}
+                className="text-xs text-stone-200 hover:text-stone-400 transition-colors select-none"
+                title="✨"
+              >
+                ✦
+              </button>
+            </div>
+            {easterOpen && (
+              <div
+                className="rounded-xl p-6 text-center transition-all duration-500"
+                style={{ backgroundColor: easterBg === "transparent" ? "#f5f5f4" : easterBg }}
+              >
+                <p className="text-xs text-stone-500 mb-3">
+                  {easterCount === 0 ? "You found it 🎉" : easterCount < 5 ? "Keep going..." : easterCount < 10 ? "Ooh pretty 🌈" : easterCount < 20 ? "Still going? Respect." : "You absolute legend 🏆"}
+                </p>
+                <button
+                  onClick={() => {
+                    const colors = ["#fde68a","#bbf7d0","#bfdbfe","#fbcfe8","#ddd6fe","#fed7aa","#99f6e4","#fca5a5","#c4b5fd","#6ee7b7","#f9a8d4","#93c5fd"];
+                    const newColor = colors[Math.floor(Math.random() * colors.length)];
+                    setEasterBg(newColor);
+                    setEasterCount((n) => n + 1);
+                  }}
+                  className="w-20 h-20 rounded-full border-4 border-white shadow-lg transition-all duration-300 hover:scale-110 active:scale-95"
+                  style={{ backgroundColor: easterBg === "transparent" ? "#e7e5e4" : easterBg }}
+                  title="Click me!"
+                />
+                <p className="text-xs text-stone-400 mt-3">clicks: {easterCount}</p>
+              </div>
+            )}
           </div>
         )}
       </div>
+
+      {/* Anti-spam modal */}
+      {spamModal && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-sm p-6 text-center">
+            {spamModal.isBlocked ? (
+              <>
+                <div className="text-4xl mb-3">🎨</div>
+                <h3 className="text-sm font-semibold text-stone-800 mb-2">Looks like you enjoy clicking!</h3>
+                <p className="text-xs text-stone-500 mb-4">You&apos;ve cancelled this shift too many times. Each cancellation within 24 hours sends an urgent alert to the clinic. We made something for you to click instead.</p>
+                <button
+                  onClick={() => { setSpamModal(null); setTab("profile"); setEasterOpen(true); }}
+                  className="w-full px-4 py-2 text-sm bg-stone-800 text-white rounded-lg hover:bg-stone-700 transition-colors mb-2"
+                >
+                  Take me there →
+                </button>
+                <button onClick={() => setSpamModal(null)} className="text-xs text-stone-400 hover:text-stone-600">Dismiss</button>
+              </>
+            ) : (
+              <>
+                <div className="text-3xl mb-3">⚠️</div>
+                <h3 className="text-sm font-semibold text-stone-800 mb-2">Heads up</h3>
+                <p className="text-xs text-stone-500 mb-4">Cancelling a shift within 24 hours sends an urgent email alert to the clinic. Please be considerate of their time. Are you sure you want to cancel?</p>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setSpamModal(null)}
+                    className="flex-1 px-4 py-2 text-sm border border-stone-200 text-stone-600 rounded-lg hover:bg-stone-50"
+                  >
+                    Keep Signup
+                  </button>
+                  <button
+                    onClick={spamModal.onProceed ?? (() => setSpamModal(null))}
+                    className="flex-1 px-4 py-2 text-sm bg-stone-800 text-white rounded-lg hover:bg-stone-700"
+                  >
+                    Yes, Cancel
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
