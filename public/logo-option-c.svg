@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <path d="M 64 8 L 108 24 L 108 68 Q 108 100 64 120 Q 20 100 20 68 L 20 24 Z" fill="#002147"/>
+  <path d="M 64 16 L 101 30 L 101 68 Q 101 95 64 112 Q 27 95 27 68 L 27 30 Z" fill="none" stroke="#C0A85C" stroke-width="2"/>
+  <text x="64" y="62" font-family="Georgia, 'Times New Roman', serif" font-size="26" font-weight="bold" fill="white" text-anchor="middle" letter-spacing="1">GMI</text>
+  <rect x="58" y="70" width="12" height="4" rx="1" fill="#C0A85C"/>
+  <rect x="61" y="67" width="4" height="10" rx="1" fill="#C0A85C"/>
+  <text x="64" y="95" font-family="Georgia, 'Times New Roman', serif" font-size="6.5" fill="#C0A85C" text-anchor="middle" letter-spacing="1.2">MEDICAL INTERPRETERS</text>
+</svg>
