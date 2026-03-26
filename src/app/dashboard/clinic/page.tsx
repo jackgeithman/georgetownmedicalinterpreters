@@ -101,6 +101,8 @@ export default function ClinicDashboard() {
     isRecurring: false,
     recurrenceEndDate: "",
   });
+  const [selectedSlotIds, setSelectedSlotIds] = useState<Set<string>>(new Set());
+  const [postError, setPostError] = useState("");
 
   useEffect(() => {
     if (status === "unauthenticated") router.push("/login");
@@ -136,6 +138,7 @@ export default function ClinicDashboard() {
     if (!form.date) return;
     if (form.isRecurring && !form.recurrenceEndDate) return;
     setActionLoading("post");
+    setPostError("");
     const res = await fetch("/api/clinic/slots", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -145,7 +148,31 @@ export default function ClinicDashboard() {
       await fetchSlots();
       setShowPostForm(false);
       setForm({ language: "ES", date: "", startTime: 9, endTime: 12, interpreterCount: 1, notes: "", isRecurring: false, recurrenceEndDate: "" });
+    } else {
+      const data = await res.json().catch(() => ({}));
+      setPostError(data.error ?? "Could not post slot.");
     }
+    setActionLoading(null);
+  };
+
+  const toggleSelectSlot = (slotId: string) => {
+    setSelectedSlotIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(slotId)) next.delete(slotId);
+      else next.add(slotId);
+      return next;
+    });
+  };
+
+  const cancelSelectedSlots = async () => {
+    if (selectedSlotIds.size === 0) return;
+    if (!confirm(`Cancel ${selectedSlotIds.size} selected slot(s)? This cannot be undone.`)) return;
+    setActionLoading("batch-delete");
+    for (const slotId of selectedSlotIds) {
+      await fetch(`/api/clinic/slots/${slotId}?deleteScope=single`, { method: "DELETE" });
+    }
+    setSelectedSlotIds(new Set());
+    await fetchSlots();
     setActionLoading(null);
   };
 
@@ -299,12 +326,17 @@ export default function ClinicDashboard() {
           ))}
         </div>
         {tab === "upcoming" && !showPostForm && (
-          <button
-            onClick={() => setShowPostForm(true)}
-            className="px-4 py-2 text-sm bg-stone-800 text-white hover:bg-stone-700 rounded-md transition-colors"
-          >
-            + Post Slot
-          </button>
+          <div className="flex items-center gap-3">
+            <span className="text-xs text-stone-400">{upcoming.length}/100 slots</span>
+            <button
+              onClick={() => setShowPostForm(true)}
+              disabled={upcoming.length >= 100}
+              className="px-4 py-2 text-sm bg-stone-800 text-white hover:bg-stone-700 rounded-md transition-colors disabled:opacity-40"
+              title={upcoming.length >= 100 ? "You have reached the 100-slot limit" : undefined}
+            >
+              + Post Slot
+            </button>
+          </div>
         )}
         {tab === "upcoming" && showPostForm && (
           <button
@@ -425,6 +457,9 @@ export default function ClinicDashboard() {
               )}
             </div>
 
+            {postError && (
+              <p className="mt-2 text-xs text-red-500">{postError}</p>
+            )}
             <button
               disabled={
                 actionLoading === "post" ||
@@ -443,6 +478,25 @@ export default function ClinicDashboard() {
           </div>
         )}
 
+
+        {selectedSlotIds.size > 0 && tab !== "settings" && (
+          <div className="flex items-center gap-3 px-4 py-3 bg-red-50 border border-red-200 rounded-lg">
+            <span className="text-sm text-red-700 font-medium">{selectedSlotIds.size} slot{selectedSlotIds.size !== 1 ? "s" : ""} selected</span>
+            <button
+              disabled={actionLoading === "batch-delete"}
+              onClick={cancelSelectedSlots}
+              className="px-3 py-1.5 text-xs bg-red-600 text-white hover:bg-red-700 rounded-md transition-colors disabled:opacity-50"
+            >
+              {actionLoading === "batch-delete" ? "Cancelling..." : "Cancel Selected"}
+            </button>
+            <button
+              onClick={() => setSelectedSlotIds(new Set())}
+              className="text-xs text-red-500 hover:text-red-700"
+            >
+              Clear selection
+            </button>
+          </div>
+        )}
 
         {/* Slot List */}
         {tab !== "settings" && (displaySlots.length === 0 ? (
@@ -464,6 +518,15 @@ export default function ClinicDashboard() {
                 {/* Slot Header */}
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex items-center gap-3 flex-wrap">
+                    {!isPast && slot.status === "ACTIVE" && (
+                      <input
+                        type="checkbox"
+                        checked={selectedSlotIds.has(slot.id)}
+                        onChange={() => toggleSelectSlot(slot.id)}
+                        className="w-4 h-4 accent-stone-700 cursor-pointer"
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                    )}
                     <span className={`text-xs px-2 py-1 rounded-full font-medium ${LANG_COLORS[slot.language]}`}>
                       {LANG_LABELS[slot.language]}
                     </span>

@@ -105,6 +105,9 @@ export default function AdminDashboard() {
   const [assignSelected, setAssignSelected] = useState<{ userId: string; name: string; email: string } | null>(null);
   const [assignLoading, setAssignLoading] = useState(false);
   const [assignError, setAssignError] = useState("");
+  const [adminSelectedSlotIds, setAdminSelectedSlotIds] = useState<Set<string>>(new Set());
+  const [adminDeleteModal, setAdminDeleteModal] = useState<false | "pending" | "confirmed">(false);
+  const [adminDeleteInput, setAdminDeleteInput] = useState("");
   const [langFilter, setLangFilter] = useState("ALL");
   const [clinicFilter, setClinicFilter] = useState("ALL");
   const [dateFrom, setDateFrom] = useState("");
@@ -248,6 +251,33 @@ export default function AdminDashboard() {
     setAssignError("");
   };
 
+  const toggleSelectAdminSlot = (slotId: string) => {
+    setAdminSelectedSlotIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(slotId)) next.delete(slotId);
+      else next.add(slotId);
+      return next;
+    });
+  };
+
+  const openAdminDeleteModal = () => {
+    setAdminDeleteInput("");
+    setAdminDeleteModal("pending");
+  };
+
+  const confirmAdminDeleteSlots = async () => {
+    setActionLoading("admin-batch-delete");
+    const selectedSlots = upcomingSlots.filter((s) => adminSelectedSlotIds.has(s.id));
+    for (const slot of selectedSlots) {
+      await fetch(`/api/admin/slots/${slot.id}`, { method: "DELETE" });
+    }
+    setAdminSelectedSlotIds(new Set());
+    setAdminDeleteModal(false);
+    setAdminDeleteInput("");
+    await fetchData();
+    setActionLoading(null);
+  };
+
   const deleteClinic = async (clinicId: string, clinicName: string) => {
     if (!confirm(`Delete "${clinicName}"? This cannot be undone.`)) return;
     setActionLoading(`delete-clinic-${clinicId}`);
@@ -362,6 +392,12 @@ export default function AdminDashboard() {
     .filter((s) => slotEnd(s) <= now)
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
+  const selectedSlots = upcomingSlots.filter((s) => adminSelectedSlotIds.has(s.id));
+  const deleteConfirmText = selectedSlots.length === 1
+    ? `${selectedSlots[0].clinic.name} ${selectedSlots[0].date.slice(0, 10)}`
+    : "DELETE";
+  const deleteInputValid = adminDeleteInput.trim() === deleteConfirmText;
+
   const renderSlot = (slot: AdminSlot, isPast: boolean) => {
     const subBlocks = Array.from({ length: slot.endTime - slot.startTime }, (_, i) => slot.startTime + i);
     const canSignUp = adminProfile?.languages.includes(slot.language) ?? false;
@@ -370,6 +406,15 @@ export default function AdminDashboard() {
       <div key={slot.id} className={`bg-white rounded-xl border border-stone-200 p-5 ${isPast ? "opacity-50" : ""}`}>
         <div className="flex items-start justify-between mb-3">
           <div className="flex items-center gap-3 flex-wrap">
+            {!isPast && (
+              <input
+                type="checkbox"
+                checked={adminSelectedSlotIds.has(slot.id)}
+                onChange={() => toggleSelectAdminSlot(slot.id)}
+                className="w-4 h-4 accent-stone-700 cursor-pointer"
+                onClick={(e) => e.stopPropagation()}
+              />
+            )}
             <span className={`text-xs px-2 py-1 rounded-full font-medium ${LANG_COLORS[slot.language]}`}>
               {LANG_LABELS[slot.language]}
             </span>
@@ -552,6 +597,23 @@ export default function AdminDashboard() {
         {/* Browse Slots */}
         {tab === "slots" && (
           <div>
+            {adminSelectedSlotIds.size > 0 && (
+              <div className="flex items-center gap-3 mb-4 px-4 py-3 bg-red-50 border border-red-200 rounded-lg">
+                <span className="text-sm text-red-700 font-medium">{adminSelectedSlotIds.size} slot{adminSelectedSlotIds.size !== 1 ? "s" : ""} selected</span>
+                <button
+                  onClick={openAdminDeleteModal}
+                  className="px-3 py-1.5 text-xs bg-red-600 text-white hover:bg-red-700 rounded-md transition-colors"
+                >
+                  Delete Selected
+                </button>
+                <button
+                  onClick={() => setAdminSelectedSlotIds(new Set())}
+                  className="text-xs text-red-500 hover:text-red-700"
+                >
+                  Clear selection
+                </button>
+              </div>
+            )}
             {!adminProfile?.languages.length && (
               <div className="mb-4 px-4 py-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-700">
                 To sign up for slots, add your languages in{" "}
@@ -1046,6 +1108,68 @@ export default function AdminDashboard() {
           </div>
         )}
       </div>
+
+      {/* Admin Delete Slots Modal */}
+      {adminDeleteModal && (() => {
+        const selectedSlotsList = upcomingSlots.filter((s) => adminSelectedSlotIds.has(s.id));
+        const isSingle = selectedSlotsList.length === 1;
+        const confirmText = isSingle
+          ? `${selectedSlotsList[0].clinic.name} ${selectedSlotsList[0].date.slice(0, 10)}`
+          : "DELETE";
+
+        return (
+          <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-xl shadow-xl w-full max-w-md">
+              <div className="px-6 py-4 border-b border-stone-100">
+                <h3 className="text-sm font-semibold text-stone-800">Delete {selectedSlotsList.length} Slot{selectedSlotsList.length !== 1 ? "s" : ""}</h3>
+                <p className="text-xs text-stone-400 mt-0.5">This will cancel the slot and notify any signed-up volunteers.</p>
+              </div>
+              <div className="px-6 py-4">
+                <div className="max-h-40 overflow-y-auto space-y-1 mb-4">
+                  {selectedSlotsList.map((s) => (
+                    <div key={s.id} className="text-xs text-stone-600 py-1 border-b border-stone-50 last:border-0">
+                      <span className="font-medium">{s.clinic.name}</span> · {formatDate(s.date)} · {formatHour(s.startTime)}–{formatHour(s.endTime)} · {LANG_LABELS[s.language]}
+                      {s.signups.length > 0 && (
+                        <span className="ml-1 text-amber-600">({s.signups.length} volunteer{s.signups.length !== 1 ? "s" : ""} affected)</span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+                <div className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 mb-4">
+                  <p className="text-xs text-amber-800">
+                    {isSingle
+                      ? <>To confirm, type the clinic name and date: <strong>{confirmText}</strong></>
+                      : <>To confirm, type: <strong>DELETE</strong></>}
+                  </p>
+                </div>
+                <input
+                  autoFocus
+                  type="text"
+                  placeholder={confirmText}
+                  value={adminDeleteInput}
+                  onChange={(e) => setAdminDeleteInput(e.target.value)}
+                  className="w-full px-3 py-2 text-sm border border-stone-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-300 mb-4"
+                />
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => { setAdminDeleteModal(false); setAdminDeleteInput(""); }}
+                    className="flex-1 px-4 py-2 text-sm border border-stone-200 text-stone-600 rounded-lg hover:bg-stone-50 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    disabled={adminDeleteInput.trim() !== confirmText || actionLoading === "admin-batch-delete"}
+                    onClick={confirmAdminDeleteSlots}
+                    className="flex-1 px-4 py-2 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-40"
+                  >
+                    {actionLoading === "admin-batch-delete" ? "Deleting..." : "Confirm Delete"}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Assign Volunteer to Shift Modal */}
       {volunteerAssignTarget && (() => {
