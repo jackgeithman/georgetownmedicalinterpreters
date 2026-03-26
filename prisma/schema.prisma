@@ -79,6 +79,7 @@ model User {
   clinic        Clinic?           @relation(fields: [clinicId], references: [id])
   volunteer     VolunteerProfile?
   accounts      Account[]
+  createdSlots  Slot[]            @relation("SlotCreatedByAdmin")
   createdAt     DateTime          @default(now())
 }
 
@@ -152,6 +153,8 @@ model Slot {
   notes             String?
   status            SlotStatus     @default(ACTIVE)
   signups           SubBlockSignup[]
+  createdByAdminId  String?
+  createdByAdmin    User?          @relation("SlotCreatedByAdmin", fields: [createdByAdminId], references: [id])
   createdAt         DateTime       @default(now())
 }
 

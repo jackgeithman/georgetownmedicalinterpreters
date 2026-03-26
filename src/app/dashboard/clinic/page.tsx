@@ -25,6 +25,7 @@ type Slot = {
   recurrenceGroupId: string | null;
   notes: string | null;
   status: string;
+  createdByAdmin: { name: string | null; email: string } | null;
   signups: SubBlockSignup[];
 };
 
@@ -566,6 +567,11 @@ export default function ClinicDashboard() {
                     <span className="text-xs px-2 py-1 bg-stone-100 text-stone-400 rounded-full">Cancelled</span>
                   )}
                 </div>
+                <p className="text-xs text-stone-400 mb-1">
+                  {slot.createdByAdmin
+                    ? `Posted by Admin: ${slot.createdByAdmin.name ?? slot.createdByAdmin.email}`
+                    : "Posted by Clinic"}
+                </p>
                 {slot.notes && (
                   <p className="text-xs text-stone-400 mb-3 italic">{slot.notes}</p>
                 )}

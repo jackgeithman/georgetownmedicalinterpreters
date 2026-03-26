@@ -17,6 +17,7 @@ export async function GET() {
     where: { clinicId: user.clinicId! },
     orderBy: { date: "asc" },
     include: {
+      createdByAdmin: { select: { name: true, email: true } },
       signups: {
         where: { status: { in: ["ACTIVE", "NO_SHOW", "COMPLETED"] } },
         include: {

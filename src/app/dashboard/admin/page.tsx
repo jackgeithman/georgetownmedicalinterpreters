@@ -43,6 +43,7 @@ type AdminSlot = {
   interpreterCount: number;
   notes: string | null;
   clinic: { name: string; address: string };
+  createdByAdmin: { name: string | null; email: string } | null;
   signups: {
     id: string;
     subBlockHour: number;
@@ -108,6 +109,12 @@ export default function AdminDashboard() {
   const [adminSelectedSlotIds, setAdminSelectedSlotIds] = useState<Set<string>>(new Set());
   const [adminDeleteModal, setAdminDeleteModal] = useState<false | "pending" | "confirmed">(false);
   const [adminDeleteInput, setAdminDeleteInput] = useState("");
+  const [showAdminPostForm, setShowAdminPostForm] = useState(false);
+  const [adminPostForm, setAdminPostForm] = useState({
+    clinicId: "", language: "ES", date: "", startTime: 9, endTime: 12,
+    interpreterCount: 1, notes: "", isRecurring: false, recurrenceEndDate: "",
+  });
+  const [adminPostError, setAdminPostError] = useState("");
   const [langFilter, setLangFilter] = useState("ALL");
   const [clinicFilter, setClinicFilter] = useState("ALL");
   const [dateFrom, setDateFrom] = useState("");
@@ -249,6 +256,27 @@ export default function AdminDashboard() {
     setAssignSelected(null);
     setAssignSearch("");
     setAssignError("");
+  };
+
+  const postAdminSlot = async () => {
+    if (!adminPostForm.clinicId || !adminPostForm.date) return;
+    if (adminPostForm.isRecurring && !adminPostForm.recurrenceEndDate) return;
+    setActionLoading("admin-post");
+    setAdminPostError("");
+    const res = await fetch("/api/admin/slots", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(adminPostForm),
+    });
+    if (res.ok) {
+      await fetchData();
+      setShowAdminPostForm(false);
+      setAdminPostForm({ clinicId: "", language: "ES", date: "", startTime: 9, endTime: 12, interpreterCount: 1, notes: "", isRecurring: false, recurrenceEndDate: "" });
+    } else {
+      const data = await res.json().catch(() => ({}));
+      setAdminPostError(data.error ?? "Could not create slot.");
+    }
+    setActionLoading(null);
   };
 
   const toggleSelectAdminSlot = (slotId: string) => {
@@ -427,6 +455,13 @@ export default function AdminDashboard() {
             {slot.clinic.address && <p className="text-xs text-stone-400">{slot.clinic.address}</p>}
           </div>
         </div>
+        <p className="text-xs mb-1">
+          {slot.createdByAdmin ? (
+            <span className="text-indigo-500">Posted by Admin: {slot.createdByAdmin.name ?? slot.createdByAdmin.email}</span>
+          ) : (
+            <span className="text-stone-400">Posted by Clinic</span>
+          )}
+        </p>
         {slot.notes && <p className="text-xs text-stone-400 italic mb-3">{slot.notes}</p>}
         <div className="space-y-2">
           {subBlocks.map((hour) => {
@@ -599,6 +634,150 @@ export default function AdminDashboard() {
         {/* Browse Slots */}
         {tab === "slots" && (
           <div>
+            {/* Admin Post Slot */}
+            <div className="flex justify-end mb-4">
+              {!showAdminPostForm ? (
+                <button
+                  onClick={() => setShowAdminPostForm(true)}
+                  className="px-4 py-2 text-sm bg-indigo-600 text-white hover:bg-indigo-700 rounded-md transition-colors"
+                >
+                  + Post Slot for Clinic
+                </button>
+              ) : (
+                <button
+                  onClick={() => { setShowAdminPostForm(false); setAdminPostError(""); }}
+                  className="px-4 py-2 text-sm bg-stone-100 hover:bg-stone-200 text-stone-600 rounded-md transition-colors"
+                >
+                  Cancel
+                </button>
+              )}
+            </div>
+
+            {showAdminPostForm && (
+              <div className="bg-white rounded-xl border border-indigo-200 p-6 mb-6">
+                <h3 className="text-sm font-medium text-stone-700 mb-1">New Slot <span className="text-xs text-indigo-500 font-normal">— posting as Admin</span></h3>
+                <p className="text-xs text-stone-400 mb-4">This slot will be attributed to you. The clinic will see "Posted by Admin: {session?.user?.name ?? session?.user?.email}".</p>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="col-span-2">
+                    <label className="block text-xs text-stone-500 mb-1">Clinic</label>
+                    <select
+                      value={adminPostForm.clinicId}
+                      onChange={(e) => setAdminPostForm({ ...adminPostForm, clinicId: e.target.value })}
+                      className="w-full px-3 py-2 text-sm border border-stone-200 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                    >
+                      <option value="">Select a clinic...</option>
+                      {clinics.map((c) => (
+                        <option key={c.id} value={c.id}>{c.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs text-stone-500 mb-1">Language</label>
+                    <select
+                      value={adminPostForm.language}
+                      onChange={(e) => setAdminPostForm({ ...adminPostForm, language: e.target.value })}
+                      className="w-full px-3 py-2 text-sm border border-stone-200 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                    >
+                      {Object.entries(LANG_LABELS).map(([k, v]) => (
+                        <option key={k} value={k}>{v}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs text-stone-500 mb-1">Date</label>
+                    <input
+                      type="date"
+                      value={adminPostForm.date}
+                      onChange={(e) => setAdminPostForm({ ...adminPostForm, date: e.target.value })}
+                      className="w-full px-3 py-2 text-sm border border-stone-200 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-stone-500 mb-1">Start Time</label>
+                    <select
+                      value={adminPostForm.startTime}
+                      onChange={(e) => setAdminPostForm({ ...adminPostForm, startTime: Number(e.target.value) })}
+                      className="w-full px-3 py-2 text-sm border border-stone-200 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                    >
+                      {Array.from({ length: 24 }, (_, i) => i).map((h) => (
+                        <option key={h} value={h}>{formatHour(h)}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs text-stone-500 mb-1">End Time</label>
+                    <select
+                      value={adminPostForm.endTime}
+                      onChange={(e) => setAdminPostForm({ ...adminPostForm, endTime: Number(e.target.value) })}
+                      className="w-full px-3 py-2 text-sm border border-stone-200 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                    >
+                      {Array.from({ length: 24 }, (_, i) => i).map((h) => (
+                        <option key={h} value={h}>{formatHour(h)}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs text-stone-500 mb-1">Interpreters per Hour</label>
+                    <input
+                      type="number" min={1} max={10}
+                      value={adminPostForm.interpreterCount}
+                      onChange={(e) => setAdminPostForm({ ...adminPostForm, interpreterCount: Number(e.target.value) })}
+                      className="w-full px-3 py-2 text-sm border border-stone-200 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-stone-500 mb-1">Notes (optional)</label>
+                    <input
+                      placeholder="Any notes for volunteers..."
+                      value={adminPostForm.notes}
+                      onChange={(e) => setAdminPostForm({ ...adminPostForm, notes: e.target.value })}
+                      className="w-full px-3 py-2 text-sm border border-stone-200 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                    />
+                  </div>
+                </div>
+                <div className="mt-4 border-t border-stone-100 pt-4">
+                  <label className="flex items-center gap-2 cursor-pointer w-fit">
+                    <input
+                      type="checkbox"
+                      checked={adminPostForm.isRecurring}
+                      onChange={(e) => setAdminPostForm({ ...adminPostForm, isRecurring: e.target.checked, recurrenceEndDate: "" })}
+                      className="w-4 h-4 accent-indigo-600"
+                    />
+                    <span className="text-sm text-stone-700">Repeat weekly</span>
+                  </label>
+                  {adminPostForm.isRecurring && (
+                    <div className="mt-3 flex items-center gap-3">
+                      <label className="text-xs text-stone-500">Repeat until</label>
+                      <input
+                        type="date"
+                        value={adminPostForm.recurrenceEndDate}
+                        min={adminPostForm.date || undefined}
+                        onChange={(e) => setAdminPostForm({ ...adminPostForm, recurrenceEndDate: e.target.value })}
+                        className="px-3 py-2 text-sm border border-stone-200 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                      />
+                    </div>
+                  )}
+                </div>
+                {adminPostError && <p className="mt-2 text-xs text-red-500">{adminPostError}</p>}
+                {adminPostForm.endTime <= adminPostForm.startTime && adminPostForm.date && (
+                  <p className="mt-2 text-xs text-red-500">End time must be after start time.</p>
+                )}
+                <button
+                  disabled={
+                    actionLoading === "admin-post" ||
+                    !adminPostForm.clinicId ||
+                    !adminPostForm.date ||
+                    adminPostForm.endTime <= adminPostForm.startTime ||
+                    (adminPostForm.isRecurring && !adminPostForm.recurrenceEndDate)
+                  }
+                  onClick={postAdminSlot}
+                  className="mt-4 px-4 py-2 text-sm bg-indigo-600 text-white hover:bg-indigo-700 rounded-md transition-colors disabled:opacity-50"
+                >
+                  {actionLoading === "admin-post" ? "Posting..." : adminPostForm.isRecurring ? "Post Recurring Slots" : "Post Slot"}
+                </button>
+              </div>
+            )}
+
             {adminSelectedSlotIds.size > 0 && (
               <div className="flex items-center gap-3 mb-4 px-4 py-3 bg-red-50 border border-red-200 rounded-lg">
                 <span className="text-sm text-red-700 font-medium">{adminSelectedSlotIds.size} slot{adminSelectedSlotIds.size !== 1 ? "s" : ""} selected</span>
