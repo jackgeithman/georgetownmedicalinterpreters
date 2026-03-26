@@ -245,64 +245,66 @@ export default function VolunteerDashboard() {
     <div className="min-h-screen bg-stone-50">
       {/* Header */}
       <header className="bg-white border-b border-stone-200">
-        <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div>
-            <h1 className="text-lg font-semibold text-stone-800 tracking-tight">Georgetown Medical Interpreters</h1>
-            <p className="text-xs text-stone-400">Volunteer Dashboard</p>
+        <div className="max-w-6xl mx-auto px-6 py-5 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <div>
+              <h1 className="text-xl font-semibold text-stone-900 tracking-tight">Georgetown Medical Interpreters</h1>
+              <p className="text-sm text-stone-500 mt-0.5">Volunteer Dashboard</p>
+            </div>
+            <a
+              href="mailto:georgetownmedicalinterpreters@gmail.com"
+              className="text-sm text-stone-400 hover:text-stone-700 hover:underline underline-offset-2 transition-colors"
+            >
+              Contact Us
+            </a>
           </div>
           <div className="flex items-center gap-3">
-            <span className="text-sm text-stone-500">{session?.user?.email}</span>
+            <span className="text-sm text-stone-400 hidden sm:block">{session?.user?.email}</span>
             {isAdmin && (
               <button
                 onClick={() => router.push("/dashboard/admin")}
-                className="text-sm px-3 py-1.5 bg-violet-50 hover:bg-violet-100 text-violet-700 rounded-md transition-colors"
+                className="text-sm px-3 py-1.5 bg-violet-50 hover:bg-violet-100 text-violet-700 rounded-lg transition-colors font-medium"
               >
                 Admin Dashboard
               </button>
             )}
-            <a
-              href="mailto:georgetownmedicalinterpreters@gmail.com"
-              className="text-sm px-3 py-1.5 bg-stone-100 hover:bg-stone-200 text-stone-600 rounded-md transition-colors"
-            >
-              Contact Us
-            </a>
             <button
               onClick={() => signOut({ callbackUrl: "/login" })}
-              className="text-sm px-3 py-1.5 bg-stone-100 hover:bg-stone-200 text-stone-600 rounded-md transition-colors"
+              className="text-sm px-3 py-1.5 bg-stone-100 hover:bg-stone-200 text-stone-600 rounded-lg transition-colors"
             >
               Sign Out
             </button>
           </div>
         </div>
-      </header>
 
-      {/* Tabs */}
-      <div className="max-w-6xl mx-auto px-6 pt-6">
-        <div className="flex gap-1 bg-stone-200/50 p-1 rounded-lg w-fit">
-          {[
-            { key: "browse" as Tab, label: "Browse Slots", count: 0 },
-            { key: "signups" as Tab, label: "My Signups", count: mySignups.length },
-            { key: "profile" as Tab, label: "Profile", count: 0 },
-          ].map((t) => (
-            <button
-              key={t.key}
-              onClick={() => setTab(t.key)}
-              className={`px-4 py-2 text-sm rounded-md transition-colors ${
-                tab === t.key
-                  ? "bg-white text-stone-800 shadow-sm font-medium"
-                  : "text-stone-500 hover:text-stone-700"
-              }`}
-            >
-              {t.label}
-              {t.count > 0 && (
-                <span className="ml-2 text-xs px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700">
-                  {t.count}
-                </span>
-              )}
-            </button>
-          ))}
+        {/* Tabs */}
+        <div className="max-w-6xl mx-auto px-6">
+          <div className="flex gap-0">
+            {[
+              { key: "browse" as Tab, label: "Browse Slots", count: 0 },
+              { key: "signups" as Tab, label: "My Signups", count: mySignups.length },
+              { key: "profile" as Tab, label: "Profile", count: 0 },
+            ].map((t) => (
+              <button
+                key={t.key}
+                onClick={() => setTab(t.key)}
+                className={`px-4 py-3 text-sm font-medium transition-colors border-b-2 -mb-px ${
+                  tab === t.key
+                    ? "border-stone-900 text-stone-900"
+                    : "border-transparent text-stone-500 hover:text-stone-700 hover:border-stone-300"
+                }`}
+              >
+                {t.label}
+                {t.count > 0 && (
+                  <span className="ml-2 text-xs px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700">
+                    {t.count}
+                  </span>
+                )}
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
+      </header>
 
       {/* Content */}
       <div className="max-w-6xl mx-auto px-6 py-6">
@@ -336,7 +338,7 @@ export default function VolunteerDashboard() {
           const renderSlot = (slot: BrowseSlot, isPast: boolean) => {
             const subBlocks = Array.from({ length: slot.endTime - slot.startTime }, (_, i) => slot.startTime + i);
             return (
-              <div key={slot.id} className={`bg-white rounded-xl border border-stone-200 p-5 ${isPast ? "opacity-50" : ""}`}>
+              <div key={slot.id} className={`bg-white rounded-xl border border-stone-200 shadow-sm p-5 ${isPast ? "opacity-50" : ""}`}>
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex items-center gap-3 flex-wrap">
                     <span className={`text-xs px-2 py-1 rounded-full font-medium ${LANG_COLORS[slot.language]}`}>
