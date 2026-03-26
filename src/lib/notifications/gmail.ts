@@ -12,10 +12,14 @@ function getAuth() {
 
 function buildRaw(to: string, subject: string, html: string): string {
   const from = `Georgetown Medical Interpreters <${process.env.GOOGLE_GMAIL_SENDER_EMAIL}>`;
+  // Include an explicit Date header (RFC 2822) so email clients display the
+  // correct send time rather than relying on Gmail's server clock.
+  // toUTCString() produces a valid RFC 2822 string (e.g. "Tue, 25 Mar 2026 14:00:00 GMT").
   const lines = [
     `From: ${from}`,
     `To: ${to}`,
     `Subject: ${subject}`,
+    `Date: ${new Date().toUTCString()}`,
     "MIME-Version: 1.0",
     "Content-Type: text/html; charset=UTF-8",
     "",

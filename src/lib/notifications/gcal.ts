@@ -38,11 +38,13 @@ function buildEventBody(volunteerEmail: string, slot: SlotInfo, titlePrefix = ""
   const lang = LANG_NAMES[slot.language] ?? slot.language;
   const senderEmail = process.env.GOOGLE_GMAIL_SENDER_EMAIL!;
 
-  // Slot dates are stored at noon UTC; set hours in local wall-clock time
-  const start = new Date(slot.date);
-  start.setHours(slot.subBlockHour, 0, 0, 0);
-  const end = new Date(slot.date);
-  end.setHours(slot.subBlockHour + 1, 0, 0, 0);
+  // Slot dates are stored at noon UTC. Build a local datetime string (no UTC
+  // conversion) and pass timeZone explicitly so Google Calendar interprets the
+  // hour as Eastern time regardless of where the server runs.
+  const dateStr = slot.date.toISOString().slice(0, 10); // "YYYY-MM-DD"
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const startStr = `${dateStr}T${pad(slot.subBlockHour)}:00:00`;
+  const endStr = `${dateStr}T${pad(slot.subBlockHour + 1)}:00:00`;
 
   return {
     summary: `${titlePrefix}Medical Interpreter — ${lang} at ${slot.clinicName}`,
@@ -50,8 +52,8 @@ function buildEventBody(volunteerEmail: string, slot: SlotInfo, titlePrefix = ""
     description:
       (slot.notes ? `Notes: ${slot.notes}\n\n` : "") +
       "Managed by Georgetown Medical Interpreters",
-    start: { dateTime: start.toISOString() },
-    end: { dateTime: end.toISOString() },
+    start: { dateTime: startStr, timeZone: "America/New_York" },
+    end: { dateTime: endStr, timeZone: "America/New_York" },
     attendees: [
       { email: senderEmail, organizer: true },
       { email: volunteerEmail },
