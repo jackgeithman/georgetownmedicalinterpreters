@@ -292,8 +292,11 @@ export default function AdminDashboard() {
   }
 
   // --- Slots tab helpers ---
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  const now = new Date();
+
+  // A slot is past when its end time has passed (local/browser time matches ET for GMI)
+  const slotEnd = (s: AdminSlot) =>
+    new Date(s.date.slice(0, 10) + "T" + String(s.endTime).padStart(2, "0") + ":00:00");
 
   const filteredSlots = adminSlots.filter((s) => {
     if (langFilter !== "ALL" && s.language !== langFilter) return false;
@@ -314,9 +317,9 @@ export default function AdminDashboard() {
 
   const uniqueClinics = Array.from(new Set(adminSlots.map((s) => s.clinic.name))).sort();
 
-  const upcomingSlots = filteredSlots.filter((s) => new Date(s.date.slice(0, 10) + "T12:00:00") >= today);
+  const upcomingSlots = filteredSlots.filter((s) => slotEnd(s) > now);
   const pastSlots = filteredSlots
-    .filter((s) => new Date(s.date.slice(0, 10) + "T12:00:00") < today)
+    .filter((s) => slotEnd(s) <= now)
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
   const renderSlot = (slot: AdminSlot, isPast: boolean) => {

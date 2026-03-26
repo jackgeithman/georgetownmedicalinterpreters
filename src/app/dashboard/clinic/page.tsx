@@ -66,9 +66,9 @@ function formatDate(s: string): string {
 }
 
 function isUpcoming(slot: Slot): boolean {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  return new Date(slot.date) >= today;
+  // A slot is upcoming until its end time has passed (local/browser time matches ET for GMI)
+  const slotEnd = new Date(slot.date.slice(0, 10) + "T" + String(slot.endTime).padStart(2, "0") + ":00:00");
+  return slotEnd > new Date();
 }
 
 const HOUR_OPTIONS = Array.from({ length: 24 }, (_, i) => i);

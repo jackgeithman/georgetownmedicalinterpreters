@@ -273,8 +273,11 @@ export default function VolunteerDashboard() {
 
         {/* Browse Slots */}
         {tab === "browse" && (() => {
-          const today = new Date();
-          today.setHours(0, 0, 0, 0);
+          const now = new Date();
+
+          // A slot is past when its end time has passed (using local/browser time which matches ET for GMI)
+          const slotEnd = (s: BrowseSlot) =>
+            new Date(s.date.slice(0, 10) + "T" + String(s.endTime).padStart(2, "0") + ":00:00");
 
           const hasAvailability = (slot: BrowseSlot) =>
             Array.from({ length: slot.endTime - slot.startTime }, (_, i) => slot.startTime + i)
@@ -290,8 +293,8 @@ export default function VolunteerDashboard() {
             return true;
           });
 
-          const upcoming = filtered.filter((s) => new Date(s.date.slice(0, 10) + "T12:00:00") >= today);
-          const past = filtered.filter((s) => new Date(s.date.slice(0, 10) + "T12:00:00") < today)
+          const upcoming = filtered.filter((s) => slotEnd(s) > now);
+          const past = filtered.filter((s) => slotEnd(s) <= now)
             .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
           const renderSlot = (slot: BrowseSlot, isPast: boolean) => {
