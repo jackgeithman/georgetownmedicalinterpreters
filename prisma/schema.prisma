@@ -68,18 +68,19 @@ enum NotifType {
 }
 
 model User {
-  id            String            @id @default(uuid())
-  email         String            @unique
-  name          String?
-  emailVerified DateTime?
-  image         String?
-  role          Role              @default(PENDING)
-  status        UserStatus        @default(PENDING_APPROVAL)
-  clinicId      String?
-  clinic        Clinic?           @relation(fields: [clinicId], references: [id])
-  volunteer     VolunteerProfile?
-  accounts      Account[]
-  createdAt     DateTime          @default(now())
+  id              String            @id @default(uuid())
+  email           String            @unique
+  name            String?
+  emailVerified   DateTime?
+  image           String?
+  role            Role              @default(PENDING)
+  status          UserStatus        @default(PENDING_APPROVAL)
+  clinicId        String?
+  clinic          Clinic?           @relation(fields: [clinicId], references: [id])
+  volunteer       VolunteerProfile?
+  accounts        Account[]
+  clearancesGiven ClearanceLog[]    @relation("ClearancesGiven")
+  createdAt       DateTime          @default(now())
 }
 
 model Account {
@@ -133,9 +134,24 @@ model VolunteerProfile {
   cancellationsWithin24h Int                  @default(0)
   cancellationsWithin2h  Int                  @default(0)
   noShows                Int                  @default(0)
+  isCleared              Boolean              @default(false)
+  clearedById            String?
+  clearedAt              DateTime?
   signups                SubBlockSignup[]
   notifPrefs             VolunteerNotifPrefs?
+  clearanceLogs          ClearanceLog[]
   createdAt              DateTime             @default(now())
+}
+
+model ClearanceLog {
+  id          String           @id @default(uuid())
+  volunteerId String
+  volunteer   VolunteerProfile @relation(fields: [volunteerId], references: [id])
+  clearedById String
+  clearedBy   User             @relation("ClearancesGiven", fields: [clearedById], references: [id])
+  isCleared   Boolean
+  note        String?
+  createdAt   DateTime         @default(now())
 }
 
 model Slot {

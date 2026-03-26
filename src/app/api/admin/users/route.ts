@@ -27,6 +27,14 @@ export async function GET() {
           cancellationsWithin24h: true,
           cancellationsWithin2h: true,
           noShows: true,
+          isCleared: true,
+          clearedAt: true,
+          clearedById: true,
+          clearanceLogs: {
+            orderBy: { createdAt: "desc" },
+            take: 1,
+            include: { clearedBy: { select: { name: true, email: true } } },
+          },
         },
       },
     },
@@ -60,6 +68,31 @@ export async function PATCH(req: NextRequest) {
   // ADMIN cannot modify other ADMINs (only SUPER_ADMIN can)
   if (target.role === "ADMIN" && admin.role !== "SUPER_ADMIN") {
     return NextResponse.json({ error: "Only the super admin can modify Admin accounts" }, { status: 403 });
+  }
+
+  // Handle volunteer clearance separately (updates VolunteerProfile + creates audit log)
+  if (typeof data.isCleared === "boolean") {
+    const volunteerProfile = await prisma.volunteerProfile.findUnique({
+      where: { userId: target.id },
+    });
+    if (!volunteerProfile) {
+      return NextResponse.json({ error: "User has no volunteer profile" }, { status: 400 });
+    }
+    await prisma.$transaction([
+      prisma.volunteerProfile.update({
+        where: { userId: target.id },
+        data: { isCleared: data.isCleared, clearedById: admin.id, clearedAt: new Date() },
+      }),
+      prisma.clearanceLog.create({
+        data: {
+          volunteerId: volunteerProfile.id,
+          clearedById: admin.id,
+          isCleared: data.isCleared,
+          note: data.note ?? null,
+        },
+      }),
+    ]);
+    return NextResponse.json({ ok: true });
   }
 
   const updateData: Record<string, string | null> = {};
