@@ -272,20 +272,20 @@ export default function ClinicDashboard() {
     <div className="min-h-screen bg-stone-50">
       {/* Header */}
       <header className="bg-white border-b border-stone-200">
-        <div className="max-w-6xl mx-auto px-6 py-5 flex items-center justify-between">
-          <div className="flex items-center gap-4">
+        <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
             <div>
-              <h1 className="text-xl font-semibold text-stone-900 tracking-tight">Georgetown Medical Interpreters</h1>
-              <p className="text-sm text-stone-500 mt-0.5">
+              <h1 className="text-lg font-semibold text-stone-800 tracking-tight">Georgetown Medical Interpreters</h1>
+              <p className="text-xs text-stone-400">
                 Clinic Dashboard
                 {session?.user?.name && (
-                  <span className="ml-1">— {session.user.name}</span>
+                  <span className="ml-1 text-stone-500">— {session.user.name}</span>
                 )}
               </p>
             </div>
             <a
               href="mailto:georgetownmedicalinterpreters@gmail.com"
-              className="text-sm text-stone-400 hover:text-stone-700 hover:underline underline-offset-2 transition-colors"
+              className="text-sm px-3 py-1.5 bg-stone-100 hover:bg-stone-200 text-stone-600 rounded-md transition-colors"
             >
               Contact Us
             </a>
@@ -293,39 +293,40 @@ export default function ClinicDashboard() {
           <div className="flex items-center gap-3">
             <button
               onClick={() => signOut({ callbackUrl: "/login" })}
-              className="text-sm px-3 py-1.5 bg-stone-100 hover:bg-stone-200 text-stone-600 rounded-lg transition-colors"
+              className="text-sm px-3 py-1.5 bg-stone-100 hover:bg-stone-200 text-stone-600 rounded-md transition-colors"
             >
               Sign Out
             </button>
           </div>
         </div>
+      </header>
 
-        {/* Tabs + Post Slot button */}
-        <div className="max-w-6xl mx-auto px-6 flex items-end justify-between">
-          <div className="flex gap-0">
-            {[
-              { key: "upcoming" as Tab, label: "Upcoming", count: upcoming.length },
-              { key: "past" as Tab, label: "Past", count: past.length },
-              { key: "settings" as Tab, label: "Notifications", count: 0 },
-            ].map((t) => (
-              <button
-                key={t.key}
-                onClick={() => setTab(t.key)}
-                className={`px-4 py-3 text-sm font-medium transition-colors border-b-2 -mb-px ${
-                  tab === t.key
-                    ? "border-stone-900 text-stone-900"
-                    : "border-transparent text-stone-500 hover:text-stone-700 hover:border-stone-300"
-                }`}
-              >
-                {t.label}
-                {t.count > 0 && (
-                  <span className="ml-2 text-xs px-1.5 py-0.5 rounded-full bg-stone-100 text-stone-500">
-                    {t.count}
-                  </span>
-                )}
-              </button>
-            ))}
-          </div>
+      {/* Tabs */}
+      <div className="max-w-6xl mx-auto px-6 pt-6 flex items-center justify-between">
+        <div className="flex gap-1 bg-stone-200/50 p-1 rounded-lg w-fit">
+          {[
+            { key: "upcoming" as Tab, label: "Upcoming", count: upcoming.length },
+            { key: "past" as Tab, label: "Past", count: past.length },
+            { key: "settings" as Tab, label: "Notifications", count: 0 },
+          ].map((t) => (
+            <button
+              key={t.key}
+              onClick={() => setTab(t.key)}
+              className={`px-4 py-2 text-sm rounded-md transition-colors ${
+                tab === t.key
+                  ? "bg-white text-stone-800 shadow-sm font-medium"
+                  : "text-stone-500 hover:text-stone-700"
+              }`}
+            >
+              {t.label}
+              {t.count > 0 && (
+                <span className="ml-2 text-xs px-1.5 py-0.5 rounded-full bg-stone-100 text-stone-500">
+                  {t.count}
+                </span>
+              )}
+            </button>
+          ))}
+        </div>
         {tab === "upcoming" && !showPostForm && (
           <div className="flex items-center gap-3">
             <span className="text-xs text-stone-400">{upcoming.length}/100 slots</span>
@@ -347,8 +348,7 @@ export default function ClinicDashboard() {
             Cancel
           </button>
         )}
-        </div>
-      </header>
+      </div>
 
       {/* Content */}
       <div className="max-w-6xl mx-auto px-6 py-6 space-y-4">

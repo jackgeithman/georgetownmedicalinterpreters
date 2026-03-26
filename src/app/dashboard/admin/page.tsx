@@ -528,21 +528,21 @@ export default function AdminDashboard() {
     <div className="min-h-screen bg-stone-50">
       {/* Header */}
       <header className="bg-white border-b border-stone-200">
-        <div className="max-w-6xl mx-auto px-6 py-5 flex items-center justify-between">
-          <div className="flex items-center gap-4">
+        <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
             <div>
-              <h1 className="text-xl font-semibold text-stone-900 tracking-tight">Georgetown Medical Interpreters</h1>
-              <p className="text-sm text-stone-500 mt-0.5">Admin Dashboard</p>
+              <h1 className="text-lg font-semibold text-stone-800 tracking-tight">Georgetown Medical Interpreters</h1>
+              <p className="text-xs text-stone-400">Admin Dashboard</p>
             </div>
             <a
               href="mailto:georgetownmedicalinterpreters@gmail.com"
-              className="text-sm text-stone-400 hover:text-stone-700 hover:underline underline-offset-2 transition-colors"
+              className="text-sm px-3 py-1.5 bg-stone-100 hover:bg-stone-200 text-stone-600 rounded-md transition-colors"
             >
               Contact Us
             </a>
           </div>
           <div className="flex items-center gap-3">
-            <span className="text-sm text-stone-400 hidden sm:block">{session?.user?.email}</span>
+            <span className="text-sm text-stone-500">{session?.user?.email}</span>
             {session?.user?.role === "SUPER_ADMIN" && (
               <span className="text-xs px-2 py-0.5 rounded-full bg-violet-100 text-violet-700 font-medium">
                 Super Admin
@@ -550,7 +550,7 @@ export default function AdminDashboard() {
             )}
             <button
               onClick={() => router.push("/dashboard/volunteer")}
-              className="text-sm px-3 py-1.5 bg-stone-100 hover:bg-stone-200 text-stone-600 rounded-lg transition-colors flex items-center gap-1.5"
+              className="text-sm px-3 py-1.5 bg-stone-100 hover:bg-stone-200 text-stone-600 rounded-md transition-colors flex items-center gap-1.5"
             >
               <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -560,52 +560,52 @@ export default function AdminDashboard() {
             </button>
             <button
               onClick={() => signOut({ callbackUrl: "/login" })}
-              className="text-sm px-3 py-1.5 bg-stone-100 hover:bg-stone-200 text-stone-600 rounded-lg transition-colors"
+              className="text-sm px-3 py-1.5 bg-stone-100 hover:bg-stone-200 text-stone-600 rounded-md transition-colors"
             >
               Sign Out
             </button>
           </div>
         </div>
-
-        {/* Tabs */}
-        <div className="max-w-6xl mx-auto px-6">
-          <div className="flex gap-0 overflow-x-auto">
-            {[
-              { key: "slots" as Tab, label: "Browse Slots", count: 0 },
-              { key: "pending" as Tab, label: "Pending", count: pendingUsers.length },
-              { key: "users" as Tab, label: "All Users", count: users.length },
-              { key: "clinics" as Tab, label: "Clinics", count: clinics.length },
-              { key: "profile" as Tab, label: "My Profile", count: 0 },
-              ...(session?.user?.role === "SUPER_ADMIN"
-                ? [{ key: "access" as Tab, label: "Access Control", count: 0 }]
-                : []),
-            ].map((t) => (
-              <button
-                key={t.key}
-                onClick={() => setTab(t.key)}
-                className={`px-4 py-3 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap ${
-                  tab === t.key
-                    ? "border-stone-900 text-stone-900"
-                    : "border-transparent text-stone-500 hover:text-stone-700 hover:border-stone-300"
-                }`}
-              >
-                {t.label}
-                {t.count > 0 && (
-                  <span
-                    className={`ml-2 text-xs px-1.5 py-0.5 rounded-full ${
-                      t.key === "pending" && t.count > 0
-                        ? "bg-amber-100 text-amber-700"
-                        : "bg-stone-100 text-stone-500"
-                    }`}
-                  >
-                    {t.count}
-                  </span>
-                )}
-              </button>
-            ))}
-          </div>
-        </div>
       </header>
+
+      {/* Tabs */}
+      <div className="max-w-6xl mx-auto px-6 pt-6">
+        <div className="flex gap-1 bg-stone-200/50 p-1 rounded-lg w-fit">
+          {[
+            { key: "slots" as Tab, label: "Browse Slots", count: 0 },
+            { key: "pending" as Tab, label: "Pending", count: pendingUsers.length },
+            { key: "users" as Tab, label: "All Users", count: users.length },
+            { key: "clinics" as Tab, label: "Clinics", count: clinics.length },
+            { key: "profile" as Tab, label: "My Profile", count: 0 },
+            ...(session?.user?.role === "SUPER_ADMIN"
+              ? [{ key: "access" as Tab, label: "Access Control", count: 0 }]
+              : []),
+          ].map((t) => (
+            <button
+              key={t.key}
+              onClick={() => setTab(t.key)}
+              className={`px-4 py-2 text-sm rounded-md transition-colors ${
+                tab === t.key
+                  ? "bg-white text-stone-800 shadow-sm font-medium"
+                  : "text-stone-500 hover:text-stone-700"
+              }`}
+            >
+              {t.label}
+              {t.count > 0 && (
+                <span
+                  className={`ml-2 text-xs px-1.5 py-0.5 rounded-full ${
+                    t.key === "pending" && t.count > 0
+                      ? "bg-amber-100 text-amber-700"
+                      : "bg-stone-100 text-stone-500"
+                  }`}
+                >
+                  {t.count}
+                </span>
+              )}
+            </button>
+          ))}
+        </div>
+      </div>
 
       {/* Content */}
       <div className="max-w-6xl mx-auto px-6 py-6">
@@ -786,7 +786,6 @@ export default function AdminDashboard() {
                   <th className="text-left text-xs font-medium text-stone-400 uppercase tracking-wider px-5 py-3">Email</th>
                   <th className="text-left text-xs font-medium text-stone-400 uppercase tracking-wider px-5 py-3">Role</th>
                   <th className="text-left text-xs font-medium text-stone-400 uppercase tracking-wider px-5 py-3">Status</th>
-                  <th className="text-left text-xs font-medium text-stone-400 uppercase tracking-wider px-5 py-3">Clearance</th>
                   <th className="text-left text-xs font-medium text-stone-400 uppercase tracking-wider px-5 py-3">Clinic</th>
                   <th className="text-left text-xs font-medium text-stone-400 uppercase tracking-wider px-5 py-3">Volunteer Stats</th>
                   <th className="text-right text-xs font-medium text-stone-400 uppercase tracking-wider px-5 py-3">Actions</th>
@@ -817,40 +816,6 @@ export default function AdminDashboard() {
                         {user.status}
                       </span>
                     </td>
-                    <td className="px-5 py-3.5">
-                      {user.role === "VOLUNTEER" && user.volunteer ? (
-                        <div className="flex flex-col gap-1">
-                          <div className="flex items-center gap-2">
-                            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                              user.volunteer.isCleared
-                                ? "bg-emerald-50 text-emerald-700"
-                                : "bg-amber-50 text-amber-700"
-                            }`}>
-                              {user.volunteer.isCleared ? "Cleared" : "Not Cleared"}
-                            </span>
-                            <button
-                              disabled={actionLoading === `clearance-${user.id}`}
-                              onClick={() => setClearance(user.id, !user.volunteer!.isCleared)}
-                              className={`text-xs px-2 py-0.5 rounded transition-colors disabled:opacity-50 ${
-                                user.volunteer.isCleared
-                                  ? "bg-red-50 text-red-600 hover:bg-red-100"
-                                  : "bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
-                              }`}
-                            >
-                              {actionLoading === `clearance-${user.id}` ? "..." : user.volunteer.isCleared ? "Revoke" : "Mark Cleared"}
-                            </button>
-                          </div>
-                          {user.volunteer.clearanceLogs[0] && (
-                            <p className="text-xs text-stone-400">
-                              by {user.volunteer.clearanceLogs[0].clearedBy.name ?? user.volunteer.clearanceLogs[0].clearedBy.email}{" "}
-                              {new Date(user.volunteer.clearanceLogs[0].createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
-                            </p>
-                          )}
-                        </div>
-                      ) : (
-                        <span className="text-xs text-stone-300">—</span>
-                      )}
-                    </td>
                     <td className="px-5 py-3.5 text-sm text-stone-500">{user.clinic?.name || "—"}</td>
                     <td className="px-5 py-3.5">
                       {user.volunteer ? (
@@ -871,9 +836,9 @@ export default function AdminDashboard() {
                       )}
                     </td>
                     <td className="px-5 py-3.5 text-right">
-                      <div className="flex gap-1 justify-end">
+                      <div className="flex flex-col gap-1.5 items-end">
                         {user.role !== "SUPER_ADMIN" && (user.role !== "ADMIN" || session?.user?.role === "SUPER_ADMIN") && (
-                          <>
+                          <div className="flex gap-1">
                             <select
                               className="text-xs border border-stone-200 rounded px-2 py-1 text-stone-600"
                               value={user.role}
@@ -908,7 +873,35 @@ export default function AdminDashboard() {
                                 Activate
                               </button>
                             )}
-                          </>
+                          </div>
+                        )}
+                        {user.role === "VOLUNTEER" && user.volunteer && (
+                          <div className="flex flex-col items-end gap-0.5">
+                            <div className="flex items-center gap-1.5">
+                              <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                                user.volunteer.isCleared ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"
+                              }`}>
+                                {user.volunteer.isCleared ? "Cleared" : "Not Cleared"}
+                              </span>
+                              <button
+                                disabled={actionLoading === `clearance-${user.id}`}
+                                onClick={() => setClearance(user.id, !user.volunteer!.isCleared)}
+                                className={`text-xs px-2 py-0.5 rounded transition-colors disabled:opacity-50 ${
+                                  user.volunteer.isCleared
+                                    ? "bg-red-50 text-red-600 hover:bg-red-100"
+                                    : "bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
+                                }`}
+                              >
+                                {actionLoading === `clearance-${user.id}` ? "..." : user.volunteer.isCleared ? "Revoke" : "Mark Cleared"}
+                              </button>
+                            </div>
+                            {user.volunteer.clearanceLogs[0] && (
+                              <p className="text-xs text-stone-400">
+                                by {user.volunteer.clearanceLogs[0].clearedBy.name ?? user.volunteer.clearanceLogs[0].clearedBy.email}{" "}
+                                · {new Date(user.volunteer.clearanceLogs[0].createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                              </p>
+                            )}
+                          </div>
                         )}
                       </div>
                     </td>
