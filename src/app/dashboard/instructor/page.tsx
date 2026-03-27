@@ -183,28 +183,28 @@ export default function InstructorDashboard() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <header className="bg-white border-b border-gray-200">
+      <header className="bg-[#041E42]">
         <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div>
-              <h1 className="text-lg font-semibold text-black tracking-tight">Georgetown Medical Interpreters</h1>
-              <p className="text-xs text-gray-400">Instructor Dashboard</p>
+              <h1 className="text-lg font-semibold text-white tracking-tight">Georgetown Medical Interpreters</h1>
+              <p className="text-xs text-white/60">Instructor Dashboard</p>
             </div>
             <a
               href="mailto:georgetownmedicalinterpreters@gmail.com"
-              className="text-sm px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-md transition-colors"
+              className="text-sm px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white rounded-md transition-colors"
             >
               Contact Us
             </a>
           </div>
           <div className="flex items-center gap-3">
-            <span className="text-sm text-gray-500">{session?.user?.email}</span>
-            <span className="text-xs px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700 font-medium">
+            <span className="text-sm text-white/70">{session?.user?.email}</span>
+            <span className="text-xs px-2 py-0.5 rounded-full bg-indigo-400/20 text-indigo-200 font-medium">
               Instructor
             </span>
             <button
               onClick={() => signOut({ callbackUrl: "/login" })}
-              className="text-sm px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-md transition-colors"
+              className="text-sm px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white rounded-md transition-colors"
             >
               Sign Out
             </button>
@@ -225,7 +225,7 @@ export default function InstructorDashboard() {
               onClick={() => setTab(t.key)}
               className={`px-4 py-2 text-sm rounded-md transition-colors ${
                 tab === t.key
-                  ? "bg-[#041E42] text-white shadow-sm font-medium"
+                  ? "bg-[#4A90D9] text-white shadow-sm font-medium"
                   : "text-gray-500 hover:text-gray-700"
               }`}
             >
@@ -244,7 +244,7 @@ export default function InstructorDashboard() {
             <div className="flex justify-end">
               <button
                 onClick={() => setShowTrainingForm(!showTrainingForm)}
-                className="px-4 py-2 text-sm bg-[#041E42] text-white hover:bg-[#03163a] rounded-full transition-colors"
+                className="px-4 py-2 text-sm bg-[#4A90D9] text-white hover:bg-[#357ABD] rounded-full transition-colors"
               >
                 {showTrainingForm ? "Cancel" : "+ Add Material"}
               </button>
@@ -273,7 +273,7 @@ export default function InstructorDashboard() {
                       onClick={() => setTrainingForm({ ...trainingForm, type: t })}
                       className={`flex-1 py-2 text-sm rounded-md border transition-colors ${
                         trainingForm.type === t
-                          ? "bg-[#041E42] text-white border-[#041E42]"
+                          ? "bg-[#4A90D9] text-white border-[#4A90D9]"
                           : "border-gray-200 text-gray-600 hover:border-gray-400"
                       }`}
                     >
@@ -332,7 +332,7 @@ export default function InstructorDashboard() {
                 <button
                   disabled={trainingSubmitting || !trainingForm.title || (trainingForm.type === "LINK" && !trainingForm.url)}
                   onClick={submitTraining}
-                  className="px-4 py-2 text-sm bg-[#041E42] text-white hover:bg-[#03163a] rounded-full transition-colors disabled:opacity-50"
+                  className="px-4 py-2 text-sm bg-[#4A90D9] text-white hover:bg-[#357ABD] rounded-full transition-colors disabled:opacity-50"
                 >
                   {trainingSubmitting ? "Saving..." : "Add Material"}
                 </button>

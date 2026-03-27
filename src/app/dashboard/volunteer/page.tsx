@@ -458,33 +458,33 @@ export default function VolunteerDashboard() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <header className="bg-white border-b border-gray-200">
+      <header className="bg-[#041E42]">
         <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div>
-              <h1 className="text-lg font-semibold text-black tracking-tight">Georgetown Medical Interpreters</h1>
-              <p className="text-xs text-gray-400">Volunteer Dashboard</p>
+              <h1 className="text-lg font-semibold text-white tracking-tight">Georgetown Medical Interpreters</h1>
+              <p className="text-xs text-white/60">Volunteer Dashboard</p>
             </div>
             <button
               onClick={() => setTab("suggestions")}
-              className="text-sm px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-md transition-colors"
+              className="text-sm px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white rounded-md transition-colors"
             >
               Contact Us
             </button>
           </div>
           <div className="flex items-center gap-3">
-            <span className="text-sm text-gray-500">{session?.user?.email}</span>
+            <span className="text-sm text-white/70">{session?.user?.email}</span>
             {isAdmin && (
               <button
                 onClick={() => router.push("/dashboard/admin")}
-                className="text-sm px-3 py-1.5 bg-violet-50 hover:bg-violet-100 text-violet-700 rounded-md transition-colors"
+                className="text-sm px-3 py-1.5 bg-violet-400/20 hover:bg-violet-400/30 text-violet-200 rounded-md transition-colors"
               >
                 Admin Dashboard
               </button>
             )}
             <button
               onClick={() => signOut({ callbackUrl: "/login" })}
-              className="text-sm px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-md transition-colors"
+              className="text-sm px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white rounded-md transition-colors"
             >
               Sign Out
             </button>
@@ -515,7 +515,7 @@ export default function VolunteerDashboard() {
               }}
               className={`px-4 py-2 text-sm rounded-md transition-colors ${
                 tab === t.key
-                  ? "bg-[#041E42] text-white shadow-sm font-medium"
+                  ? "bg-[#4A90D9] text-white shadow-sm font-medium"
                   : "text-gray-500 hover:text-gray-700"
               }`}
             >
@@ -628,7 +628,7 @@ export default function VolunteerDashboard() {
                           <button
                             disabled={actionLoading === key}
                             onClick={() => signUp(slot.id, hour)}
-                            className="text-xs px-3 py-1 bg-[#041E42] text-white hover:bg-[#03163a] rounded-full transition-colors disabled:opacity-50"
+                            className="text-xs px-3 py-1 bg-[#4A90D9] text-white hover:bg-[#357ABD] rounded-full transition-colors disabled:opacity-50"
                           >
                             {actionLoading === key ? "..." : "Sign Up"}
                           </button>
@@ -652,7 +652,7 @@ export default function VolunteerDashboard() {
                     onClick={() => setLangFilter(lang)}
                     className={`px-3 py-1.5 text-xs rounded-md transition-colors ${
                       langFilter === lang
-                        ? "bg-[#041E42] text-white"
+                        ? "bg-[#4A90D9] text-white"
                         : "bg-white border border-gray-200 text-gray-500 hover:border-gray-300"
                     }`}
                   >
@@ -823,7 +823,7 @@ export default function VolunteerDashboard() {
                                 <button
                                   disabled={submittingFeedbackFor === slot.id}
                                   onClick={() => submitInlineFeedback(slot.id, signupId)}
-                                  className="px-3 py-1.5 text-xs bg-[#041E42] text-white rounded-full hover:bg-[#03163a] transition-colors disabled:opacity-50 whitespace-nowrap"
+                                  className="px-3 py-1.5 text-xs bg-[#4A90D9] text-white rounded-full hover:bg-[#357ABD] transition-colors disabled:opacity-50 whitespace-nowrap"
                                 >
                                   {submittingFeedbackFor === slot.id ? "..." : "Submit"}
                                 </button>
@@ -879,7 +879,7 @@ export default function VolunteerDashboard() {
                         <button
                           key={code}
                           onClick={() => toggleLanguage(code)}
-                          className="px-3 py-1 text-xs rounded-full bg-[#041E42] text-white hover:bg-[#03163a] transition-colors flex items-center gap-1"
+                          className="px-3 py-1 text-xs rounded-full bg-[#4A90D9] text-white hover:bg-[#357ABD] transition-colors flex items-center gap-1"
                         >
                           {lang?.name ?? code}
                           <span className="text-gray-400">×</span>
@@ -945,7 +945,7 @@ export default function VolunteerDashboard() {
               <button
                 disabled={actionLoading === "profile"}
                 onClick={saveProfile}
-                className="mt-4 px-4 py-2 text-sm bg-[#041E42] text-white hover:bg-[#03163a] rounded-full transition-colors disabled:opacity-50"
+                className="mt-4 px-4 py-2 text-sm bg-[#4A90D9] text-white hover:bg-[#357ABD] rounded-full transition-colors disabled:opacity-50"
               >
                 {actionLoading === "profile" ? "Saving..." : "Save Languages"}
               </button>
@@ -974,7 +974,7 @@ export default function VolunteerDashboard() {
                       aria-checked={notifPrefs[key]}
                       onClick={() => toggleNotif(key)}
                       className={`mt-0.5 relative inline-flex h-5 w-9 flex-shrink-0 rounded-full border-2 border-transparent transition-colors focus:outline-none ${
-                        notifPrefs[key] ? "bg-[#041E42]" : "bg-gray-200"
+                        notifPrefs[key] ? "bg-[#4A90D9]" : "bg-gray-200"
                       }`}
                     >
                       <span className={`inline-block h-4 w-4 rounded-full bg-white shadow transition-transform ${notifPrefs[key] ? "translate-x-4" : "translate-x-0"}`} />
@@ -994,7 +994,7 @@ export default function VolunteerDashboard() {
                       aria-checked={notifPrefs.unfilledSlotAlert}
                       onClick={() => toggleNotif("unfilledSlotAlert")}
                       className={`mt-0.5 relative inline-flex h-5 w-9 flex-shrink-0 rounded-full border-2 border-transparent transition-colors focus:outline-none ${
-                        notifPrefs.unfilledSlotAlert ? "bg-[#041E42]" : "bg-gray-200"
+                        notifPrefs.unfilledSlotAlert ? "bg-[#4A90D9]" : "bg-gray-200"
                       }`}
                     >
                       <span className={`inline-block h-4 w-4 rounded-full bg-white shadow transition-transform ${notifPrefs.unfilledSlotAlert ? "translate-x-4" : "translate-x-0"}`} />
@@ -1160,7 +1160,7 @@ export default function VolunteerDashboard() {
                 <button
                   disabled={suggSubmitting || !suggForm.subject.trim() || !suggForm.message.trim()}
                   onClick={submitSuggestion}
-                  className="px-4 py-2 text-sm bg-[#041E42] text-white hover:bg-[#03163a] rounded-full transition-colors disabled:opacity-50"
+                  className="px-4 py-2 text-sm bg-[#4A90D9] text-white hover:bg-[#357ABD] rounded-full transition-colors disabled:opacity-50"
                 >
                   {suggSubmitting ? "Submitting..." : "Submit Suggestion"}
                 </button>
@@ -1181,7 +1181,7 @@ export default function VolunteerDashboard() {
                 <p className="text-xs text-gray-500 mb-4">You&apos;ve cancelled this shift too many times. Each cancellation within 24 hours sends an urgent alert to the clinic. We made something for you to click instead.</p>
                 <button
                   onClick={() => { setSpamModal(null); setTab("profile"); setEasterOpen(true); }}
-                  className="w-full px-4 py-2 text-sm bg-[#041E42] text-white rounded-full hover:bg-[#03163a] transition-colors mb-2"
+                  className="w-full px-4 py-2 text-sm bg-[#4A90D9] text-white rounded-full hover:bg-[#357ABD] transition-colors mb-2"
                 >
                   Take me there →
                 </button>
@@ -1201,7 +1201,7 @@ export default function VolunteerDashboard() {
                   </button>
                   <button
                     onClick={spamModal.onProceed ?? (() => setSpamModal(null))}
-                    className="flex-1 px-4 py-2 text-sm bg-[#041E42] text-white rounded-full hover:bg-[#03163a]"
+                    className="flex-1 px-4 py-2 text-sm bg-[#4A90D9] text-white rounded-full hover:bg-[#357ABD]"
                   >
                     Yes, Cancel
                   </button>

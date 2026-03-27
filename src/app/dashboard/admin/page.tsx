@@ -759,7 +759,7 @@ export default function AdminDashboard() {
                         disabled={actionLoading === signupKey || !canSignUp}
                         onClick={() => signUp(slot.id, hour)}
                         title={!canSignUp ? "Add this language to your volunteer profile first" : undefined}
-                        className="text-xs px-3 py-1 bg-[#041E42] text-white hover:bg-[#03163a] rounded-full transition-colors disabled:opacity-40"
+                        className="text-xs px-3 py-1 bg-[#4A90D9] text-white hover:bg-[#357ABD] rounded-full transition-colors disabled:opacity-40"
                       >
                         {actionLoading === signupKey ? "..." : "Sign Up"}
                       </button>
@@ -797,30 +797,30 @@ export default function AdminDashboard() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <header className="bg-white border-b border-gray-200">
+      <header className="bg-[#041E42]">
         <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div>
-              <h1 className="text-lg font-semibold text-black tracking-tight">Georgetown Medical Interpreters</h1>
-              <p className="text-xs text-gray-400">Admin Dashboard</p>
+              <h1 className="text-lg font-semibold text-white tracking-tight">Georgetown Medical Interpreters</h1>
+              <p className="text-xs text-white/60">Admin Dashboard</p>
             </div>
             <button
               onClick={() => setTab("suggestions")}
-              className="text-sm px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-md transition-colors"
+              className="text-sm px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white rounded-md transition-colors"
             >
               Contact Us
             </button>
           </div>
           <div className="flex items-center gap-3">
-            <span className="text-sm text-gray-500">{session?.user?.email}</span>
+            <span className="text-sm text-white/70">{session?.user?.email}</span>
             {session?.user?.role === "SUPER_ADMIN" && (
-              <span className="text-xs px-2 py-0.5 rounded-full bg-violet-100 text-violet-700 font-medium">
+              <span className="text-xs px-2 py-0.5 rounded-full bg-violet-400/20 text-violet-200 font-medium">
                 Super Admin
               </span>
             )}
             <button
               onClick={() => router.push("/dashboard/volunteer")}
-              className="text-sm px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-md transition-colors flex items-center gap-1.5"
+              className="text-sm px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white rounded-md transition-colors flex items-center gap-1.5"
             >
               <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -830,7 +830,7 @@ export default function AdminDashboard() {
             </button>
             <button
               onClick={() => signOut({ callbackUrl: "/login" })}
-              className="text-sm px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-md transition-colors"
+              className="text-sm px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white rounded-md transition-colors"
             >
               Sign Out
             </button>
@@ -862,7 +862,7 @@ export default function AdminDashboard() {
               onClick={() => setTab(t.key)}
               className={`px-4 py-2 text-sm rounded-md transition-colors ${
                 tab === t.key
-                  ? "bg-[#041E42] text-white shadow-sm font-medium"
+                  ? "bg-[#4A90D9] text-white shadow-sm font-medium"
                   : "text-gray-500 hover:text-gray-700"
               }`}
             >
@@ -926,7 +926,7 @@ export default function AdminDashboard() {
                   onClick={() => setLangFilter(lang)}
                   className={`px-3 py-1.5 text-xs rounded-md transition-colors ${
                     langFilter === lang
-                      ? "bg-[#041E42] text-white"
+                      ? "bg-[#4A90D9] text-white"
                       : "bg-white border border-gray-200 text-gray-500 hover:border-gray-300"
                   }`}
                 >
@@ -1184,7 +1184,7 @@ export default function AdminDashboard() {
             <div className="flex justify-end mb-4">
               <button
                 onClick={() => setShowClinicForm(!showClinicForm)}
-                className="px-4 py-2 text-sm bg-[#041E42] text-white hover:bg-[#03163a] rounded-full transition-colors"
+                className="px-4 py-2 text-sm bg-[#4A90D9] text-white hover:bg-[#357ABD] rounded-full transition-colors"
               >
                 {showClinicForm ? "Cancel" : "+ Add Clinic"}
               </button>
@@ -1227,7 +1227,7 @@ export default function AdminDashboard() {
                 <button
                   disabled={actionLoading === "clinic-form" || !clinicForm.name || !clinicForm.contactEmail}
                   onClick={createClinic}
-                  className="mt-4 px-4 py-2 text-sm bg-[#041E42] text-white hover:bg-[#03163a] rounded-full transition-colors disabled:opacity-50"
+                  className="mt-4 px-4 py-2 text-sm bg-[#4A90D9] text-white hover:bg-[#357ABD] rounded-full transition-colors disabled:opacity-50"
                 >
                   {actionLoading === "clinic-form" ? "Creating..." : "Create Clinic"}
                 </button>
@@ -1313,7 +1313,7 @@ export default function AdminDashboard() {
                     onClick={() => toggleLanguage(code)}
                     className={`px-4 py-2 text-sm rounded-md border transition-colors ${
                       profileForm.languages.includes(code)
-                        ? "border-[#041E42] bg-[#041E42] text-white"
+                        ? "border-[#4A90D9] bg-[#4A90D9] text-white"
                         : "border-gray-200 text-gray-600 hover:border-gray-400"
                     }`}
                   >
@@ -1326,7 +1326,7 @@ export default function AdminDashboard() {
                 <button
                   disabled={actionLoading === "profile"}
                   onClick={saveProfile}
-                  className="px-4 py-2 text-sm bg-[#041E42] text-white hover:bg-[#03163a] rounded-full transition-colors disabled:opacity-50"
+                  className="px-4 py-2 text-sm bg-[#4A90D9] text-white hover:bg-[#357ABD] rounded-full transition-colors disabled:opacity-50"
                 >
                   {actionLoading === "profile" ? "Saving..." : "Save Profile"}
                 </button>
@@ -1354,7 +1354,7 @@ export default function AdminDashboard() {
                 <button
                   disabled={!langForm.name}
                   onClick={createLanguage}
-                  className="px-4 py-2 text-sm bg-[#041E42] text-white hover:bg-[#03163a] rounded-full transition-colors disabled:opacity-50"
+                  className="px-4 py-2 text-sm bg-[#4A90D9] text-white hover:bg-[#357ABD] rounded-full transition-colors disabled:opacity-50"
                 >
                   Add
                 </button>
@@ -1523,7 +1523,7 @@ export default function AdminDashboard() {
             <div className="flex justify-end">
               <button
                 onClick={() => setShowTrainingForm(!showTrainingForm)}
-                className="px-4 py-2 text-sm bg-[#041E42] text-white hover:bg-[#03163a] rounded-full transition-colors"
+                className="px-4 py-2 text-sm bg-[#4A90D9] text-white hover:bg-[#357ABD] rounded-full transition-colors"
               >
                 {showTrainingForm ? "Cancel" : "+ Add Material"}
               </button>
@@ -1588,7 +1588,7 @@ export default function AdminDashboard() {
                 <button
                   disabled={trainingSubmitting || !trainingForm.title || (trainingForm.type === "LINK" && !trainingForm.url)}
                   onClick={submitTraining}
-                  className="px-4 py-2 text-sm bg-[#041E42] text-white hover:bg-[#03163a] rounded-full transition-colors disabled:opacity-50"
+                  className="px-4 py-2 text-sm bg-[#4A90D9] text-white hover:bg-[#357ABD] rounded-full transition-colors disabled:opacity-50"
                 >
                   {trainingSubmitting ? "Saving..." : "Add Material"}
                 </button>
@@ -1687,7 +1687,7 @@ export default function AdminDashboard() {
                 <button
                   disabled={!ruleEmail.trim() || actionLoading === "email-rule"}
                   onClick={addEmailRule}
-                  className="w-full py-2 text-sm bg-[#041E42] text-white hover:bg-[#03163a] rounded-full transition-colors disabled:opacity-50"
+                  className="w-full py-2 text-sm bg-[#4A90D9] text-white hover:bg-[#357ABD] rounded-full transition-colors disabled:opacity-50"
                 >
                   {actionLoading === "email-rule" ? "Saving..." : "Add Rule"}
                 </button>
@@ -1751,7 +1751,7 @@ export default function AdminDashboard() {
                       aria-checked={flag.enabled}
                       onClick={() => toggleFlag(flag.key, !flag.enabled)}
                       className={`relative inline-flex h-5 w-9 flex-shrink-0 rounded-full border-2 border-transparent transition-colors focus:outline-none ${
-                        flag.enabled ? "bg-[#041E42]" : "bg-gray-200"
+                        flag.enabled ? "bg-[#4A90D9]" : "bg-gray-200"
                       }`}
                     >
                       <span className={`inline-block h-4 w-4 rounded-full bg-white shadow transition-transform ${flag.enabled ? "translate-x-4" : "translate-x-0"}`} />
@@ -1776,7 +1776,7 @@ export default function AdminDashboard() {
                 <button
                   disabled={!testEmailTo.trim() || testEmailStatus === "sending"}
                   onClick={sendTestEmailFn}
-                  className="px-4 py-2 text-sm bg-[#041E42] text-white hover:bg-[#03163a] rounded-full transition-colors disabled:opacity-50"
+                  className="px-4 py-2 text-sm bg-[#4A90D9] text-white hover:bg-[#357ABD] rounded-full transition-colors disabled:opacity-50"
                 >
                   {testEmailStatus === "sending" ? "Sending..." : "Send Test Email"}
                 </button>
@@ -2040,7 +2040,7 @@ export default function AdminDashboard() {
                     <button
                       disabled={assignLoading}
                       onClick={assignVolunteer}
-                      className="flex-1 px-4 py-2 text-sm bg-[#041E42] text-white rounded-full hover:bg-[#03163a] transition-colors disabled:opacity-50"
+                      className="flex-1 px-4 py-2 text-sm bg-[#4A90D9] text-white rounded-full hover:bg-[#357ABD] transition-colors disabled:opacity-50"
                     >
                       {assignLoading ? "Assigning..." : "Confirm Assignment"}
                     </button>
@@ -2077,7 +2077,7 @@ export default function AdminDashboard() {
             </div>
             <button
               onClick={() => setPinReveal(null)}
-              className="w-full px-4 py-2 text-sm bg-[#041E42] text-white hover:bg-[#03163a] rounded-lg transition-colors"
+              className="w-full px-4 py-2 text-sm bg-[#4A90D9] text-white hover:bg-[#357ABD] rounded-lg transition-colors"
             >
               Done
             </button>

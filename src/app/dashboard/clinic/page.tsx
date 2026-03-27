@@ -344,21 +344,21 @@ export default function ClinicDashboard() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <header className="bg-white border-b border-gray-200">
+      <header className="bg-[#041E42]">
         <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div>
-              <h1 className="text-lg font-semibold text-black tracking-tight">Georgetown Medical Interpreters</h1>
-              <p className="text-xs text-gray-400">
+              <h1 className="text-lg font-semibold text-white tracking-tight">Georgetown Medical Interpreters</h1>
+              <p className="text-xs text-white/60">
                 Clinic Dashboard
                 {session?.user?.name && (
-                  <span className="ml-1 text-gray-500">— {session.user.name}</span>
+                  <span className="ml-1 text-white/80">— {session.user.name}</span>
                 )}
               </p>
             </div>
             <a
               href="mailto:georgetownmedicalinterpreters@gmail.com"
-              className="text-sm px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-md transition-colors"
+              className="text-sm px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white rounded-md transition-colors"
             >
               Contact Us
             </a>
@@ -366,7 +366,7 @@ export default function ClinicDashboard() {
           <div className="flex items-center gap-3">
             <button
               onClick={() => signOut({ callbackUrl: "/login" })}
-              className="text-sm px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-md transition-colors"
+              className="text-sm px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white rounded-md transition-colors"
             >
               Sign Out
             </button>
@@ -387,7 +387,7 @@ export default function ClinicDashboard() {
               onClick={() => setTab(t.key)}
               className={`relative px-4 py-2 text-sm rounded-md transition-colors ${
                 tab === t.key
-                  ? "bg-[#041E42] text-white shadow-sm font-medium"
+                  ? "bg-[#4A90D9] text-white shadow-sm font-medium"
                   : "text-gray-500 hover:text-gray-700"
               }`}
             >
@@ -411,7 +411,7 @@ export default function ClinicDashboard() {
             <button
               onClick={() => setShowPostForm(true)}
               disabled={upcoming.length >= 100}
-              className="px-4 py-2 text-sm bg-[#041E42] text-white hover:bg-[#03163a] rounded-full transition-colors disabled:opacity-40"
+              className="px-4 py-2 text-sm bg-[#4A90D9] text-white hover:bg-[#357ABD] rounded-full transition-colors disabled:opacity-40"
               title={upcoming.length >= 100 ? "You have reached the 100-slot limit" : undefined}
             >
               + Post Slot
@@ -548,7 +548,7 @@ export default function ClinicDashboard() {
                 (form.isRecurring && !form.recurrenceEndDate)
               }
               onClick={postSlot}
-              className="mt-4 px-4 py-2 text-sm bg-[#041E42] text-white hover:bg-[#03163a] rounded-full transition-colors disabled:opacity-50"
+              className="mt-4 px-4 py-2 text-sm bg-[#4A90D9] text-white hover:bg-[#357ABD] rounded-full transition-colors disabled:opacity-50"
             >
               {actionLoading === "post" ? "Posting..." : form.isRecurring ? "Post Recurring Slots" : "Post Slot"}
             </button>
@@ -778,7 +778,7 @@ export default function ClinicDashboard() {
                                 <button
                                   disabled={submittingFeedbackFor === feedbackKey}
                                   onClick={() => submitInlineFeedback(feedbackKey, s.id)}
-                                  className="px-3 py-1.5 text-xs bg-[#041E42] text-white rounded-full hover:bg-[#03163a] transition-colors disabled:opacity-50 whitespace-nowrap"
+                                  className="px-3 py-1.5 text-xs bg-[#4A90D9] text-white rounded-full hover:bg-[#357ABD] transition-colors disabled:opacity-50 whitespace-nowrap"
                                 >
                                   {submittingFeedbackFor === feedbackKey ? "..." : "Submit"}
                                 </button>
@@ -812,7 +812,7 @@ export default function ClinicDashboard() {
                     aria-checked={notifPrefs.dailySummary}
                     onClick={() => saveNotifPrefs({ ...notifPrefs, dailySummary: !notifPrefs.dailySummary })}
                     className={`mt-0.5 relative inline-flex h-5 w-9 flex-shrink-0 rounded-full border-2 border-transparent transition-colors focus:outline-none ${
-                      notifPrefs.dailySummary ? "bg-[#041E42]" : "bg-gray-200"
+                      notifPrefs.dailySummary ? "bg-[#4A90D9]" : "bg-gray-200"
                     }`}
                   >
                     <span className={`inline-block h-4 w-4 rounded-full bg-white shadow transition-transform ${notifPrefs.dailySummary ? "translate-x-4" : "translate-x-0"}`} />
@@ -830,7 +830,7 @@ export default function ClinicDashboard() {
                     aria-checked={notifPrefs.unfilledAlert24h}
                     onClick={() => saveNotifPrefs({ ...notifPrefs, unfilledAlert24h: !notifPrefs.unfilledAlert24h })}
                     className={`mt-0.5 relative inline-flex h-5 w-9 flex-shrink-0 rounded-full border-2 border-transparent transition-colors focus:outline-none ${
-                      notifPrefs.unfilledAlert24h ? "bg-[#041E42]" : "bg-gray-200"
+                      notifPrefs.unfilledAlert24h ? "bg-[#4A90D9]" : "bg-gray-200"
                     }`}
                   >
                     <span className={`inline-block h-4 w-4 rounded-full bg-white shadow transition-transform ${notifPrefs.unfilledAlert24h ? "translate-x-4" : "translate-x-0"}`} />
@@ -852,7 +852,7 @@ export default function ClinicDashboard() {
                         onClick={() => saveNotifPrefs({ ...notifPrefs, volunteerCancelWindow: v })}
                         className={`px-3 py-1.5 text-xs rounded-md border transition-colors ${
                           notifPrefs.volunteerCancelWindow === v
-                            ? "bg-[#041E42] text-white border-[#041E42]"
+                            ? "bg-[#4A90D9] text-white border-[#4A90D9]"
                             : "bg-white text-gray-500 border-gray-200 hover:border-gray-300"
                         }`}
                       >
@@ -882,7 +882,7 @@ export default function ClinicDashboard() {
                     onClick={() => setEditScope(scope)}
                     className={`w-full text-left px-4 py-2.5 text-sm transition-colors ${
                       editScope === scope
-                        ? "bg-[#041E42] text-white"
+                        ? "bg-[#4A90D9] text-white"
                         : "bg-white text-gray-600 hover:bg-gray-50"
                     }`}
                   >
@@ -962,7 +962,7 @@ export default function ClinicDashboard() {
               <button
                 disabled={actionLoading === "edit" || editSlot.endTime <= editSlot.startTime}
                 onClick={requestSaveEdit}
-                className="px-4 py-2 text-sm bg-[#041E42] text-white hover:bg-[#03163a] rounded-full transition-colors disabled:opacity-50"
+                className="px-4 py-2 text-sm bg-[#4A90D9] text-white hover:bg-[#357ABD] rounded-full transition-colors disabled:opacity-50"
               >
                 {actionLoading === "edit" ? "Saving..." : "Save Changes"}
               </button>
@@ -1000,7 +1000,7 @@ export default function ClinicDashboard() {
               <button
                 disabled={actionLoading === "edit"}
                 onClick={confirmSaveEdit}
-                className="w-full px-4 py-2.5 text-sm bg-[#041E42] hover:bg-[#03163a] text-white font-medium rounded-lg transition-colors disabled:opacity-50"
+                className="w-full px-4 py-2.5 text-sm bg-[#4A90D9] hover:bg-[#357ABD] text-white font-medium rounded-lg transition-colors disabled:opacity-50"
               >
                 {actionLoading === "edit" ? "Saving..." : "Save Changes Anyway"}
               </button>

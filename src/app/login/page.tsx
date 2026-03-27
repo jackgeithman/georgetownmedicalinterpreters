@@ -53,7 +53,7 @@ function LoginContent() {
     <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <h1 className="text-xl font-semibold text-black tracking-tight">
+          <h1 className="text-xl font-semibold text-[#041E42] tracking-tight">
             Georgetown Medical Interpreters
           </h1>
           <p className="text-sm text-gray-400 mt-1">GMI Volunteer Platform</p>
@@ -76,7 +76,7 @@ function LoginContent() {
             </p>
             <button
               onClick={() => signIn("google", { callbackUrl: "/dashboard" })}
-              className="w-full flex items-center justify-center gap-3 px-4 py-2.5 bg-[#041E42] hover:bg-[#03163a] text-white text-sm font-medium rounded-lg transition-colors"
+              className="w-full flex items-center justify-center gap-3 px-4 py-2.5 bg-[#4A90D9] hover:bg-[#357ABD] text-white text-sm font-medium rounded-full transition-colors"
             >
               <svg className="w-4 h-4" viewBox="0 0 24 24">
                 <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
@@ -113,12 +113,12 @@ function LoginContent() {
                 value={pin}
                 onChange={(e) => setPin(e.target.value.replace(/\D/g, ""))}
                 disabled={clinicLoading}
-                className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-300 tracking-widest text-center disabled:bg-gray-50"
+                className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4A90D9] tracking-widest text-center disabled:bg-gray-50"
               />
               <button
                 type="submit"
                 disabled={pin.length < 6 || clinicLoading}
-                className="w-full px-4 py-2.5 bg-[#041E42] hover:bg-[#03163a] text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50"
+                className="w-full px-4 py-2.5 bg-[#4A90D9] hover:bg-[#357ABD] text-white text-sm font-medium rounded-full transition-colors disabled:opacity-50"
               >
                 {clinicLoading ? "Signing in..." : "Sign In"}
               </button>
