@@ -93,12 +93,12 @@ export default function ClinicLoginPage({
               value={pin}
               onChange={(e) => setPin(e.target.value.replace(/\D/g, ""))}
               disabled={!clinicName || loading}
-              className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-300 tracking-widest text-center disabled:bg-gray-50"
+              className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4A90D9] tracking-widest text-center disabled:bg-gray-50"
             />
             <button
               type="submit"
               disabled={pin.length !== 8 || loading || !clinicName}
-              className="w-full px-4 py-2.5 bg-[#041E42] hover:bg-[#03163a] text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50"
+              className="w-full px-4 py-2.5 bg-[#4A90D9] hover:bg-[#357ABD] text-white text-sm font-medium rounded-full transition-colors disabled:opacity-50"
             >
               {loading ? "Signing in..." : "Sign In"}
             </button>
