@@ -6,12 +6,12 @@ export default function PrivacyPage() {
       <div className="max-w-3xl mx-auto px-6 py-16">
         <div className="border-b-4 border-[#002147] pb-4 mb-10">
           <h1 className="text-2xl font-bold text-[#002147]">Georgetown Medical Interpreters</h1>
-          <p className="text-sm text-stone-400 mt-1">Privacy Policy</p>
+          <p className="text-sm text-gray-400 mt-1">Privacy Policy</p>
         </div>
 
-        <p className="text-sm text-stone-400 mb-10">Last updated: March 2026</p>
+        <p className="text-sm text-gray-400 mb-10">Last updated: March 2026</p>
 
-        <div className="space-y-8 text-stone-700 leading-relaxed">
+        <div className="space-y-8 text-gray-700 leading-relaxed">
           <section>
             <h2 className="text-lg font-semibold text-[#002147] mb-3">1. Overview</h2>
             <p>
@@ -78,7 +78,7 @@ export default function PrivacyPage() {
           </section>
         </div>
 
-        <div className="mt-16 pt-8 border-t border-stone-200 text-xs text-stone-400">
+        <div className="mt-16 pt-8 border-t border-gray-200 text-xs text-gray-400">
           Georgetown Medical Interpreters &middot; georgetownmedicalinterpreters.org
         </div>
       </div>

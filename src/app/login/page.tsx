@@ -50,13 +50,13 @@ function LoginContent() {
   };
 
   return (
-    <div className="min-h-screen bg-stone-50 flex items-center justify-center px-4">
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <h1 className="text-xl font-semibold text-stone-800 tracking-tight">
+          <h1 className="text-xl font-semibold text-black tracking-tight">
             Georgetown Medical Interpreters
           </h1>
-          <p className="text-sm text-stone-400 mt-1">GMI Volunteer Platform</p>
+          <p className="text-sm text-gray-400 mt-1">GMI Volunteer Platform</p>
         </div>
 
         {errorKey && (
@@ -67,16 +67,16 @@ function LoginContent() {
 
         <div className="space-y-4">
           {/* Volunteer & Admin */}
-          <div className="bg-white rounded-xl border border-stone-200 p-6">
-            <p className="text-xs font-medium text-stone-500 uppercase tracking-wider mb-1">
+          <div className="bg-white rounded-xl border border-gray-200 p-6">
+            <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">
               Volunteers &amp; Admins
             </p>
-            <p className="text-sm text-stone-400 mb-4">
+            <p className="text-sm text-gray-400 mb-4">
               Sign in with your Google account.
             </p>
             <button
               onClick={() => signIn("google", { callbackUrl: "/dashboard" })}
-              className="w-full flex items-center justify-center gap-3 px-4 py-2.5 bg-stone-800 hover:bg-stone-700 text-white text-sm font-medium rounded-lg transition-colors"
+              className="w-full flex items-center justify-center gap-3 px-4 py-2.5 bg-[#041E42] hover:bg-[#03163a] text-white text-sm font-medium rounded-lg transition-colors"
             >
               <svg className="w-4 h-4" viewBox="0 0 24 24">
                 <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
@@ -89,11 +89,11 @@ function LoginContent() {
           </div>
 
           {/* Clinic */}
-          <div className="bg-white rounded-xl border border-stone-200 p-6">
-            <p className="text-xs font-medium text-stone-500 uppercase tracking-wider mb-1">
+          <div className="bg-white rounded-xl border border-gray-200 p-6">
+            <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">
               Clinic Staff
             </p>
-            <p className="text-sm text-stone-400 mb-4">
+            <p className="text-sm text-gray-400 mb-4">
               Enter your clinic&apos;s PIN to sign in.
             </p>
 
@@ -113,12 +113,12 @@ function LoginContent() {
                 value={pin}
                 onChange={(e) => setPin(e.target.value.replace(/\D/g, ""))}
                 disabled={clinicLoading}
-                className="w-full px-3 py-2.5 text-sm border border-stone-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-stone-300 tracking-widest text-center disabled:bg-stone-50"
+                className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-300 tracking-widest text-center disabled:bg-gray-50"
               />
               <button
                 type="submit"
                 disabled={pin.length < 6 || clinicLoading}
-                className="w-full px-4 py-2.5 bg-stone-800 hover:bg-stone-700 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50"
+                className="w-full px-4 py-2.5 bg-[#041E42] hover:bg-[#03163a] text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50"
               >
                 {clinicLoading ? "Signing in..." : "Sign In"}
               </button>
@@ -126,17 +126,17 @@ function LoginContent() {
           </div>
         </div>
 
-        <p className="text-center text-xs text-stone-400 mt-6">
+        <p className="text-center text-xs text-gray-400 mt-6">
           By signing in you agree to our{" "}
-          <a href="/terms" className="underline hover:text-stone-600">Terms of Service</a>
+          <a href="/terms" className="underline hover:text-gray-700">Terms of Service</a>
           {" "}and{" "}
-          <a href="/privacy" className="underline hover:text-stone-600">Privacy Policy</a>.
+          <a href="/privacy" className="underline hover:text-gray-700">Privacy Policy</a>.
         </p>
-        <p className="text-center text-xs text-stone-400 mt-2">
+        <p className="text-center text-xs text-gray-400 mt-2">
           Questions?{" "}
           <a
             href="mailto:georgetownmedicalinterpreters@gmail.com"
-            className="underline hover:text-stone-600"
+            className="underline hover:text-gray-700"
           >
             Contact Us
           </a>
