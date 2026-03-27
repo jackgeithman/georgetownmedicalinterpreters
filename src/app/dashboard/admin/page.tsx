@@ -64,11 +64,6 @@ type EmailRule = { id: string; email: string; type: "ALLOW" | "BLOCK"; note: str
 type Tab = "slots" | "pending" | "users" | "clinics" | "profile" | "access";
 
 const LANG_LABELS: Record<string, string> = { ES: "Spanish", ZH: "Chinese", KO: "Korean" };
-const LANG_COLORS: Record<string, string> = {
-  ES: "bg-amber-50 text-amber-700",
-  ZH: "bg-red-50 text-red-700",
-  KO: "bg-blue-50 text-blue-700",
-};
 
 function formatHour(h: number) {
   if (h === 0) return "12 AM";
@@ -82,6 +77,34 @@ function formatDate(s: string) {
     weekday: "short", month: "short", day: "numeric",
   });
 }
+
+function formatDateLong(s: string) {
+  return new Date(s.slice(0, 10) + "T12:00:00").toLocaleDateString("en-US", {
+    weekday: "long", month: "long", day: "numeric",
+  });
+}
+
+// ── Shared style helpers ──────────────────────────────────────────────────────
+
+const card: React.CSSProperties = {
+  background: "var(--card-bg)", border: "1.5px solid var(--card-border)",
+  borderRadius: "14px", overflow: "hidden", marginBottom: "14px",
+  boxShadow: "0 2px 6px rgba(0,0,0,.05)",
+};
+
+const inputStyle: React.CSSProperties = {
+  width: "100%", padding: "10px 14px", border: "1.5px solid var(--card-border)",
+  borderRadius: "9px", fontFamily: "inherit", fontSize: "0.9rem",
+  color: "var(--gray-900)", background: "#fff", outline: "none",
+};
+
+const btnPrimary: React.CSSProperties = {
+  background: "var(--blue)", color: "#fff", border: "none", borderRadius: "9px",
+  padding: "10px 22px", fontFamily: "inherit", fontSize: "0.875rem", fontWeight: 600,
+  cursor: "pointer", transition: "all .18s", whiteSpace: "nowrap" as const,
+};
+
+// ── Main component ────────────────────────────────────────────────────────────
 
 export default function AdminDashboard() {
   const { data: session, status } = useSession();
@@ -355,28 +378,21 @@ export default function AdminDashboard() {
 
   if (status === "loading" || loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-stone-50">
-        <p className="text-stone-400">Loading...</p>
+      <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--page-bg)" }}>
+        <p style={{ color: "var(--gray-400)" }}>Loading…</p>
       </div>
     );
   }
 
-  // --- Slots tab helpers ---
   const now = new Date();
-
-  // A slot is past when its end time has passed (local/browser time matches ET for GMI)
   const slotEnd = (s: AdminSlot) =>
     new Date(s.date.slice(0, 10) + "T" + String(s.endTime).padStart(2, "0") + ":00:00");
 
   const filteredSlots = adminSlots.filter((s) => {
     if (langFilter !== "ALL" && s.language !== langFilter) return false;
     if (clinicFilter !== "ALL" && s.clinic.name !== clinicFilter) return false;
-    if (dateFrom) {
-      if (new Date(s.date.slice(0, 10) + "T12:00:00") < new Date(dateFrom + "T00:00:00")) return false;
-    }
-    if (dateTo) {
-      if (new Date(s.date.slice(0, 10) + "T12:00:00") > new Date(dateTo + "T23:59:59")) return false;
-    }
+    if (dateFrom && new Date(s.date.slice(0, 10) + "T12:00:00") < new Date(dateFrom + "T00:00:00")) return false;
+    if (dateTo && new Date(s.date.slice(0, 10) + "T12:00:00") > new Date(dateTo + "T23:59:59")) return false;
     if (availableOnly) {
       const hasOpen = Array.from({ length: s.endTime - s.startTime }, (_, i) => s.startTime + i)
         .some((h) => s.signups.filter((sg) => sg.subBlockHour === h).length < s.interpreterCount);
@@ -386,476 +402,352 @@ export default function AdminDashboard() {
   });
 
   const uniqueClinics = Array.from(new Set(adminSlots.map((s) => s.clinic.name))).sort();
-
   const upcomingSlots = filteredSlots.filter((s) => slotEnd(s) > now);
-  const pastSlots = filteredSlots
-    .filter((s) => slotEnd(s) <= now)
-    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  const pastSlots = filteredSlots.filter((s) => slotEnd(s) <= now).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+  const upcomingByDate: Record<string, AdminSlot[]> = {};
+  for (const s of upcomingSlots) {
+    const label = formatDateLong(s.date);
+    if (!upcomingByDate[label]) upcomingByDate[label] = [];
+    upcomingByDate[label].push(s);
+  }
 
   const selectedSlots = upcomingSlots.filter((s) => adminSelectedSlotIds.has(s.id));
   const deleteConfirmText = selectedSlots.length === 1
     ? `${selectedSlots[0].clinic.name} ${selectedSlots[0].date.slice(0, 10)}`
     : "DELETE";
-  const deleteInputValid = adminDeleteInput.trim() === deleteConfirmText;
 
   const renderSlot = (slot: AdminSlot, isPast: boolean) => {
     const subBlocks = Array.from({ length: slot.endTime - slot.startTime }, (_, i) => slot.startTime + i);
     const canSignUp = adminProfile?.languages.includes(slot.language) ?? false;
+    const openCount = subBlocks.filter((h) => slot.signups.filter((s) => s.subBlockHour === h).length < slot.interpreterCount).length;
 
     return (
-      <div key={slot.id} className={`bg-white rounded-xl border border-stone-200 p-5 ${isPast ? "opacity-50" : ""}`}>
-        <div className="flex items-start justify-between mb-3">
-          <div className="flex items-center gap-3 flex-wrap">
-            {!isPast && (
-              <input
-                type="checkbox"
-                checked={adminSelectedSlotIds.has(slot.id)}
-                onChange={() => toggleSelectAdminSlot(slot.id)}
-                className="w-4 h-4 accent-stone-700 cursor-pointer"
-                onClick={(e) => e.stopPropagation()}
-              />
-            )}
-            <span className={`text-xs px-2 py-1 rounded-full font-medium ${LANG_COLORS[slot.language]}`}>
-              {LANG_LABELS[slot.language]}
-            </span>
-            <span className="text-sm font-medium text-stone-800">{formatDate(slot.date)}</span>
-            <span className="text-sm text-stone-500">{formatHour(slot.startTime)} – {formatHour(slot.endTime)}</span>
-            {isPast && <span className="text-xs px-2 py-0.5 rounded-full bg-stone-100 text-stone-400">Past</span>}
-          </div>
-          <div className="text-right">
-            <p className="text-sm font-medium text-stone-800">{slot.clinic.name}</p>
-            {slot.clinic.address && <p className="text-xs text-stone-400">{slot.clinic.address}</p>}
-          </div>
-        </div>
-        {slot.notes && <p className="text-xs text-stone-400 italic mb-3">{slot.notes}</p>}
-        <div className="space-y-2">
-          {subBlocks.map((hour) => {
-            const hoursSignups = slot.signups.filter((s) => s.subBlockHour === hour);
-            const mySignup = adminProfile ? hoursSignups.find((s) => s.volunteer.id === adminProfile.id) : null;
-            const filled = hoursSignups.length;
-            const isFull = filled >= slot.interpreterCount;
-            const signupKey = `signup-${slot.id}-${hour}`;
-
-            return (
-              <div key={hour} className="rounded-md bg-stone-50 px-3 py-2 space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <span className="text-xs text-stone-600 w-28">{formatHour(hour)} – {formatHour(hour + 1)}</span>
-                    <span className="text-xs text-stone-400">{filled}/{slot.interpreterCount} filled</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {!isPast && (
-                      <button
-                        onClick={() => {
-                          setVolunteerAssignTarget({ slotId: slot.id, hour, language: slot.language, date: slot.date, clinicName: slot.clinic.name });
-                          setAssignSearch("");
-                          setAssignSelected(null);
-                          setAssignError("");
-                        }}
-                        className="text-xs px-2 py-1 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200 rounded-md transition-colors"
-                      >
-                        Assign
-                      </button>
-                    )}
-                    {isPast ? (
-                      <span className="text-xs px-2 py-1 bg-stone-100 text-stone-400 rounded-md">Past</span>
-                    ) : mySignup ? (
-                      <button
-                        disabled={actionLoading === mySignup.id}
-                        onClick={() => cancelMySignup(mySignup.id)}
-                        className="text-xs px-2 py-1 bg-emerald-50 text-emerald-700 hover:bg-red-50 hover:text-red-600 border border-emerald-200 hover:border-red-200 rounded-md font-medium transition-colors disabled:opacity-50"
-                        title="Click to cancel"
-                      >
-                        {actionLoading === mySignup.id ? "..." : "Signed Up ✓"}
-                      </button>
-                    ) : isFull ? (
-                      <span className="text-xs px-2 py-1 bg-stone-100 text-stone-400 rounded-md">Full</span>
-                    ) : (
-                      <button
-                        disabled={actionLoading === signupKey || !canSignUp}
-                        onClick={() => signUp(slot.id, hour)}
-                        title={!canSignUp ? "Add this language to your volunteer profile first" : undefined}
-                        className="text-xs px-3 py-1 bg-stone-800 text-white hover:bg-stone-700 rounded-md transition-colors disabled:opacity-40"
-                      >
-                        {actionLoading === signupKey ? "..." : "Sign Up"}
-                      </button>
-                    )}
-                  </div>
-                </div>
-                {/* Other volunteers signed up this hour */}
-                {hoursSignups
-                  .filter((s) => s.volunteer.id !== adminProfile?.id)
-                  .map((s) => (
-                    <div key={s.id} className="flex items-center justify-between pl-1">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs text-stone-500">{s.volunteer.user.name ?? s.volunteer.user.email}</span>
-                        <span className="text-xs text-stone-300">{s.volunteer.user.email}</span>
-                      </div>
-                      {!isPast && (
-                        <button
-                          disabled={actionLoading === s.id}
-                          onClick={() => removeVolunteer(s.id)}
-                          className="text-xs px-2 py-0.5 bg-red-50 text-red-500 hover:bg-red-100 rounded transition-colors disabled:opacity-50"
-                        >
-                          Remove
-                        </button>
-                      )}
-                    </div>
-                  ))}
+      <div key={slot.id} style={{ ...card, opacity: isPast ? 0.45 : 1, pointerEvents: isPast ? "none" : "auto" }}>
+        <div style={{ padding: "16px 22px 14px", borderBottom: "1.5px solid var(--card-border)", display: "grid", gridTemplateColumns: "1fr auto", gap: "16px", alignItems: "center" }}>
+          <div>
+            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+              {!isPast && (
+                <input
+                  type="checkbox"
+                  checked={adminSelectedSlotIds.has(slot.id)}
+                  onChange={() => toggleSelectAdminSlot(slot.id)}
+                  style={{ width: "16px", height: "16px", cursor: "pointer", accentColor: "var(--navy)" }}
+                  onClick={(e) => e.stopPropagation()}
+                />
+              )}
+              <div style={{ fontSize: "1.15rem", fontWeight: 700, color: "var(--navy)" }}>{slot.clinic.name}</div>
+            </div>
+            <div style={{ fontSize: "0.875rem", fontWeight: 500, color: "var(--gray-600)", marginTop: "3px" }}>{LANG_LABELS[slot.language]}</div>
+            {slot.notes && <div style={{ fontSize: "0.82rem", color: "var(--gray-600)", fontStyle: "italic", marginTop: "4px" }}>{slot.notes}</div>}
+            <div style={{ display: "flex", gap: "24px", marginTop: "10px", flexWrap: "wrap" }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: "3px" }}>
+                <span style={{ fontSize: "0.68rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.09em", color: "var(--gray-400)" }}>Date</span>
+                <span style={{ fontSize: "0.95rem", fontWeight: 600, color: "var(--gray-900)" }}>{formatDate(slot.date)}</span>
               </div>
-            );
-          })}
+              <div style={{ display: "flex", flexDirection: "column", gap: "3px" }}>
+                <span style={{ fontSize: "0.68rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.09em", color: "var(--gray-400)" }}>Session</span>
+                <span style={{ fontSize: "0.95rem", fontWeight: 600, color: "var(--gray-900)" }}>{formatHour(slot.startTime)} – {formatHour(slot.endTime)}</span>
+              </div>
+              {slot.clinic.address && (
+                <div style={{ display: "flex", flexDirection: "column", gap: "3px" }}>
+                  <span style={{ fontSize: "0.68rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.09em", color: "var(--gray-400)" }}>Location</span>
+                  <span style={{ fontSize: "0.95rem", fontWeight: 600, color: "var(--gray-900)" }}>{slot.clinic.address}</span>
+                </div>
+              )}
+            </div>
+          </div>
+          {isPast ? (
+            <span style={{ background: "var(--gray-200)", color: "var(--gray-600)", fontSize: "0.7rem", fontWeight: 600, padding: "4px 10px", borderRadius: "99px", textTransform: "uppercase" }}>Past</span>
+          ) : (
+            <div style={{ background: "var(--green-light)", color: "var(--green)", fontSize: "0.9rem", fontWeight: 700, padding: "9px 18px", borderRadius: "10px", whiteSpace: "nowrap", textAlign: "center", lineHeight: 1.2 }}>
+              {openCount} open<span style={{ display: "block", fontSize: "0.72rem", fontWeight: 500, marginTop: "2px", opacity: 0.8 }}>slots</span>
+            </div>
+          )}
         </div>
+
+        {subBlocks.map((hour, i) => {
+          const hoursSignups = slot.signups.filter((s) => s.subBlockHour === hour);
+          const mySignup = adminProfile ? hoursSignups.find((s) => s.volunteer.id === adminProfile.id) : null;
+          const filled = hoursSignups.length;
+          const isFull = filled >= slot.interpreterCount;
+          const signupKey = `signup-${slot.id}-${hour}`;
+          const isLast = i === subBlocks.length - 1;
+
+          return (
+            <div key={hour}>
+              <div style={{ display: "flex", alignItems: "center", padding: "12px 22px", borderBottom: "1px solid var(--card-border)", gap: "14px" }}>
+                <div style={{ width: "9px", height: "9px", borderRadius: "50%", background: isPast ? "var(--gray-400)" : "var(--green)", flexShrink: 0 }} />
+                <span style={{ fontSize: "0.95rem", fontWeight: 600, color: "var(--gray-900)", minWidth: "145px" }}>{formatHour(hour)} – {formatHour(hour + 1)}</span>
+                <span style={{ fontSize: "0.875rem", color: "var(--gray-600)", flex: 1 }}>{filled}/{slot.interpreterCount} filled</span>
+                <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+                  {!isPast && (
+                    <button
+                      onClick={() => { setVolunteerAssignTarget({ slotId: slot.id, hour, language: slot.language, date: slot.date, clinicName: slot.clinic.name }); setAssignSearch(""); setAssignSelected(null); setAssignError(""); }}
+                      style={{ fontSize: "0.78rem", padding: "5px 12px", background: "#EFF6FF", color: "#1D4ED8", border: "1px solid #BFDBFE", borderRadius: "7px", fontFamily: "inherit", cursor: "pointer" }}
+                    >
+                      Assign
+                    </button>
+                  )}
+                  {isPast ? (
+                    <span style={{ fontSize: "0.78rem", color: "var(--gray-400)" }}>Past</span>
+                  ) : mySignup ? (
+                    <button
+                      disabled={actionLoading === mySignup.id}
+                      onClick={() => cancelMySignup(mySignup.id)}
+                      style={{ fontSize: "0.78rem", padding: "5px 12px", background: "var(--green-light)", color: "var(--green)", border: "1px solid #86EFAC", borderRadius: "7px", fontFamily: "inherit", cursor: "pointer", opacity: actionLoading === mySignup.id ? 0.5 : 1 }}
+                      title="Click to cancel"
+                    >
+                      {actionLoading === mySignup.id ? "…" : "Signed Up ✓"}
+                    </button>
+                  ) : isFull ? (
+                    <span style={{ fontSize: "0.78rem", color: "var(--gray-400)" }}>Full</span>
+                  ) : (
+                    <button
+                      disabled={actionLoading === signupKey || !canSignUp}
+                      onClick={() => signUp(slot.id, hour)}
+                      title={!canSignUp ? "Add this language to your volunteer profile first" : undefined}
+                      style={{ ...btnPrimary, padding: "5px 14px", fontSize: "0.78rem", opacity: actionLoading === signupKey || !canSignUp ? 0.4 : 1 }}
+                    >
+                      {actionLoading === signupKey ? "…" : "Sign Up"}
+                    </button>
+                  )}
+                </div>
+              </div>
+              {hoursSignups.filter((s) => s.volunteer.id !== adminProfile?.id).map((s, si, sarr) => (
+                <div key={s.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "7px 22px 7px 48px", borderBottom: si === sarr.length - 1 && isLast ? "none" : "1px solid var(--card-border)", background: "#FAFAF9" }}>
+                  <div>
+                    <span style={{ fontSize: "0.82rem", color: "var(--gray-900)", fontWeight: 500 }}>{s.volunteer.user.name ?? s.volunteer.user.email}</span>
+                    <span style={{ fontSize: "0.75rem", color: "var(--gray-400)", marginLeft: "8px" }}>{s.volunteer.user.email}</span>
+                  </div>
+                  {!isPast && (
+                    <button
+                      disabled={actionLoading === s.id}
+                      onClick={() => removeVolunteer(s.id)}
+                      style={{ fontSize: "0.75rem", padding: "3px 10px", background: "#FEF2F2", color: "#DC2626", border: "1px solid #FECACA", borderRadius: "6px", fontFamily: "inherit", cursor: "pointer", opacity: actionLoading === s.id ? 0.5 : 1 }}
+                    >
+                      Remove
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          );
+        })}
       </div>
     );
   };
 
+  const tabs: { key: Tab; label: string; count?: number }[] = [
+    { key: "slots", label: "Browse Slots" },
+    { key: "pending", label: "Pending", count: pendingUsers.length },
+    { key: "users", label: "All Users", count: users.length },
+    { key: "clinics", label: "Clinics", count: clinics.length },
+    { key: "profile", label: "My Profile" },
+    ...(session?.user?.role === "SUPER_ADMIN" ? [{ key: "access" as Tab, label: "Access Control" }] : []),
+  ];
+
   return (
-    <div className="min-h-screen bg-stone-50">
-      {/* Header */}
-      <header className="bg-white border-b border-stone-200">
-        <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
+    <div style={{ minHeight: "100vh", background: "var(--page-bg)" }}>
+      {/* Topbar */}
+      <header style={{ background: "var(--navy)", height: "64px", position: "sticky", top: 0, zIndex: 100, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 32px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
+          <div style={{ width: "36px", height: "36px", borderRadius: "9px", background: "linear-gradient(135deg,#2563EB,#60A5FA)", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, color: "#fff", fontSize: "1rem" }}>G</div>
           <div>
-            <h1 className="text-lg font-semibold text-stone-800 tracking-tight">Georgetown Medical Interpreters</h1>
-            <p className="text-xs text-stone-400">Admin Dashboard</p>
+            <div style={{ color: "#fff", fontSize: "0.95rem", fontWeight: 600 }}>Georgetown Medical Interpreters</div>
+            <div style={{ color: "#94A3B8", fontSize: "0.72rem" }}>Admin Dashboard</div>
           </div>
-          <div className="flex items-center gap-3">
-            <span className="text-sm text-stone-500">{session?.user?.email}</span>
-            {session?.user?.role === "SUPER_ADMIN" && (
-              <span className="text-xs px-2 py-0.5 rounded-full bg-violet-100 text-violet-700 font-medium">
-                Super Admin
-              </span>
-            )}
-            <button
-              onClick={() => router.push("/dashboard/volunteer")}
-              className="text-sm px-3 py-1.5 bg-stone-100 hover:bg-stone-200 text-stone-600 rounded-md transition-colors flex items-center gap-1.5"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-              </svg>
-              Volunteer View
-            </button>
-            <a
-              href="mailto:georgetownmedicalinterpreters@gmail.com"
-              className="text-sm px-3 py-1.5 bg-stone-100 hover:bg-stone-200 text-stone-600 rounded-md transition-colors"
-            >
-              Contact Us
-            </a>
-            <button
-              onClick={() => signOut({ callbackUrl: "/login" })}
-              className="text-sm px-3 py-1.5 bg-stone-100 hover:bg-stone-200 text-stone-600 rounded-md transition-colors"
-            >
-              Sign Out
-            </button>
-          </div>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
+          {session?.user?.role === "SUPER_ADMIN" && (
+            <span style={{ background: "rgba(124,58,237,.25)", color: "#C4B5FD", fontSize: "0.72rem", fontWeight: 600, padding: "3px 10px", borderRadius: "99px", border: "1px solid rgba(124,58,237,.3)" }}>Super Admin</span>
+          )}
+          <button
+            onClick={() => router.push("/dashboard/volunteer")}
+            style={{ color: "#CBD5E1", fontSize: "0.8rem", padding: "6px 12px", borderRadius: "8px", border: "1px solid rgba(255,255,255,.15)", background: "transparent", cursor: "pointer", fontFamily: "inherit" }}
+          >
+            Volunteer View
+          </button>
+          <a
+            href="mailto:georgetownmedicalinterpreters@gmail.com"
+            style={{ color: "#CBD5E1", fontSize: "0.8rem", textDecoration: "none", padding: "6px 12px", borderRadius: "8px", border: "1px solid rgba(255,255,255,.15)" }}
+          >
+            Contact Us
+          </a>
+          <span style={{ color: "#CBD5E1", fontSize: "0.82rem" }}>{session?.user?.email}</span>
+          <button
+            onClick={() => signOut({ callbackUrl: "/login" })}
+            style={{ background: "rgba(255,255,255,.08)", border: "1px solid rgba(255,255,255,.2)", color: "#fff", fontFamily: "inherit", fontSize: "0.8rem", fontWeight: 500, padding: "7px 16px", borderRadius: "8px", cursor: "pointer" }}
+          >
+            Sign Out
+          </button>
         </div>
       </header>
 
-      {/* Tabs */}
-      <div className="max-w-6xl mx-auto px-6 pt-6">
-        <div className="flex gap-1 bg-stone-200/50 p-1 rounded-lg w-fit">
-          {[
-            { key: "slots" as Tab, label: "Browse Slots", count: 0 },
-            { key: "pending" as Tab, label: "Pending", count: pendingUsers.length },
-            { key: "users" as Tab, label: "All Users", count: users.length },
-            { key: "clinics" as Tab, label: "Clinics", count: clinics.length },
-            { key: "profile" as Tab, label: "My Profile", count: 0 },
-            ...(session?.user?.role === "SUPER_ADMIN"
-              ? [{ key: "access" as Tab, label: "Access Control", count: 0 }]
-              : []),
-          ].map((t) => (
+      <main style={{ maxWidth: "960px", margin: "0 auto", padding: "36px 24px" }}>
+        {/* Tabs */}
+        <div style={{ display: "flex", gap: "4px", marginBottom: "28px", background: "var(--card-bg)", padding: "5px", borderRadius: "12px", boxShadow: "0 1px 3px rgba(0,0,0,.08)", width: "fit-content", border: "1px solid var(--card-border)" }}>
+          {tabs.map((t) => (
             <button
               key={t.key}
               onClick={() => setTab(t.key)}
-              className={`px-4 py-2 text-sm rounded-md transition-colors ${
-                tab === t.key
-                  ? "bg-white text-stone-800 shadow-sm font-medium"
-                  : "text-stone-500 hover:text-stone-700"
-              }`}
+              style={{ padding: "9px 20px", borderRadius: "9px", fontSize: "0.9rem", fontWeight: 500, cursor: "pointer", border: "none", fontFamily: "inherit", transition: "all .15s", background: tab === t.key ? "var(--blue)" : "none", color: tab === t.key ? "#fff" : "var(--gray-600)", whiteSpace: "nowrap" }}
             >
               {t.label}
-              {t.count > 0 && (
-                <span
-                  className={`ml-2 text-xs px-1.5 py-0.5 rounded-full ${
-                    t.key === "pending" && t.count > 0
-                      ? "bg-amber-100 text-amber-700"
-                      : "bg-stone-100 text-stone-500"
-                  }`}
-                >
-                  {t.count}
-                </span>
+              {t.count !== undefined && t.count > 0 && (
+                <span style={{ background: t.key === "pending" ? "#D97706" : "#DC2626", color: "#fff", fontSize: "0.7rem", fontWeight: 700, padding: "1px 7px", borderRadius: "99px", marginLeft: "5px" }}>{t.count}</span>
               )}
             </button>
           ))}
         </div>
-      </div>
 
-      {/* Content */}
-      <div className="max-w-6xl mx-auto px-6 py-6">
-
-        {/* Browse Slots */}
+        {/* ── Browse Slots ── */}
         {tab === "slots" && (
           <div>
             {adminSelectedSlotIds.size > 0 && (
-              <div className="flex items-center gap-3 mb-4 px-4 py-3 bg-red-50 border border-red-200 rounded-lg">
-                <span className="text-sm text-red-700 font-medium">{adminSelectedSlotIds.size} slot{adminSelectedSlotIds.size !== 1 ? "s" : ""} selected</span>
-                <button
-                  onClick={openAdminDeleteModal}
-                  className="px-3 py-1.5 text-xs bg-red-600 text-white hover:bg-red-700 rounded-md transition-colors"
-                >
-                  Delete Selected
-                </button>
-                <button
-                  onClick={() => setAdminSelectedSlotIds(new Set())}
-                  className="text-xs text-red-500 hover:text-red-700"
-                >
-                  Clear selection
-                </button>
+              <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "16px", padding: "12px 16px", background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: "10px" }}>
+                <span style={{ fontSize: "0.875rem", color: "#B91C1C", fontWeight: 600 }}>{adminSelectedSlotIds.size} slot{adminSelectedSlotIds.size !== 1 ? "s" : ""} selected</span>
+                <button onClick={openAdminDeleteModal} style={{ padding: "6px 14px", fontSize: "0.8rem", background: "#DC2626", color: "#fff", border: "none", borderRadius: "7px", fontFamily: "inherit", cursor: "pointer" }}>Delete Selected</button>
+                <button onClick={() => setAdminSelectedSlotIds(new Set())} style={{ background: "none", border: "none", color: "#DC2626", fontFamily: "inherit", fontSize: "0.8rem", cursor: "pointer" }}>Clear</button>
               </div>
             )}
             {!adminProfile?.languages.length && (
-              <div className="mb-4 px-4 py-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-700">
+              <div style={{ marginBottom: "16px", padding: "12px 16px", background: "#FFFBEB", border: "1px solid #FDE68A", borderRadius: "10px", fontSize: "0.875rem", color: "#92400E" }}>
                 To sign up for slots, add your languages in{" "}
-                <button
-                  onClick={() => setTab("profile")}
-                  className="underline font-medium"
-                >
-                  My Profile
-                </button>
-                .
+                <button onClick={() => setTab("profile")} style={{ background: "none", border: "none", color: "#92400E", fontFamily: "inherit", fontSize: "0.875rem", cursor: "pointer", textDecoration: "underline", fontWeight: 600 }}>My Profile</button>.
               </div>
             )}
 
             {/* Filters */}
-            <div className="flex flex-wrap items-center gap-2 mb-5">
-              {/* Language */}
-              {["ALL", "ES", "ZH", "KO"].map((lang) => (
-                <button
-                  key={lang}
-                  onClick={() => setLangFilter(lang)}
-                  className={`px-3 py-1.5 text-xs rounded-md transition-colors ${
-                    langFilter === lang
-                      ? "bg-stone-800 text-white"
-                      : "bg-white border border-stone-200 text-stone-500 hover:border-stone-300"
-                  }`}
-                >
-                  {lang === "ALL" ? "All Languages" : LANG_LABELS[lang]}
-                </button>
-              ))}
-
-              <div className="w-px bg-stone-200 mx-1 self-stretch" />
-
-              {/* Clinic */}
-              <select
-                value={clinicFilter}
-                onChange={(e) => setClinicFilter(e.target.value)}
-                className="px-2 py-1.5 text-xs border border-stone-200 rounded-md bg-white text-stone-600 focus:outline-none"
-              >
+            <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "10px", marginBottom: "28px" }}>
+              <select value={langFilter} onChange={(e) => setLangFilter(e.target.value)} style={{ padding: "9px 14px", borderRadius: "9px", fontSize: "0.875rem", fontWeight: 500, border: "1.5px solid var(--card-border)", background: "var(--card-bg)", color: "var(--gray-900)", fontFamily: "inherit", cursor: "pointer", outline: "none" }}>
+                <option value="ALL">All Languages</option>
+                {Object.entries(LANG_LABELS).map(([code, label]) => <option key={code} value={code}>{label}</option>)}
+              </select>
+              <select value={clinicFilter} onChange={(e) => setClinicFilter(e.target.value)} style={{ padding: "9px 14px", borderRadius: "9px", fontSize: "0.875rem", fontWeight: 500, border: "1.5px solid var(--card-border)", background: "var(--card-bg)", color: "var(--gray-900)", fontFamily: "inherit", cursor: "pointer", outline: "none" }}>
                 <option value="ALL">All Clinics</option>
                 {uniqueClinics.map((c) => <option key={c} value={c}>{c}</option>)}
               </select>
-
-              <div className="w-px bg-stone-200 mx-1 self-stretch" />
-
-              {/* Date range */}
-              <div className="flex items-center gap-1.5">
-                <span className="text-xs text-stone-400">From</span>
-                <input
-                  type="date"
-                  value={dateFrom}
-                  onChange={(e) => setDateFrom(e.target.value)}
-                  className="px-2 py-1.5 text-xs border border-stone-200 rounded-md bg-white text-stone-600 focus:outline-none"
-                />
+              <div style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "0.875rem", fontWeight: 500, color: "var(--gray-900)" }}>
+                From
+                <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} style={{ padding: "9px 12px", border: "1.5px solid var(--card-border)", borderRadius: "9px", fontSize: "0.875rem", fontFamily: "inherit", color: "var(--gray-900)", outline: "none", background: "var(--card-bg)" }} />
+                To
+                <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} style={{ padding: "9px 12px", border: "1.5px solid var(--card-border)", borderRadius: "9px", fontSize: "0.875rem", fontFamily: "inherit", color: "var(--gray-900)", outline: "none", background: "var(--card-bg)" }} />
+                {(dateFrom || dateTo) && <button onClick={() => { setDateFrom(""); setDateTo(""); }} style={{ background: "none", border: "none", color: "var(--gray-400)", cursor: "pointer", fontSize: "0.8rem", fontFamily: "inherit" }}>Clear</button>}
               </div>
-              <div className="flex items-center gap-1.5">
-                <span className="text-xs text-stone-400">To</span>
-                <input
-                  type="date"
-                  value={dateTo}
-                  onChange={(e) => setDateTo(e.target.value)}
-                  className="px-2 py-1.5 text-xs border border-stone-200 rounded-md bg-white text-stone-600 focus:outline-none"
-                />
-              </div>
-              {(dateFrom || dateTo) && (
-                <button
-                  onClick={() => { setDateFrom(""); setDateTo(""); }}
-                  className="text-xs text-stone-400 hover:text-stone-600"
-                >
-                  Clear
-                </button>
-              )}
-
-              <div className="w-px bg-stone-200 mx-1 self-stretch" />
-
-              {/* Available only */}
-              <button
-                onClick={() => setAvailableOnly(!availableOnly)}
-                className={`px-3 py-1.5 text-xs rounded-md transition-colors ${
-                  availableOnly
-                    ? "bg-emerald-700 text-white"
-                    : "bg-white border border-stone-200 text-stone-500 hover:border-stone-300"
-                }`}
-              >
+              <label style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "0.875rem", fontWeight: 500, color: "var(--gray-900)", cursor: "pointer" }}>
+                <div onClick={() => setAvailableOnly(!availableOnly)} style={{ width: "38px", height: "22px", borderRadius: "99px", background: availableOnly ? "var(--blue)" : "var(--gray-200)", position: "relative", cursor: "pointer", transition: "background .15s" }}>
+                  <div style={{ width: "16px", height: "16px", background: "#fff", borderRadius: "50%", position: "absolute", top: "3px", left: availableOnly ? "19px" : "3px", transition: "left .15s" }} />
+                </div>
                 Available Only
-              </button>
+              </label>
             </div>
 
             {upcomingSlots.length === 0 && pastSlots.length === 0 ? (
-              <div className="bg-white rounded-xl border border-stone-200 p-12 text-center">
-                <p className="text-stone-400">No slots match your filters.</p>
+              <div style={{ ...card, padding: "48px", textAlign: "center" }}>
+                <p style={{ color: "var(--gray-400)" }}>No slots match your filters.</p>
               </div>
             ) : (
-              <div className="space-y-4">
-                {upcomingSlots.map((slot) => renderSlot(slot, false))}
+              <>
+                {Object.entries(upcomingByDate).map(([dateLabel, slots]) => (
+                  <div key={dateLabel}>
+                    <div style={{ fontSize: "0.78rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", color: "var(--gray-600)", margin: "28px 0 12px" }}>{dateLabel}</div>
+                    {slots.map((slot) => renderSlot(slot, false))}
+                  </div>
+                ))}
                 {pastSlots.length > 0 && (
                   <>
-                    <p className="text-xs font-medium text-stone-400 uppercase tracking-wider pt-2">Past Slots</p>
+                    <div style={{ display: "flex", alignItems: "center", gap: "12px", margin: "32px 0 16px", fontSize: "0.72rem", textTransform: "uppercase", letterSpacing: "0.1em", fontWeight: 700, color: "var(--gray-400)" }}>
+                      <span style={{ flex: 1, height: "1px", background: "var(--card-border)" }} />
+                      Past Slots
+                      <span style={{ flex: 1, height: "1px", background: "var(--card-border)" }} />
+                    </div>
                     {pastSlots.map((slot) => renderSlot(slot, true))}
                   </>
                 )}
-              </div>
+              </>
             )}
           </div>
         )}
 
-        {/* Pending Approvals */}
+        {/* ── Pending Approvals ── */}
         {tab === "pending" && (
           <div>
             {pendingUsers.length === 0 ? (
-              <div className="bg-white rounded-xl border border-stone-200 p-12 text-center">
-                <p className="text-stone-400">No pending approvals</p>
+              <div style={{ ...card, padding: "48px", textAlign: "center" }}>
+                <p style={{ color: "var(--gray-400)" }}>No pending approvals</p>
               </div>
             ) : (
-              <div className="space-y-3">
-                {pendingUsers.map((user) => (
-                  <div key={user.id} className="bg-white rounded-xl border border-stone-200 p-5 flex items-center justify-between">
-                    <div>
-                      <p className="font-medium text-stone-800">{user.name}</p>
-                      <p className="text-sm text-stone-500">{user.email}</p>
-                      <p className="text-xs text-stone-400 mt-1">
-                        Applied {new Date(user.createdAt).toLocaleDateString()}
-                      </p>
-                    </div>
-                    <div className="flex gap-2">
-                      <button
-                        disabled={actionLoading === user.id}
-                        onClick={() => updateUser(user.id, { status: "ACTIVE", role: "VOLUNTEER" })}
-                        className="px-4 py-2 text-sm bg-emerald-50 text-emerald-700 hover:bg-emerald-100 rounded-md transition-colors disabled:opacity-50"
-                      >
-                        Approve
-                      </button>
-                      <button
-                        disabled={actionLoading === user.id}
-                        onClick={() => updateUser(user.id, { status: "SUSPENDED" })}
-                        className="px-4 py-2 text-sm bg-red-50 text-red-600 hover:bg-red-100 rounded-md transition-colors disabled:opacity-50"
-                      >
-                        Reject
-                      </button>
-                    </div>
+              pendingUsers.map((user) => (
+                <div key={user.id} style={{ ...card, padding: "20px 24px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                  <div>
+                    <p style={{ fontWeight: 600, color: "var(--gray-900)", fontSize: "0.95rem" }}>{user.name}</p>
+                    <p style={{ fontSize: "0.875rem", color: "var(--gray-600)", marginTop: "2px" }}>{user.email}</p>
+                    <p style={{ fontSize: "0.78rem", color: "var(--gray-400)", marginTop: "4px" }}>Applied {new Date(user.createdAt).toLocaleDateString()}</p>
                   </div>
-                ))}
-              </div>
+                  <div style={{ display: "flex", gap: "8px" }}>
+                    <button disabled={actionLoading === user.id} onClick={() => updateUser(user.id, { status: "ACTIVE", role: "VOLUNTEER" })} style={{ padding: "8px 18px", fontSize: "0.875rem", background: "var(--green-light)", color: "var(--green)", border: "1px solid #86EFAC", borderRadius: "8px", fontFamily: "inherit", cursor: "pointer", opacity: actionLoading === user.id ? 0.5 : 1 }}>Approve</button>
+                    <button disabled={actionLoading === user.id} onClick={() => updateUser(user.id, { status: "SUSPENDED" })} style={{ padding: "8px 18px", fontSize: "0.875rem", background: "#FEF2F2", color: "#DC2626", border: "1px solid #FECACA", borderRadius: "8px", fontFamily: "inherit", cursor: "pointer", opacity: actionLoading === user.id ? 0.5 : 1 }}>Reject</button>
+                  </div>
+                </div>
+              ))
             )}
           </div>
         )}
 
-        {/* All Users */}
+        {/* ── All Users ── */}
         {tab === "users" && (
-          <div className="bg-white rounded-xl border border-stone-200 overflow-hidden">
-            <table className="w-full">
+          <div style={{ ...card, overflow: "auto" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.875rem" }}>
               <thead>
-                <tr className="border-b border-stone-100">
-                  <th className="text-left text-xs font-medium text-stone-400 uppercase tracking-wider px-5 py-3">Name</th>
-                  <th className="text-left text-xs font-medium text-stone-400 uppercase tracking-wider px-5 py-3">Email</th>
-                  <th className="text-left text-xs font-medium text-stone-400 uppercase tracking-wider px-5 py-3">Role</th>
-                  <th className="text-left text-xs font-medium text-stone-400 uppercase tracking-wider px-5 py-3">Status</th>
-                  <th className="text-left text-xs font-medium text-stone-400 uppercase tracking-wider px-5 py-3">Clinic</th>
-                  <th className="text-left text-xs font-medium text-stone-400 uppercase tracking-wider px-5 py-3">Volunteer Stats</th>
-                  <th className="text-right text-xs font-medium text-stone-400 uppercase tracking-wider px-5 py-3">Actions</th>
+                <tr style={{ borderBottom: "1.5px solid var(--card-border)" }}>
+                  {["Name", "Email", "Role", "Status", "Clinic", "Volunteer Stats", "Actions"].map((h) => (
+                    <th key={h} style={{ textAlign: h === "Actions" ? "right" : "left", fontSize: "0.68rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.09em", color: "var(--gray-400)", padding: "12px 16px" }}>{h}</th>
+                  ))}
                 </tr>
               </thead>
               <tbody>
                 {users.map((user) => (
-                  <tr key={user.id} className="border-b border-stone-50 last:border-0">
-                    <td className="px-5 py-3.5 text-sm text-stone-800">{user.name}</td>
-                    <td className="px-5 py-3.5 text-sm text-stone-500">{user.email}</td>
-                    <td className="px-5 py-3.5">
-                      <span className={`text-xs px-2 py-1 rounded-full font-medium ${
-                        user.role === "SUPER_ADMIN" ? "bg-violet-100 text-violet-800" :
-                        user.role === "ADMIN" ? "bg-violet-50 text-violet-700" :
-                        user.role === "CLINIC" ? "bg-blue-50 text-blue-700" :
-                        user.role === "VOLUNTEER" ? "bg-emerald-50 text-emerald-700" :
-                        "bg-stone-100 text-stone-500"
-                      }`}>
+                  <tr key={user.id} style={{ borderBottom: "1px solid var(--card-border)" }}>
+                    <td style={{ padding: "12px 16px", color: "var(--gray-900)", fontWeight: 500 }}>{user.name}</td>
+                    <td style={{ padding: "12px 16px", color: "var(--gray-600)" }}>{user.email}</td>
+                    <td style={{ padding: "12px 16px" }}>
+                      <span style={{ fontSize: "0.75rem", padding: "3px 10px", borderRadius: "99px", fontWeight: 600, background: user.role === "SUPER_ADMIN" ? "#EDE9FE" : user.role === "ADMIN" ? "#F5F3FF" : user.role === "CLINIC" ? "#EFF6FF" : user.role === "VOLUNTEER" ? "var(--green-light)" : "var(--gray-200)", color: user.role === "SUPER_ADMIN" ? "#6D28D9" : user.role === "ADMIN" ? "#7C3AED" : user.role === "CLINIC" ? "#1D4ED8" : user.role === "VOLUNTEER" ? "var(--green)" : "var(--gray-600)" }}>
                         {user.role === "SUPER_ADMIN" ? "Super Admin" : user.role}
                       </span>
                     </td>
-                    <td className="px-5 py-3.5">
-                      <span className={`text-xs px-2 py-1 rounded-full ${
-                        user.status === "ACTIVE" ? "bg-green-50 text-green-700" :
-                        user.status === "SUSPENDED" ? "bg-red-50 text-red-600" :
-                        "bg-amber-50 text-amber-700"
-                      }`}>
+                    <td style={{ padding: "12px 16px" }}>
+                      <span style={{ fontSize: "0.75rem", padding: "3px 10px", borderRadius: "99px", background: user.status === "ACTIVE" ? "var(--green-light)" : user.status === "SUSPENDED" ? "#FEF2F2" : "#FFFBEB", color: user.status === "ACTIVE" ? "var(--green)" : user.status === "SUSPENDED" ? "#DC2626" : "#D97706" }}>
                         {user.status}
                       </span>
                     </td>
-                    <td className="px-5 py-3.5 text-sm text-stone-500">{user.clinic?.name || "—"}</td>
-                    <td className="px-5 py-3.5">
+                    <td style={{ padding: "12px 16px", color: "var(--gray-600)" }}>{user.clinic?.name || "—"}</td>
+                    <td style={{ padding: "12px 16px" }}>
                       {user.volunteer ? (
-                        <div className="flex gap-3 text-xs text-stone-500">
+                        <div style={{ display: "flex", gap: "10px", fontSize: "0.75rem", color: "var(--gray-600)" }}>
                           <span title="Hours volunteered">⏱ {user.volunteer.hoursVolunteered}h</span>
-                          <span title="No-shows" className={user.volunteer.noShows > 0 ? "text-red-500" : ""}>
-                            NS {user.volunteer.noShows}
-                          </span>
-                          <span title="Cancellations within 24 hours" className={user.volunteer.cancellationsWithin24h > 0 ? "text-amber-600" : ""}>
-                            24h {user.volunteer.cancellationsWithin24h}
-                          </span>
-                          <span title="Cancellations within 2 hours" className={user.volunteer.cancellationsWithin2h > 0 ? "text-red-500" : ""}>
-                            2h {user.volunteer.cancellationsWithin2h}
-                          </span>
+                          <span title="No-shows" style={{ color: user.volunteer.noShows > 0 ? "#DC2626" : "inherit" }}>NS {user.volunteer.noShows}</span>
+                          <span title="Cancellations within 24h" style={{ color: user.volunteer.cancellationsWithin24h > 0 ? "#D97706" : "inherit" }}>24h {user.volunteer.cancellationsWithin24h}</span>
+                          <span title="Cancellations within 2h" style={{ color: user.volunteer.cancellationsWithin2h > 0 ? "#DC2626" : "inherit" }}>2h {user.volunteer.cancellationsWithin2h}</span>
                         </div>
-                      ) : (
-                        <span className="text-xs text-stone-300">—</span>
-                      )}
+                      ) : <span style={{ color: "var(--gray-400)", fontSize: "0.75rem" }}>—</span>}
                     </td>
-                    <td className="px-5 py-3.5 text-right">
-                      <div className="flex gap-1 justify-end">
+                    <td style={{ padding: "12px 16px", textAlign: "right" }}>
+                      <div style={{ display: "flex", gap: "6px", justifyContent: "flex-end" }}>
                         {user.role !== "SUPER_ADMIN" && (user.role !== "ADMIN" || session?.user?.role === "SUPER_ADMIN") && (
                           <>
-                            <select
-                              className="text-xs border border-stone-200 rounded px-2 py-1 text-stone-600"
-                              value={user.role}
-                              onChange={(e) => updateUser(user.id, { role: e.target.value })}
-                            >
+                            <select style={{ fontSize: "0.78rem", border: "1px solid var(--card-border)", borderRadius: "6px", padding: "4px 8px", color: "var(--gray-900)", fontFamily: "inherit", background: "var(--card-bg)" }} value={user.role} onChange={(e) => updateUser(user.id, { role: e.target.value })}>
                               <option value="VOLUNTEER">Volunteer</option>
                               <option value="CLINIC">Clinic</option>
-                              {session?.user?.role === "SUPER_ADMIN" && (
-                                <option value="ADMIN">Admin</option>
-                              )}
+                              {session?.user?.role === "SUPER_ADMIN" && <option value="ADMIN">Admin</option>}
                             </select>
                             {user.role === "CLINIC" && (
-                              <button
-                                onClick={() => setAssignModal({ userId: user.id, userName: user.name })}
-                                className="text-xs px-2 py-1 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded transition-colors"
-                              >
-                                Assign Clinic
-                              </button>
+                              <button onClick={() => setAssignModal({ userId: user.id, userName: user.name })} style={{ fontSize: "0.78rem", padding: "4px 10px", background: "#EFF6FF", color: "#1D4ED8", border: "1px solid #BFDBFE", borderRadius: "6px", fontFamily: "inherit", cursor: "pointer" }}>Assign Clinic</button>
                             )}
                             {user.status === "ACTIVE" ? (
-                              <button
-                                onClick={() => updateUser(user.id, { status: "SUSPENDED" })}
-                                className="text-xs px-2 py-1 bg-red-50 text-red-600 hover:bg-red-100 rounded transition-colors"
-                              >
-                                Suspend
-                              </button>
+                              <button onClick={() => updateUser(user.id, { status: "SUSPENDED" })} style={{ fontSize: "0.78rem", padding: "4px 10px", background: "#FEF2F2", color: "#DC2626", border: "1px solid #FECACA", borderRadius: "6px", fontFamily: "inherit", cursor: "pointer" }}>Suspend</button>
                             ) : (
-                              <button
-                                onClick={() => updateUser(user.id, { status: "ACTIVE" })}
-                                className="text-xs px-2 py-1 bg-green-50 text-green-700 hover:bg-green-100 rounded transition-colors"
-                              >
-                                Activate
-                              </button>
+                              <button onClick={() => updateUser(user.id, { status: "ACTIVE" })} style={{ fontSize: "0.78rem", padding: "4px 10px", background: "var(--green-light)", color: "var(--green)", border: "1px solid #86EFAC", borderRadius: "6px", fontFamily: "inherit", cursor: "pointer" }}>Activate</button>
                             )}
                           </>
                         )}
@@ -868,301 +760,193 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        {/* Clinics */}
+        {/* ── Clinics ── */}
         {tab === "clinics" && (
           <div>
-            <div className="flex justify-end mb-4">
-              <button
-                onClick={() => setShowClinicForm(!showClinicForm)}
-                className="px-4 py-2 text-sm bg-stone-800 text-white hover:bg-stone-700 rounded-md transition-colors"
-              >
+            <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "16px" }}>
+              <button onClick={() => setShowClinicForm(!showClinicForm)} style={{ ...btnPrimary, background: showClinicForm ? "var(--gray-600)" : "var(--blue)" }}>
                 {showClinicForm ? "Cancel" : "+ Add Clinic"}
               </button>
             </div>
 
             {showClinicForm && (
-              <div className="bg-white rounded-xl border border-stone-200 p-6 mb-4">
-                <h3 className="text-sm font-medium text-stone-700 mb-4">New Clinic</h3>
-                <div className="grid grid-cols-2 gap-4">
-                  <input
-                    placeholder="Clinic Name"
-                    value={clinicForm.name}
-                    onChange={(e) => setClinicForm({ ...clinicForm, name: e.target.value })}
-                    className="px-3 py-2 text-sm border border-stone-200 rounded-md focus:outline-none focus:ring-2 focus:ring-stone-300"
-                  />
-                  <input
-                    placeholder="Address"
-                    value={clinicForm.address}
-                    onChange={(e) => setClinicForm({ ...clinicForm, address: e.target.value })}
-                    className="px-3 py-2 text-sm border border-stone-200 rounded-md focus:outline-none focus:ring-2 focus:ring-stone-300"
-                  />
-                  <input
-                    placeholder="Contact Name"
-                    value={clinicForm.contactName}
-                    onChange={(e) => setClinicForm({ ...clinicForm, contactName: e.target.value })}
-                    className="px-3 py-2 text-sm border border-stone-200 rounded-md focus:outline-none focus:ring-2 focus:ring-stone-300"
-                  />
-                  <input
-                    placeholder="Contact Email"
-                    value={clinicForm.contactEmail}
-                    onChange={(e) => setClinicForm({ ...clinicForm, contactEmail: e.target.value })}
-                    className="px-3 py-2 text-sm border border-stone-200 rounded-md focus:outline-none focus:ring-2 focus:ring-stone-300"
-                  />
+              <div style={{ ...card, padding: "24px", marginBottom: "20px" }}>
+                <h3 style={{ fontSize: "1.05rem", fontWeight: 700, color: "var(--navy)", marginBottom: "16px" }}>New Clinic</h3>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px", marginBottom: "14px" }}>
+                  {[
+                    { placeholder: "Clinic Name", field: "name" },
+                    { placeholder: "Address", field: "address" },
+                    { placeholder: "Contact Name", field: "contactName" },
+                    { placeholder: "Contact Email", field: "contactEmail" },
+                  ].map(({ placeholder, field }) => (
+                    <input
+                      key={field}
+                      placeholder={placeholder}
+                      value={clinicForm[field as keyof typeof clinicForm]}
+                      onChange={(e) => setClinicForm({ ...clinicForm, [field]: e.target.value })}
+                      style={inputStyle}
+                    />
+                  ))}
                 </div>
-                {clinicFormError && (
-                  <p className="mt-3 text-sm text-red-600 bg-red-50 border border-red-100 rounded-md px-3 py-2">
-                    {clinicFormError}
-                  </p>
-                )}
-                <button
-                  disabled={actionLoading === "clinic-form" || !clinicForm.name || !clinicForm.contactEmail}
-                  onClick={createClinic}
-                  className="mt-4 px-4 py-2 text-sm bg-stone-800 text-white hover:bg-stone-700 rounded-md transition-colors disabled:opacity-50"
-                >
-                  {actionLoading === "clinic-form" ? "Creating..." : "Create Clinic"}
-                </button>
+                {clinicFormError && <p style={{ padding: "10px 14px", background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: "9px", fontSize: "0.875rem", color: "#DC2626", marginBottom: "12px" }}>{clinicFormError}</p>}
+                <div style={{ display: "flex", justifyContent: "flex-end" }}>
+                  <button disabled={actionLoading === "clinic-form" || !clinicForm.name || !clinicForm.contactEmail} onClick={createClinic} style={{ ...btnPrimary, opacity: actionLoading === "clinic-form" || !clinicForm.name || !clinicForm.contactEmail ? 0.5 : 1 }}>
+                    {actionLoading === "clinic-form" ? "Creating…" : "Create Clinic"}
+                  </button>
+                </div>
               </div>
             )}
 
             {clinics.length === 0 && !showClinicForm ? (
-              <div className="bg-white rounded-xl border border-stone-200 p-12 text-center">
-                <p className="text-stone-400">No clinics yet</p>
+              <div style={{ ...card, padding: "48px", textAlign: "center" }}>
+                <p style={{ color: "var(--gray-400)" }}>No clinics yet</p>
               </div>
             ) : (
-              <div className="space-y-3">
-                {clinics.map((clinic) => (
-                  <div key={clinic.id} className="bg-white rounded-xl border border-stone-200 p-5">
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <h3 className="font-medium text-stone-800">{clinic.name}</h3>
-                        <p className="text-sm text-stone-500 mt-0.5">{clinic.address}</p>
-                        <p className="text-xs text-stone-400 mt-1">{clinic.contactName} · {clinic.contactEmail}</p>
-                        <div className="mt-3 flex items-center gap-3 flex-wrap">
-                          <div className="flex items-center gap-1.5 bg-stone-50 border border-stone-200 rounded-md px-2 py-1">
-                            <span className="text-xs text-stone-400">PIN</span>
-                            <span className="text-xs font-mono font-semibold text-stone-400 tracking-widest">••••••</span>
-                          </div>
-                          <button
-                            onClick={() => {
-                              const url = `${window.location.origin}/clinic-login/${clinic.loginToken}`;
-                              navigator.clipboard.writeText(url);
-                            }}
-                            className="text-xs px-2 py-1 bg-stone-50 border border-stone-200 hover:bg-stone-100 text-stone-600 rounded-md transition-colors"
-                          >
-                            Copy Login URL
-                          </button>
-                          <button
-                            disabled={actionLoading === `pin-${clinic.id}`}
-                            onClick={() => regeneratePin(clinic.id, clinic.name)}
-                            className="text-xs px-2 py-1 bg-amber-50 border border-amber-200 hover:bg-amber-100 text-amber-700 rounded-md transition-colors disabled:opacity-50"
-                          >
-                            Regenerate PIN
-                          </button>
+              clinics.map((clinic) => (
+                <div key={clinic.id} style={{ ...card, padding: "20px 24px" }}>
+                  <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between" }}>
+                    <div>
+                      <h3 style={{ fontSize: "1.05rem", fontWeight: 700, color: "var(--navy)" }}>{clinic.name}</h3>
+                      <p style={{ fontSize: "0.875rem", color: "var(--gray-600)", marginTop: "2px" }}>{clinic.address}</p>
+                      <p style={{ fontSize: "0.78rem", color: "var(--gray-400)", marginTop: "4px" }}>{clinic.contactName} · {clinic.contactEmail}</p>
+                      <div style={{ display: "flex", gap: "8px", marginTop: "12px", flexWrap: "wrap" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "6px", background: "var(--page-bg)", border: "1px solid var(--card-border)", borderRadius: "7px", padding: "5px 10px" }}>
+                          <span style={{ fontSize: "0.75rem", color: "var(--gray-400)" }}>PIN</span>
+                          <span style={{ fontSize: "0.78rem", fontFamily: "monospace", color: "var(--gray-400)", letterSpacing: "0.2em" }}>••••••</span>
                         </div>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <span className="text-xs text-stone-400">{clinic._count?.slots || 0} slots</span>
-                        <button
-                          disabled={actionLoading === `delete-clinic-${clinic.id}`}
-                          onClick={() => deleteClinic(clinic.id, clinic.name)}
-                          className="text-xs px-2 py-1 bg-red-50 border border-red-100 hover:bg-red-100 text-red-600 rounded-md transition-colors disabled:opacity-50"
-                        >
-                          Delete
-                        </button>
+                        <button onClick={() => { const url = `${window.location.origin}/clinic-login/${clinic.loginToken}`; navigator.clipboard.writeText(url); }} style={{ fontSize: "0.78rem", padding: "5px 12px", background: "var(--page-bg)", color: "var(--gray-600)", border: "1px solid var(--card-border)", borderRadius: "7px", fontFamily: "inherit", cursor: "pointer" }}>Copy Login URL</button>
+                        <button disabled={actionLoading === `pin-${clinic.id}`} onClick={() => regeneratePin(clinic.id, clinic.name)} style={{ fontSize: "0.78rem", padding: "5px 12px", background: "#FFFBEB", color: "#D97706", border: "1px solid #FDE68A", borderRadius: "7px", fontFamily: "inherit", cursor: "pointer", opacity: actionLoading === `pin-${clinic.id}` ? 0.5 : 1 }}>Regenerate PIN</button>
                       </div>
                     </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                      <span style={{ fontSize: "0.82rem", color: "var(--gray-400)" }}>{clinic._count?.slots || 0} slots</span>
+                      <button disabled={actionLoading === `delete-clinic-${clinic.id}`} onClick={() => deleteClinic(clinic.id, clinic.name)} style={{ fontSize: "0.78rem", padding: "5px 12px", background: "#FEF2F2", color: "#DC2626", border: "1px solid #FECACA", borderRadius: "7px", fontFamily: "inherit", cursor: "pointer", opacity: actionLoading === `delete-clinic-${clinic.id}` ? 0.5 : 1 }}>Delete</button>
+                    </div>
                   </div>
-                ))}
-              </div>
+                </div>
+              ))
             )}
           </div>
         )}
 
-        {/* My Profile */}
+        {/* ── My Profile ── */}
         {tab === "profile" && (
-          <div className="max-w-lg space-y-5">
-            {/* Hours stat */}
-            <div className="bg-white rounded-xl border border-stone-200 p-5 flex items-center gap-4">
-              <div className="text-center">
-                <p className="text-3xl font-semibold text-stone-800">{adminProfile?.hoursVolunteered ?? 0}</p>
-                <p className="text-xs text-stone-400 mt-1">Hours Volunteered</p>
+          <div style={{ maxWidth: "560px", display: "flex", flexDirection: "column", gap: "20px" }}>
+            <div style={{ ...card, padding: "24px", display: "flex", alignItems: "center", gap: "20px" }}>
+              <div style={{ textAlign: "center" }}>
+                <p style={{ fontSize: "2.5rem", fontWeight: 700, color: "var(--navy)" }}>{adminProfile?.hoursVolunteered ?? 0}</p>
+                <p style={{ fontSize: "0.78rem", color: "var(--gray-400)", marginTop: "2px" }}>Hours Volunteered</p>
               </div>
             </div>
 
-            {/* Language selection */}
-            <div className="bg-white rounded-xl border border-stone-200 p-6">
-              <h3 className="text-sm font-medium text-stone-700 mb-1">Languages</h3>
-              <p className="text-xs text-stone-400 mb-4">Click to toggle. Filled black = you speak it, white = you don&apos;t. Only matching slots will let you sign up.</p>
-              <div className="flex gap-3 flex-wrap mb-6">
-                {Object.entries(LANG_LABELS).map(([code, label]) => (
-                  <button
-                    key={code}
-                    onClick={() => toggleLanguage(code)}
-                    className={`px-4 py-2 text-sm rounded-md border transition-colors ${
-                      profileForm.languages.includes(code)
-                        ? "border-stone-800 bg-stone-800 text-white"
-                        : "border-stone-200 text-stone-600 hover:border-stone-400"
-                    }`}
-                  >
-                    {label}
-                  </button>
-                ))}
+            <div style={card}>
+              <div style={{ padding: "18px 24px", borderBottom: "1.5px solid var(--card-border)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <h2 style={{ fontSize: "1.05rem", fontWeight: 700, color: "var(--navy)" }}>Languages</h2>
+                {profileSaved && <span style={{ fontSize: "0.82rem", color: "var(--green)" }}>Saved ✓</span>}
               </div>
-
-              <div className="flex items-center gap-3">
-                <button
-                  disabled={actionLoading === "profile"}
-                  onClick={saveProfile}
-                  className="px-4 py-2 text-sm bg-stone-800 text-white hover:bg-stone-700 rounded-md transition-colors disabled:opacity-50"
-                >
-                  {actionLoading === "profile" ? "Saving..." : "Save Profile"}
-                </button>
-                {profileSaved && (
-                  <span className="text-sm text-emerald-600">Saved!</span>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Access Control — SUPER_ADMIN only */}
-        {tab === "access" && session?.user?.role === "SUPER_ADMIN" && (
-          <div className="max-w-lg space-y-5">
-            <div className="bg-white rounded-xl border border-stone-200 p-6">
-              <h3 className="text-sm font-medium text-stone-700 mb-1">Add Email Rule</h3>
-              <p className="text-xs text-stone-400 mb-4">
-                <strong>Allow</strong> lets a non-Georgetown email sign in. <strong>Block</strong> prevents any email from signing in, including Georgetown addresses.
-              </p>
-              <div className="space-y-3">
-                <input
-                  type="email"
-                  placeholder="user@example.com"
-                  value={ruleEmail}
-                  onChange={(e) => setRuleEmail(e.target.value)}
-                  className="w-full px-3 py-2 text-sm border border-stone-200 rounded-md focus:outline-none focus:ring-2 focus:ring-stone-300"
-                />
-                <div className="flex gap-3">
-                  {(["ALLOW", "BLOCK"] as const).map((t) => (
-                    <button
-                      key={t}
-                      onClick={() => setRuleType(t)}
-                      className={`flex-1 py-2 text-sm rounded-md border transition-colors ${
-                        ruleType === t
-                          ? t === "ALLOW"
-                            ? "bg-emerald-700 text-white border-emerald-700"
-                            : "bg-red-600 text-white border-red-600"
-                          : "border-stone-200 text-stone-600 hover:border-stone-400"
-                      }`}
-                    >
-                      {t === "ALLOW" ? "Allow" : "Block"}
-                    </button>
+              <div style={{ padding: "20px 24px" }}>
+                <p style={{ fontSize: "0.82rem", color: "var(--gray-600)", marginBottom: "16px" }}>Select the languages you can interpret. Only matching slots will let you sign up.</p>
+                <div style={{ display: "flex", gap: "12px", flexWrap: "wrap", marginBottom: "20px" }}>
+                  {Object.entries(LANG_LABELS).map(([code, label]) => (
+                    <label key={code} style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer", fontSize: "0.9rem", color: "var(--gray-900)" }}>
+                      <input type="checkbox" checked={profileForm.languages.includes(code)} onChange={() => toggleLanguage(code)} style={{ accentColor: "var(--blue)", width: "16px", height: "16px", cursor: "pointer" }} />
+                      <span>{label}</span>
+                    </label>
                   ))}
                 </div>
-                <input
-                  type="text"
-                  placeholder="Note (optional)"
-                  value={ruleNote}
-                  onChange={(e) => setRuleNote(e.target.value)}
-                  className="w-full px-3 py-2 text-sm border border-stone-200 rounded-md focus:outline-none focus:ring-2 focus:ring-stone-300"
-                />
-                <button
-                  disabled={!ruleEmail.trim() || actionLoading === "email-rule"}
-                  onClick={addEmailRule}
-                  className="w-full py-2 text-sm bg-stone-800 text-white hover:bg-stone-700 rounded-md transition-colors disabled:opacity-50"
-                >
-                  {actionLoading === "email-rule" ? "Saving..." : "Add Rule"}
-                </button>
+                <div style={{ display: "flex", justifyContent: "flex-end" }}>
+                  <button disabled={actionLoading === "profile"} onClick={saveProfile} style={{ ...btnPrimary, opacity: actionLoading === "profile" ? 0.5 : 1 }}>
+                    {actionLoading === "profile" ? "Saving…" : "Save Changes"}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── Access Control ── */}
+        {tab === "access" && session?.user?.role === "SUPER_ADMIN" && (
+          <div style={{ maxWidth: "560px", display: "flex", flexDirection: "column", gap: "20px" }}>
+            <div style={card}>
+              <div style={{ padding: "18px 24px", borderBottom: "1.5px solid var(--card-border)" }}>
+                <h2 style={{ fontSize: "1.05rem", fontWeight: 700, color: "var(--navy)" }}>Add Email Rule</h2>
+              </div>
+              <div style={{ padding: "20px 24px" }}>
+                <p style={{ fontSize: "0.82rem", color: "var(--gray-600)", marginBottom: "16px" }}>
+                  <strong>Allow</strong> lets a non-Georgetown email sign in. <strong>Block</strong> prevents any email from signing in.
+                </p>
+                <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                  <input type="email" placeholder="user@example.com" value={ruleEmail} onChange={(e) => setRuleEmail(e.target.value)} style={inputStyle} />
+                  <div style={{ display: "flex", gap: "10px" }}>
+                    {(["ALLOW", "BLOCK"] as const).map((t) => (
+                      <button key={t} onClick={() => setRuleType(t)} style={{ flex: 1, padding: "10px", fontSize: "0.875rem", fontFamily: "inherit", cursor: "pointer", borderRadius: "9px", fontWeight: 600, border: "1.5px solid", background: ruleType === t ? (t === "ALLOW" ? "var(--green)" : "#DC2626") : "transparent", color: ruleType === t ? "#fff" : "var(--gray-600)", borderColor: ruleType === t ? (t === "ALLOW" ? "var(--green)" : "#DC2626") : "var(--card-border)" }}>
+                        {t === "ALLOW" ? "Allow" : "Block"}
+                      </button>
+                    ))}
+                  </div>
+                  <input type="text" placeholder="Note (optional)" value={ruleNote} onChange={(e) => setRuleNote(e.target.value)} style={inputStyle} />
+                  <button disabled={!ruleEmail.trim() || actionLoading === "email-rule"} onClick={addEmailRule} style={{ ...btnPrimary, width: "100%", opacity: !ruleEmail.trim() || actionLoading === "email-rule" ? 0.5 : 1 }}>
+                    {actionLoading === "email-rule" ? "Saving…" : "Add Rule"}
+                  </button>
+                </div>
               </div>
             </div>
 
-            {emailRules.length > 0 && (
-              <div className="bg-white rounded-xl border border-stone-200 divide-y divide-stone-100">
-                {emailRules.map((rule) => (
-                  <div key={rule.id} className="flex items-center justify-between px-5 py-3 gap-3">
-                    <div className="flex items-center gap-3 min-w-0">
-                      <span className={`shrink-0 text-xs px-2 py-0.5 rounded-full font-medium ${
-                        rule.type === "ALLOW" ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-600"
-                      }`}>
-                        {rule.type}
-                      </span>
-                      <span className="text-sm text-stone-800 truncate">{rule.email}</span>
-                      {rule.note && <span className="text-xs text-stone-400 truncate">{rule.note}</span>}
+            {emailRules.length > 0 ? (
+              <div style={card}>
+                {emailRules.map((rule, i) => (
+                  <div key={rule.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 20px", borderBottom: i === emailRules.length - 1 ? "none" : "1px solid var(--card-border)", gap: "12px" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "10px", minWidth: 0 }}>
+                      <span style={{ flexShrink: 0, fontSize: "0.75rem", padding: "3px 10px", borderRadius: "99px", fontWeight: 600, background: rule.type === "ALLOW" ? "var(--green-light)" : "#FEF2F2", color: rule.type === "ALLOW" ? "var(--green)" : "#DC2626" }}>{rule.type}</span>
+                      <span style={{ fontSize: "0.875rem", color: "var(--gray-900)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{rule.email}</span>
+                      {rule.note && <span style={{ fontSize: "0.78rem", color: "var(--gray-400)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{rule.note}</span>}
                     </div>
-                    <button
-                      disabled={actionLoading === `rule-${rule.id}`}
-                      onClick={() => removeEmailRule(rule.id)}
-                      className="shrink-0 text-xs px-2 py-1 bg-stone-100 hover:bg-stone-200 text-stone-500 rounded transition-colors disabled:opacity-50"
-                    >
-                      Remove
-                    </button>
+                    <button disabled={actionLoading === `rule-${rule.id}`} onClick={() => removeEmailRule(rule.id)} style={{ flexShrink: 0, fontSize: "0.78rem", padding: "4px 10px", background: "var(--page-bg)", color: "var(--gray-600)", border: "1px solid var(--card-border)", borderRadius: "6px", fontFamily: "inherit", cursor: "pointer", opacity: actionLoading === `rule-${rule.id}` ? 0.5 : 1 }}>Remove</button>
                   </div>
                 ))}
               </div>
-            )}
-
-            {emailRules.length === 0 && (
-              <div className="bg-white rounded-xl border border-stone-200 p-8 text-center">
-                <p className="text-stone-400 text-sm">No rules yet. All Georgetown emails can sign in by default.</p>
+            ) : (
+              <div style={{ ...card, padding: "36px", textAlign: "center" }}>
+                <p style={{ color: "var(--gray-400)", fontSize: "0.875rem" }}>No rules yet. All Georgetown emails can sign in by default.</p>
               </div>
             )}
           </div>
         )}
-      </div>
+      </main>
 
-      {/* Admin Delete Slots Modal */}
+      {/* ── Modals ── */}
+
+      {/* Delete Slots Modal */}
       {adminDeleteModal && (() => {
         const selectedSlotsList = upcomingSlots.filter((s) => adminSelectedSlotIds.has(s.id));
         const isSingle = selectedSlotsList.length === 1;
-        const confirmText = isSingle
-          ? `${selectedSlotsList[0].clinic.name} ${selectedSlotsList[0].date.slice(0, 10)}`
-          : "DELETE";
-
+        const confirmText = isSingle ? `${selectedSlotsList[0].clinic.name} ${selectedSlotsList[0].date.slice(0, 10)}` : "DELETE";
         return (
-          <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-xl shadow-xl w-full max-w-md">
-              <div className="px-6 py-4 border-b border-stone-100">
-                <h3 className="text-sm font-semibold text-stone-800">Delete {selectedSlotsList.length} Slot{selectedSlotsList.length !== 1 ? "s" : ""}</h3>
-                <p className="text-xs text-stone-400 mt-0.5">This will cancel the slot and notify any signed-up volunteers.</p>
+          <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.4)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 50, padding: "16px" }}>
+            <div style={{ background: "#fff", borderRadius: "16px", boxShadow: "0 20px 60px rgba(0,0,0,.2)", width: "100%", maxWidth: "480px" }}>
+              <div style={{ padding: "20px 24px", borderBottom: "1.5px solid var(--card-border)" }}>
+                <h3 style={{ fontSize: "1rem", fontWeight: 700, color: "var(--navy)" }}>Delete {selectedSlotsList.length} Slot{selectedSlotsList.length !== 1 ? "s" : ""}</h3>
+                <p style={{ fontSize: "0.82rem", color: "var(--gray-600)", marginTop: "4px" }}>This will cancel the slot and notify any signed-up volunteers.</p>
               </div>
-              <div className="px-6 py-4">
-                <div className="max-h-40 overflow-y-auto space-y-1 mb-4">
+              <div style={{ padding: "20px 24px" }}>
+                <div style={{ maxHeight: "160px", overflowY: "auto", marginBottom: "16px" }}>
                   {selectedSlotsList.map((s) => (
-                    <div key={s.id} className="text-xs text-stone-600 py-1 border-b border-stone-50 last:border-0">
-                      <span className="font-medium">{s.clinic.name}</span> · {formatDate(s.date)} · {formatHour(s.startTime)}–{formatHour(s.endTime)} · {LANG_LABELS[s.language]}
-                      {s.signups.length > 0 && (
-                        <span className="ml-1 text-amber-600">({s.signups.length} volunteer{s.signups.length !== 1 ? "s" : ""} affected)</span>
-                      )}
+                    <div key={s.id} style={{ fontSize: "0.82rem", color: "var(--gray-600)", padding: "6px 0", borderBottom: "1px solid var(--card-border)" }}>
+                      <span style={{ fontWeight: 600 }}>{s.clinic.name}</span> · {formatDate(s.date)} · {formatHour(s.startTime)}–{formatHour(s.endTime)} · {LANG_LABELS[s.language]}
+                      {s.signups.length > 0 && <span style={{ color: "#D97706", marginLeft: "6px" }}>({s.signups.length} volunteer{s.signups.length !== 1 ? "s" : ""} affected)</span>}
                     </div>
                   ))}
                 </div>
-                <div className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 mb-4">
-                  <p className="text-xs text-amber-800">
-                    {isSingle
-                      ? <>To confirm, type the clinic name and date: <strong>{confirmText}</strong></>
-                      : <>To confirm, type: <strong>DELETE</strong></>}
+                <div style={{ background: "#FFFBEB", border: "1px solid #FDE68A", borderRadius: "9px", padding: "12px 16px", marginBottom: "14px" }}>
+                  <p style={{ fontSize: "0.82rem", color: "#92400E" }}>
+                    {isSingle ? <>To confirm, type the clinic name and date: <strong>{confirmText}</strong></> : <>To confirm, type: <strong>DELETE</strong></>}
                   </p>
                 </div>
-                <input
-                  autoFocus
-                  type="text"
-                  placeholder={confirmText}
-                  value={adminDeleteInput}
-                  onChange={(e) => setAdminDeleteInput(e.target.value)}
-                  className="w-full px-3 py-2 text-sm border border-stone-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-300 mb-4"
-                />
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => { setAdminDeleteModal(false); setAdminDeleteInput(""); }}
-                    className="flex-1 px-4 py-2 text-sm border border-stone-200 text-stone-600 rounded-lg hover:bg-stone-50 transition-colors"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    disabled={adminDeleteInput.trim() !== confirmText || actionLoading === "admin-batch-delete"}
-                    onClick={confirmAdminDeleteSlots}
-                    className="flex-1 px-4 py-2 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-40"
-                  >
-                    {actionLoading === "admin-batch-delete" ? "Deleting..." : "Confirm Delete"}
+                <input autoFocus type="text" placeholder={confirmText} value={adminDeleteInput} onChange={(e) => setAdminDeleteInput(e.target.value)} style={{ ...inputStyle, marginBottom: "16px" }} />
+                <div style={{ display: "flex", gap: "10px" }}>
+                  <button onClick={() => { setAdminDeleteModal(false); setAdminDeleteInput(""); }} style={{ flex: 1, padding: "10px", background: "none", border: "1.5px solid var(--card-border)", borderRadius: "9px", fontFamily: "inherit", fontSize: "0.875rem", color: "var(--gray-600)", cursor: "pointer" }}>Cancel</button>
+                  <button disabled={adminDeleteInput.trim() !== confirmText || actionLoading === "admin-batch-delete"} onClick={confirmAdminDeleteSlots} style={{ flex: 1, padding: "10px", background: "#DC2626", color: "#fff", border: "none", borderRadius: "9px", fontFamily: "inherit", fontSize: "0.875rem", fontWeight: 600, cursor: "pointer", opacity: adminDeleteInput.trim() !== confirmText || actionLoading === "admin-batch-delete" ? 0.4 : 1 }}>
+                    {actionLoading === "admin-batch-delete" ? "Deleting…" : "Confirm Delete"}
                   </button>
                 </div>
               </div>
@@ -1171,128 +955,66 @@ export default function AdminDashboard() {
         );
       })()}
 
-      {/* Assign Volunteer to Shift Modal */}
+      {/* Assign Volunteer Modal */}
       {volunteerAssignTarget && (() => {
-        const activeVolunteers = users.filter(
-          (u) =>
-            (u.role === "VOLUNTEER" || u.role === "ADMIN" || u.role === "SUPER_ADMIN") &&
-            u.status === "ACTIVE"
-        );
+        const activeVolunteers = users.filter((u) => (u.role === "VOLUNTEER" || u.role === "ADMIN" || u.role === "SUPER_ADMIN") && u.status === "ACTIVE");
         const searchLower = assignSearch.toLowerCase();
-        const filtered = activeVolunteers.filter(
-          (u) =>
-            (u.name?.toLowerCase().includes(searchLower) ?? false) ||
-            u.email.toLowerCase().includes(searchLower)
-        );
+        const filteredVols = activeVolunteers.filter((u) => (u.name?.toLowerCase().includes(searchLower) ?? false) || u.email.toLowerCase().includes(searchLower));
         const targetSlot = adminSlots.find((s) => s.id === volunteerAssignTarget.slotId);
-
         return (
-          <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-xl shadow-xl w-full max-w-md">
-              {/* Header */}
-              <div className="px-6 py-4 border-b border-stone-100">
-                <h3 className="text-sm font-semibold text-stone-800">Assign a Volunteer</h3>
-                <p className="text-xs text-stone-400 mt-0.5">
-                  {LANG_LABELS[volunteerAssignTarget.language]} &middot; {formatDate(volunteerAssignTarget.date)} &middot; {formatHour(volunteerAssignTarget.hour)}–{formatHour(volunteerAssignTarget.hour + 1)} &middot; {volunteerAssignTarget.clinicName}
+          <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.4)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 50, padding: "16px" }}>
+            <div style={{ background: "#fff", borderRadius: "16px", boxShadow: "0 20px 60px rgba(0,0,0,.2)", width: "100%", maxWidth: "480px" }}>
+              <div style={{ padding: "20px 24px", borderBottom: "1.5px solid var(--card-border)" }}>
+                <h3 style={{ fontSize: "1rem", fontWeight: 700, color: "var(--navy)" }}>Assign a Volunteer</h3>
+                <p style={{ fontSize: "0.82rem", color: "var(--gray-600)", marginTop: "4px" }}>
+                  {LANG_LABELS[volunteerAssignTarget.language]} · {formatDate(volunteerAssignTarget.date)} · {formatHour(volunteerAssignTarget.hour)}–{formatHour(volunteerAssignTarget.hour + 1)} · {volunteerAssignTarget.clinicName}
                 </p>
               </div>
-
               {!assignSelected ? (
-                /* Step 1: search and select */
-                <div className="px-6 py-4">
-                  <input
-                    autoFocus
-                    type="text"
-                    placeholder="Search by name or email..."
-                    value={assignSearch}
-                    onChange={(e) => setAssignSearch(e.target.value)}
-                    className="w-full px-3 py-2 text-sm border border-stone-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-stone-300 mb-3"
-                  />
-                  <div className="max-h-64 overflow-y-auto space-y-1">
-                    {filtered.length === 0 && (
-                      <p className="text-xs text-stone-400 text-center py-6">No volunteers found.</p>
-                    )}
-                    {filtered.map((u) => {
-                      const alreadySigned = targetSlot?.signups.some(
-                        (sg) =>
-                          sg.subBlockHour === volunteerAssignTarget.hour &&
-                          sg.volunteer.user.email === u.email
-                      );
+                <div style={{ padding: "20px 24px" }}>
+                  <input autoFocus type="text" placeholder="Search by name or email…" value={assignSearch} onChange={(e) => setAssignSearch(e.target.value)} style={{ ...inputStyle, marginBottom: "12px" }} />
+                  <div style={{ maxHeight: "280px", overflowY: "auto" }}>
+                    {filteredVols.length === 0 && <p style={{ fontSize: "0.82rem", color: "var(--gray-400)", textAlign: "center", padding: "24px 0" }}>No volunteers found.</p>}
+                    {filteredVols.map((u) => {
+                      const alreadySigned = targetSlot?.signups.some((sg) => sg.subBlockHour === volunteerAssignTarget.hour && sg.volunteer.user.email === u.email);
                       return (
-                        <button
-                          key={u.id}
-                          disabled={!!alreadySigned}
-                          onClick={() =>
-                            setAssignSelected({ userId: u.id, name: u.name ?? u.email, email: u.email })
-                          }
-                          className="w-full text-left px-3 py-2.5 rounded-lg hover:bg-stone-50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed border border-transparent hover:border-stone-200"
-                        >
-                          <div className="flex items-center justify-between gap-3">
-                            <div className="min-w-0">
-                              <p className="text-sm font-medium text-stone-800 truncate">{u.name ?? "—"}</p>
-                              <p className="text-xs text-stone-400 truncate">{u.email}</p>
-                            </div>
-                            <div className="flex items-center gap-1.5 shrink-0">
-                              {alreadySigned && (
-                                <span className="text-xs px-2 py-0.5 bg-emerald-50 text-emerald-600 rounded-full">Signed up</span>
-                              )}
-                              {u.volunteer?.languages?.map((l) => (
-                                <span key={l} className={`text-xs px-1.5 py-0.5 rounded-full ${LANG_COLORS[l] ?? "bg-stone-100 text-stone-500"}`}>
-                                  {LANG_LABELS[l] ?? l}
-                                </span>
-                              ))}
-                            </div>
+                        <button key={u.id} disabled={!!alreadySigned} onClick={() => setAssignSelected({ userId: u.id, name: u.name ?? u.email, email: u.email })} style={{ width: "100%", textAlign: "left", padding: "10px 12px", borderRadius: "9px", border: "1px solid transparent", background: "none", fontFamily: "inherit", cursor: alreadySigned ? "not-allowed" : "pointer", opacity: alreadySigned ? 0.4 : 1, display: "flex", alignItems: "center", justifyContent: "space-between", gap: "10px" }}>
+                          <div style={{ minWidth: 0 }}>
+                            <p style={{ fontSize: "0.875rem", fontWeight: 500, color: "var(--gray-900)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{u.name ?? "—"}</p>
+                            <p style={{ fontSize: "0.78rem", color: "var(--gray-400)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{u.email}</p>
+                          </div>
+                          <div style={{ display: "flex", gap: "6px", flexShrink: 0 }}>
+                            {alreadySigned && <span style={{ fontSize: "0.72rem", padding: "2px 8px", background: "var(--green-light)", color: "var(--green)", borderRadius: "99px" }}>Signed up</span>}
+                            {u.volunteer?.languages?.map((l) => (
+                              <span key={l} style={{ fontSize: "0.72rem", padding: "2px 8px", borderRadius: "99px", background: "var(--gray-200)", color: "var(--gray-600)" }}>{LANG_LABELS[l] ?? l}</span>
+                            ))}
                           </div>
                         </button>
                       );
                     })}
                   </div>
-                  <button
-                    onClick={closeAssignModal}
-                    className="mt-4 text-xs text-stone-400 hover:text-stone-600"
-                  >
-                    Cancel
-                  </button>
+                  <button onClick={closeAssignModal} style={{ marginTop: "12px", background: "none", border: "none", color: "var(--gray-400)", fontFamily: "inherit", fontSize: "0.82rem", cursor: "pointer" }}>Cancel</button>
                 </div>
               ) : (
-                /* Step 2: confirm */
-                <div className="px-6 py-4">
-                  <div className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 mb-4">
-                    <p className="text-xs font-semibold text-amber-800 mb-2">Confirm Assignment</p>
-                    <p className="text-sm text-amber-900">
-                      Assign <strong>{assignSelected.name}</strong> to this shift?
-                    </p>
-                    <p className="text-xs text-amber-700 mt-0.5">{assignSelected.email}</p>
-                    <div className="mt-2 pt-2 border-t border-amber-200 text-xs text-amber-700 space-y-0.5">
+                <div style={{ padding: "20px 24px" }}>
+                  <div style={{ background: "#FFFBEB", border: "1px solid #FDE68A", borderRadius: "10px", padding: "14px 16px", marginBottom: "16px" }}>
+                    <p style={{ fontSize: "0.82rem", fontWeight: 700, color: "#92400E", marginBottom: "6px" }}>Confirm Assignment</p>
+                    <p style={{ fontSize: "0.875rem", color: "#78350F" }}>Assign <strong>{assignSelected.name}</strong> to this shift?</p>
+                    <p style={{ fontSize: "0.78rem", color: "#92400E", marginTop: "2px" }}>{assignSelected.email}</p>
+                    <div style={{ marginTop: "8px", paddingTop: "8px", borderTop: "1px solid #FDE68A", fontSize: "0.78rem", color: "#92400E" }}>
                       <p>{LANG_LABELS[volunteerAssignTarget.language]} · {volunteerAssignTarget.clinicName}</p>
                       <p>{formatDate(volunteerAssignTarget.date)} · {formatHour(volunteerAssignTarget.hour)}–{formatHour(volunteerAssignTarget.hour + 1)}</p>
-                      <p className="mt-1 text-amber-600">They will receive a calendar invite.</p>
+                      <p style={{ marginTop: "4px" }}>They will receive a calendar invite.</p>
                     </div>
                   </div>
-                  {assignError && (
-                    <p className="text-xs text-red-600 mb-3">{assignError}</p>
-                  )}
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => { setAssignSelected(null); setAssignError(""); }}
-                      className="flex-1 px-4 py-2 text-sm border border-stone-200 text-stone-600 rounded-lg hover:bg-stone-50 transition-colors"
-                    >
-                      ← Back
-                    </button>
-                    <button
-                      disabled={assignLoading}
-                      onClick={assignVolunteer}
-                      className="flex-1 px-4 py-2 text-sm bg-stone-800 text-white rounded-lg hover:bg-stone-700 transition-colors disabled:opacity-50"
-                    >
-                      {assignLoading ? "Assigning..." : "Confirm Assignment"}
+                  {assignError && <p style={{ fontSize: "0.82rem", color: "#DC2626", marginBottom: "12px" }}>{assignError}</p>}
+                  <div style={{ display: "flex", gap: "10px" }}>
+                    <button onClick={() => { setAssignSelected(null); setAssignError(""); }} style={{ flex: 1, padding: "10px", background: "none", border: "1.5px solid var(--card-border)", borderRadius: "9px", fontFamily: "inherit", fontSize: "0.875rem", color: "var(--gray-600)", cursor: "pointer" }}>← Back</button>
+                    <button disabled={assignLoading} onClick={assignVolunteer} style={{ ...btnPrimary, flex: 1, textAlign: "center", opacity: assignLoading ? 0.5 : 1 }}>
+                      {assignLoading ? "Assigning…" : "Confirm Assignment"}
                     </button>
                   </div>
-                  <button
-                    onClick={closeAssignModal}
-                    className="mt-3 text-xs text-stone-400 hover:text-stone-600 w-full text-center"
-                  >
-                    Cancel
-                  </button>
+                  <button onClick={closeAssignModal} style={{ marginTop: "12px", background: "none", border: "none", color: "var(--gray-400)", fontFamily: "inherit", fontSize: "0.82rem", cursor: "pointer", width: "100%", textAlign: "center" }}>Cancel</button>
                 </div>
               )}
             </div>
@@ -1302,58 +1024,32 @@ export default function AdminDashboard() {
 
       {/* PIN Reveal Modal */}
       {pinReveal && (
-        <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-6 w-full max-w-sm shadow-xl">
-            <h3 className="text-sm font-semibold text-stone-800 mb-1">New PIN for {pinReveal.clinicName}</h3>
-            <p className="text-xs text-stone-400 mb-4">
-              Copy this PIN now — it cannot be shown again. Share it with the clinic directly.
-            </p>
-            <div className="flex items-center gap-3 bg-stone-50 border border-stone-200 rounded-lg px-4 py-3 mb-4">
-              <span className="text-2xl font-mono font-bold tracking-[0.3em] text-stone-800">{pinReveal.pin}</span>
-              <button
-                onClick={() => navigator.clipboard.writeText(pinReveal.pin)}
-                className="ml-auto text-xs px-2 py-1 bg-stone-200 hover:bg-stone-300 text-stone-600 rounded transition-colors"
-              >
-                Copy
-              </button>
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.3)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 50 }}>
+          <div style={{ background: "#fff", borderRadius: "16px", padding: "28px 24px", width: "100%", maxWidth: "360px", boxShadow: "0 20px 60px rgba(0,0,0,.2)" }}>
+            <h3 style={{ fontSize: "1rem", fontWeight: 700, color: "var(--navy)", marginBottom: "6px" }}>New PIN for {pinReveal.clinicName}</h3>
+            <p style={{ fontSize: "0.82rem", color: "var(--gray-600)", marginBottom: "16px" }}>Copy this PIN now — it cannot be shown again.</p>
+            <div style={{ display: "flex", alignItems: "center", gap: "12px", background: "var(--page-bg)", border: "1.5px solid var(--card-border)", borderRadius: "10px", padding: "14px 18px", marginBottom: "16px" }}>
+              <span style={{ fontSize: "1.8rem", fontFamily: "monospace", fontWeight: 700, letterSpacing: "0.3em", color: "var(--navy)" }}>{pinReveal.pin}</span>
+              <button onClick={() => navigator.clipboard.writeText(pinReveal.pin)} style={{ marginLeft: "auto", fontSize: "0.78rem", padding: "5px 12px", background: "var(--gray-200)", color: "var(--gray-600)", border: "none", borderRadius: "6px", fontFamily: "inherit", cursor: "pointer" }}>Copy</button>
             </div>
-            <button
-              onClick={() => setPinReveal(null)}
-              className="w-full px-4 py-2 text-sm bg-stone-800 text-white hover:bg-stone-700 rounded-lg transition-colors"
-            >
-              Done
-            </button>
+            <button onClick={() => setPinReveal(null)} style={{ ...btnPrimary, width: "100%", textAlign: "center" }}>Done</button>
           </div>
         </div>
       )}
 
       {/* Assign Clinic Modal */}
       {assignModal && (
-        <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-6 w-full max-w-sm shadow-xl">
-            <h3 className="text-sm font-medium text-stone-700 mb-3">
-              Assign {assignModal.userName} to a clinic
-            </h3>
-            <div className="space-y-2">
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.3)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 50 }}>
+          <div style={{ background: "#fff", borderRadius: "16px", padding: "24px", width: "100%", maxWidth: "360px", boxShadow: "0 20px 60px rgba(0,0,0,.2)" }}>
+            <h3 style={{ fontSize: "0.95rem", fontWeight: 700, color: "var(--navy)", marginBottom: "14px" }}>Assign {assignModal.userName} to a clinic</h3>
+            <div style={{ display: "flex", flexDirection: "column", gap: "8px", marginBottom: "14px" }}>
               {clinics.map((clinic) => (
-                <button
-                  key={clinic.id}
-                  onClick={async () => {
-                    await updateUser(assignModal.userId, { clinicId: clinic.id });
-                    setAssignModal(null);
-                  }}
-                  className="w-full text-left px-3 py-2 text-sm border border-stone-200 rounded-md hover:bg-stone-50 transition-colors"
-                >
+                <button key={clinic.id} onClick={async () => { await updateUser(assignModal.userId, { clinicId: clinic.id }); setAssignModal(null); }} style={{ textAlign: "left", padding: "10px 14px", fontSize: "0.875rem", border: "1.5px solid var(--card-border)", borderRadius: "9px", background: "var(--card-bg)", color: "var(--gray-900)", fontFamily: "inherit", cursor: "pointer" }}>
                   {clinic.name}
                 </button>
               ))}
             </div>
-            <button
-              onClick={() => setAssignModal(null)}
-              className="mt-4 text-xs text-stone-400 hover:text-stone-600"
-            >
-              Cancel
-            </button>
+            <button onClick={() => setAssignModal(null)} style={{ background: "none", border: "none", color: "var(--gray-400)", fontFamily: "inherit", fontSize: "0.82rem", cursor: "pointer" }}>Cancel</button>
           </div>
         </div>
       )}
