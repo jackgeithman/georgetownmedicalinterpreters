@@ -172,8 +172,8 @@ export default function InstructorDashboard() {
 
   if (status === "loading" || loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-stone-50">
-        <p className="text-stone-400">Loading...</p>
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <p className="text-gray-400">Loading...</p>
       </div>
     );
   }
@@ -181,30 +181,30 @@ export default function InstructorDashboard() {
   const volunteerList = volunteers.filter((u) => u.volunteer !== null);
 
   return (
-    <div className="min-h-screen bg-stone-50">
+    <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <header className="bg-white border-b border-stone-200">
+      <header className="bg-white border-b border-gray-200">
         <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div>
-              <h1 className="text-lg font-semibold text-stone-800 tracking-tight">Georgetown Medical Interpreters</h1>
-              <p className="text-xs text-stone-400">Instructor Dashboard</p>
+              <h1 className="text-lg font-semibold text-black tracking-tight">Georgetown Medical Interpreters</h1>
+              <p className="text-xs text-gray-400">Instructor Dashboard</p>
             </div>
             <a
               href="mailto:georgetownmedicalinterpreters@gmail.com"
-              className="text-sm px-3 py-1.5 bg-stone-100 hover:bg-stone-200 text-stone-600 rounded-md transition-colors"
+              className="text-sm px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-md transition-colors"
             >
               Contact Us
             </a>
           </div>
           <div className="flex items-center gap-3">
-            <span className="text-sm text-stone-500">{session?.user?.email}</span>
+            <span className="text-sm text-gray-500">{session?.user?.email}</span>
             <span className="text-xs px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700 font-medium">
               Instructor
             </span>
             <button
               onClick={() => signOut({ callbackUrl: "/login" })}
-              className="text-sm px-3 py-1.5 bg-stone-100 hover:bg-stone-200 text-stone-600 rounded-md transition-colors"
+              className="text-sm px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-md transition-colors"
             >
               Sign Out
             </button>
@@ -214,7 +214,7 @@ export default function InstructorDashboard() {
 
       {/* Tabs */}
       <div className="max-w-6xl mx-auto px-6 pt-6">
-        <div className="flex gap-1 bg-stone-200/50 p-1 rounded-xl w-fit">
+        <div className="flex gap-1 bg-gray-200/50 p-1 rounded-xl w-fit">
           {[
             { key: "training" as Tab, label: "Training" },
             { key: "volunteers" as Tab, label: "Volunteers" },
@@ -226,7 +226,7 @@ export default function InstructorDashboard() {
               className={`px-4 py-2 text-sm rounded-md transition-colors ${
                 tab === t.key
                   ? "bg-[#041E42] text-white shadow-sm font-medium"
-                  : "text-stone-500 hover:text-stone-700"
+                  : "text-gray-500 hover:text-gray-700"
               }`}
             >
               {t.label}
@@ -251,20 +251,20 @@ export default function InstructorDashboard() {
             </div>
 
             {showTrainingForm && (
-              <div className="bg-white rounded-xl border border-stone-200 p-6 space-y-4">
-                <h3 className="text-sm font-medium text-stone-700">New Training Material</h3>
+              <div className="bg-white rounded-xl border border-gray-200 p-6 space-y-4">
+                <h3 className="text-sm font-medium text-gray-700">New Training Material</h3>
                 <input
                   placeholder="Title"
                   value={trainingForm.title}
                   onChange={(e) => setTrainingForm({ ...trainingForm, title: e.target.value })}
-                  className="w-full px-3 py-2 text-sm border border-stone-200 rounded-md focus:outline-none focus:ring-2 focus:ring-stone-300"
+                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-300"
                 />
                 <textarea
                   placeholder="Description (optional)"
                   value={trainingForm.description}
                   onChange={(e) => setTrainingForm({ ...trainingForm, description: e.target.value })}
                   rows={2}
-                  className="w-full px-3 py-2 text-sm border border-stone-200 rounded-md focus:outline-none focus:ring-2 focus:ring-stone-300 resize-none"
+                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-300 resize-none"
                 />
                 <div className="flex gap-2">
                   {(["LINK", "FILE"] as const).map((t) => (
@@ -274,7 +274,7 @@ export default function InstructorDashboard() {
                       className={`flex-1 py-2 text-sm rounded-md border transition-colors ${
                         trainingForm.type === t
                           ? "bg-[#041E42] text-white border-[#041E42]"
-                          : "border-stone-200 text-stone-600 hover:border-stone-400"
+                          : "border-gray-200 text-gray-600 hover:border-gray-400"
                       }`}
                     >
                       {t === "LINK" ? "Link" : "File Upload"}
@@ -286,23 +286,23 @@ export default function InstructorDashboard() {
                     placeholder="URL (https://...)"
                     value={trainingForm.url}
                     onChange={(e) => setTrainingForm({ ...trainingForm, url: e.target.value })}
-                    className="w-full px-3 py-2 text-sm border border-stone-200 rounded-md focus:outline-none focus:ring-2 focus:ring-stone-300"
+                    className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-300"
                   />
                 ) : (
                   <input
                     type="file"
                     accept=".pdf,.doc,.docx,.pptx,.mp4,.mov"
                     onChange={(e) => setTrainingFile(e.target.files?.[0] ?? null)}
-                    className="w-full text-sm text-stone-600"
+                    className="w-full text-sm text-gray-600"
                   />
                 )}
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="text-xs text-stone-500 mb-1 block">Language</label>
+                    <label className="text-xs text-gray-500 mb-1 block">Language</label>
                     <select
                       value={trainingForm.languageCode}
                       onChange={(e) => setTrainingForm({ ...trainingForm, languageCode: e.target.value })}
-                      className="w-full px-3 py-2 text-sm border border-stone-200 rounded-md focus:outline-none bg-white"
+                      className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none bg-white"
                     >
                       <option value="">All Languages</option>
                       {languages.filter((l) => l.isActive).map((l) => (
@@ -311,13 +311,13 @@ export default function InstructorDashboard() {
                     </select>
                   </div>
                   <div>
-                    <label className="text-xs text-stone-500 mb-1 block">Category</label>
+                    <label className="text-xs text-gray-500 mb-1 block">Category</label>
                     <input
                       placeholder="General"
                       value={trainingForm.category}
                       list="instructor-training-categories"
                       onChange={(e) => setTrainingForm({ ...trainingForm, category: e.target.value })}
-                      className="w-full px-3 py-2 text-sm border border-stone-200 rounded-md focus:outline-none focus:ring-2 focus:ring-stone-300"
+                      className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-300"
                     />
                     <datalist id="instructor-training-categories">
                       {["General", "Medical Terminology", "Ethics", "Language-Specific", "Administrative"].map((c) => (
@@ -340,18 +340,18 @@ export default function InstructorDashboard() {
             )}
 
             {trainingMaterials.length === 0 ? (
-              <div className="bg-white rounded-xl border border-stone-200 p-12 text-center">
-                <p className="text-stone-400">No training materials yet.</p>
+              <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
+                <p className="text-gray-400">No training materials yet.</p>
               </div>
             ) : (
               <div className="space-y-3">
                 {trainingMaterials.map((m) => (
-                  <div key={m.id} className="bg-white rounded-xl border border-stone-200 p-5">
+                  <div key={m.id} className="bg-white rounded-xl border border-gray-200 p-5">
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2 flex-wrap mb-1">
-                          <span className="font-medium text-stone-800 text-sm">{m.title}</span>
-                          <span className="text-xs px-1.5 py-0.5 rounded bg-stone-100 text-stone-600">{m.category}</span>
+                          <span className="font-medium text-black text-sm">{m.title}</span>
+                          <span className="text-xs px-1.5 py-0.5 rounded bg-gray-100 text-gray-600">{m.category}</span>
                           {m.languageCode && (
                             <span className="text-xs px-1.5 py-0.5 rounded bg-[#EBF3FC] text-[#041E42]">{m.languageCode}</span>
                           )}
@@ -359,9 +359,9 @@ export default function InstructorDashboard() {
                             {m.type}
                           </span>
                         </div>
-                        {m.description && <p className="text-xs text-stone-500 mb-2">{m.description}</p>}
+                        {m.description && <p className="text-xs text-gray-500 mb-2">{m.description}</p>}
                         {m.type === "FILE" ? (
-                          <a href={m.url} target="_blank" rel="noopener noreferrer" className="text-xs text-stone-600 hover:text-stone-800 underline">
+                          <a href={m.url} target="_blank" rel="noopener noreferrer" className="text-xs text-gray-600 hover:text-black underline">
                             {m.fileName ?? "Download"}
                           </a>
                         ) : (
@@ -369,7 +369,7 @@ export default function InstructorDashboard() {
                             {m.url}
                           </a>
                         )}
-                        <p className="text-xs text-stone-400 mt-2">
+                        <p className="text-xs text-gray-400 mt-2">
                           by {m.uploadedBy.name ?? m.uploadedBy.email} · {new Date(m.createdAt).toLocaleDateString()}
                         </p>
                       </div>
@@ -392,35 +392,35 @@ export default function InstructorDashboard() {
 
         {/* Volunteers Tab */}
         {tab === "volunteers" && (
-          <div className="bg-white rounded-xl border border-stone-200 overflow-hidden">
+          <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
             {volunteerList.length === 0 ? (
               <div className="p-12 text-center">
-                <p className="text-stone-400">No volunteers yet.</p>
+                <p className="text-gray-400">No volunteers yet.</p>
               </div>
             ) : (
               <table className="w-full">
                 <thead>
-                  <tr className="border-b border-stone-100">
-                    <th className="text-left text-xs font-medium text-stone-400 uppercase tracking-wider px-5 py-3">Name</th>
-                    <th className="text-left text-xs font-medium text-stone-400 uppercase tracking-wider px-5 py-3">Email</th>
-                    <th className="text-left text-xs font-medium text-stone-400 uppercase tracking-wider px-5 py-3">Languages</th>
-                    <th className="text-left text-xs font-medium text-stone-400 uppercase tracking-wider px-5 py-3">Hours</th>
-                    <th className="text-left text-xs font-medium text-stone-400 uppercase tracking-wider px-5 py-3">Clearance</th>
+                  <tr className="border-b border-gray-100">
+                    <th className="text-left text-xs font-medium text-gray-400 uppercase tracking-wider px-5 py-3">Name</th>
+                    <th className="text-left text-xs font-medium text-gray-400 uppercase tracking-wider px-5 py-3">Email</th>
+                    <th className="text-left text-xs font-medium text-gray-400 uppercase tracking-wider px-5 py-3">Languages</th>
+                    <th className="text-left text-xs font-medium text-gray-400 uppercase tracking-wider px-5 py-3">Hours</th>
+                    <th className="text-left text-xs font-medium text-gray-400 uppercase tracking-wider px-5 py-3">Clearance</th>
                   </tr>
                 </thead>
                 <tbody>
                   {volunteerList.map((user) => (
-                    <tr key={user.id} className="border-b border-stone-50 last:border-0">
-                      <td className="px-5 py-3.5 text-sm text-stone-800">{user.name ?? "—"}</td>
-                      <td className="px-5 py-3.5 text-sm text-stone-500">{user.email}</td>
+                    <tr key={user.id} className="border-b border-gray-50 last:border-0">
+                      <td className="px-5 py-3.5 text-sm text-black">{user.name ?? "—"}</td>
+                      <td className="px-5 py-3.5 text-sm text-gray-500">{user.email}</td>
                       <td className="px-5 py-3.5">
                         <div className="flex gap-1 flex-wrap">
                           {user.volunteer?.languages?.map((lang) => (
-                            <span key={lang} className="text-xs px-1.5 py-0.5 rounded bg-stone-100 text-stone-600">{lang}</span>
+                            <span key={lang} className="text-xs px-1.5 py-0.5 rounded bg-gray-100 text-gray-600">{lang}</span>
                           ))}
                         </div>
                       </td>
-                      <td className="px-5 py-3.5 text-sm text-stone-600">{user.volunteer?.hoursVolunteered ?? 0}h</td>
+                      <td className="px-5 py-3.5 text-sm text-gray-600">{user.volunteer?.hoursVolunteered ?? 0}h</td>
                       <td className="px-5 py-3.5">
                         {user.volunteer && (
                           <div className="flex items-center gap-2">
@@ -455,56 +455,56 @@ export default function InstructorDashboard() {
         {tab === "metrics" && (
           <div className="space-y-6">
             {!metrics ? (
-              <div className="bg-white rounded-xl border border-stone-200 p-12 text-center">
-                <p className="text-stone-400">Loading metrics...</p>
+              <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
+                <p className="text-gray-400">Loading metrics...</p>
               </div>
             ) : (
               <>
                 <div className="grid grid-cols-3 gap-4">
-                  <div className="bg-white rounded-xl border border-stone-200 p-5 text-center">
-                    <p className="text-3xl font-semibold text-stone-800">{metrics.totalHours}</p>
-                    <p className="text-xs text-stone-400 mt-1">Total Hours</p>
+                  <div className="bg-white rounded-xl border border-gray-200 p-5 text-center">
+                    <p className="text-3xl font-semibold text-black">{metrics.totalHours}</p>
+                    <p className="text-xs text-gray-400 mt-1">Total Hours</p>
                   </div>
-                  <div className="bg-white rounded-xl border border-stone-200 p-5 text-center">
-                    <p className="text-3xl font-semibold text-stone-800">{metrics.volunteerCount}</p>
-                    <p className="text-xs text-stone-400 mt-1">Active Volunteers</p>
+                  <div className="bg-white rounded-xl border border-gray-200 p-5 text-center">
+                    <p className="text-3xl font-semibold text-black">{metrics.volunteerCount}</p>
+                    <p className="text-xs text-gray-400 mt-1">Active Volunteers</p>
                   </div>
-                  <div className="bg-white rounded-xl border border-stone-200 p-5 text-center">
-                    <p className="text-3xl font-semibold text-stone-800">{metrics.activeSlotCount}</p>
-                    <p className="text-xs text-stone-400 mt-1">Active Slots</p>
+                  <div className="bg-white rounded-xl border border-gray-200 p-5 text-center">
+                    <p className="text-3xl font-semibold text-black">{metrics.activeSlotCount}</p>
+                    <p className="text-xs text-gray-400 mt-1">Active Slots</p>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
-                  <div className="bg-white rounded-xl border border-stone-200 p-5">
-                    <h3 className="text-sm font-medium text-stone-700 mb-3">Hours by Language</h3>
+                  <div className="bg-white rounded-xl border border-gray-200 p-5">
+                    <h3 className="text-sm font-medium text-gray-700 mb-3">Hours by Language</h3>
                     {metrics.hoursByLanguage.length === 0 ? (
-                      <p className="text-xs text-stone-400">No data yet.</p>
+                      <p className="text-xs text-gray-400">No data yet.</p>
                     ) : (
                       <div className="space-y-2">
                         {metrics.hoursByLanguage.map((item) => (
                           <div key={item.code} className="flex items-center justify-between">
                             <div className="flex items-center gap-2">
-                              <span className="text-xs font-mono font-semibold px-1.5 py-0.5 bg-stone-100 text-stone-600 rounded">{item.code}</span>
-                              <span className="text-sm text-stone-700">{item.name}</span>
+                              <span className="text-xs font-mono font-semibold px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded">{item.code}</span>
+                              <span className="text-sm text-gray-700">{item.name}</span>
                             </div>
-                            <span className="text-sm font-medium text-stone-800">{item.hours}h</span>
+                            <span className="text-sm font-medium text-black">{item.hours}h</span>
                           </div>
                         ))}
                       </div>
                     )}
                   </div>
 
-                  <div className="bg-white rounded-xl border border-stone-200 p-5">
-                    <h3 className="text-sm font-medium text-stone-700 mb-3">Hours by Clinic</h3>
+                  <div className="bg-white rounded-xl border border-gray-200 p-5">
+                    <h3 className="text-sm font-medium text-gray-700 mb-3">Hours by Clinic</h3>
                     {metrics.hoursByClinic.length === 0 ? (
-                      <p className="text-xs text-stone-400">No data yet.</p>
+                      <p className="text-xs text-gray-400">No data yet.</p>
                     ) : (
                       <div className="space-y-2">
                         {metrics.hoursByClinic.map((item) => (
                           <div key={item.clinicId} className="flex items-center justify-between">
-                            <span className="text-sm text-stone-700">{item.clinicName}</span>
-                            <span className="text-sm font-medium text-stone-800">{item.hours}h</span>
+                            <span className="text-sm text-gray-700">{item.clinicName}</span>
+                            <span className="text-sm font-medium text-black">{item.hours}h</span>
                           </div>
                         ))}
                       </div>
@@ -512,7 +512,7 @@ export default function InstructorDashboard() {
                   </div>
                 </div>
 
-                <p className="text-xs text-stone-400 text-center">Graphs coming soon</p>
+                <p className="text-xs text-gray-400 text-center">Graphs coming soon</p>
               </>
             )}
           </div>

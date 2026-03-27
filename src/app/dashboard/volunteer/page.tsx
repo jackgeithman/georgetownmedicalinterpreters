@@ -49,11 +49,11 @@ type Tab = "browse" | "signups" | "profile" | "training" | "suggestions";
 type FeedbackEntry = { id: string; authorRole: string; rating: number | null; note: string; createdAt: string };
 
 const RATING_OPTIONS = [
-  { value: 1, label: "Needs Improvement", active: "bg-red-100 text-red-700 border-red-300", idle: "bg-white text-stone-500 border-stone-200 hover:border-red-200 hover:text-red-600" },
-  { value: 2, label: "Okay",              active: "bg-orange-100 text-orange-700 border-orange-300", idle: "bg-white text-stone-500 border-stone-200 hover:border-orange-200 hover:text-orange-600" },
-  { value: 3, label: "Good",              active: "bg-yellow-100 text-yellow-700 border-yellow-300", idle: "bg-white text-stone-500 border-stone-200 hover:border-yellow-200 hover:text-yellow-600" },
-  { value: 4, label: "Excellent",         active: "bg-green-100 text-green-700 border-green-300",  idle: "bg-white text-stone-500 border-stone-200 hover:border-green-200 hover:text-green-600" },
-  { value: 5, label: "Exceptional", active: "bg-emerald-100 text-emerald-700 border-emerald-300", idle: "bg-white text-stone-500 border-stone-200 hover:border-emerald-200 hover:text-emerald-600" },
+  { value: 1, label: "Needs Improvement", active: "bg-red-100 text-red-700 border-red-300", idle: "bg-white text-gray-500 border-gray-200 hover:border-red-200 hover:text-red-600" },
+  { value: 2, label: "Okay",              active: "bg-orange-100 text-orange-700 border-orange-300", idle: "bg-white text-gray-500 border-gray-200 hover:border-orange-200 hover:text-orange-600" },
+  { value: 3, label: "Good",              active: "bg-yellow-100 text-yellow-700 border-yellow-300", idle: "bg-white text-gray-500 border-gray-200 hover:border-yellow-200 hover:text-yellow-600" },
+  { value: 4, label: "Excellent",         active: "bg-green-100 text-green-700 border-green-300",  idle: "bg-white text-gray-500 border-gray-200 hover:border-green-200 hover:text-green-600" },
+  { value: 5, label: "Exceptional", active: "bg-emerald-100 text-emerald-700 border-emerald-300", idle: "bg-white text-gray-500 border-gray-200 hover:border-emerald-200 hover:text-emerald-600" },
 ];
 
 type TrainingMaterial = {
@@ -191,7 +191,7 @@ function MapsLinks({ address }: { address: string }) {
       >
         G Maps
       </a>
-      <span className="text-stone-300">·</span>
+      <span className="text-gray-300">·</span>
       <a
         href={`https://maps.apple.com/?q=${q}`}
         target="_blank"
@@ -442,8 +442,8 @@ export default function VolunteerDashboard() {
 
   if (status === "loading" || loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-stone-50">
-        <p className="text-stone-400">Loading...</p>
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <p className="text-gray-400">Loading...</p>
       </div>
     );
   }
@@ -456,24 +456,24 @@ export default function VolunteerDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-stone-50">
+    <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <header className="bg-white border-b border-stone-200">
+      <header className="bg-white border-b border-gray-200">
         <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div>
-              <h1 className="text-lg font-semibold text-stone-800 tracking-tight">Georgetown Medical Interpreters</h1>
-              <p className="text-xs text-stone-400">Volunteer Dashboard</p>
+              <h1 className="text-lg font-semibold text-black tracking-tight">Georgetown Medical Interpreters</h1>
+              <p className="text-xs text-gray-400">Volunteer Dashboard</p>
             </div>
             <button
               onClick={() => setTab("suggestions")}
-              className="text-sm px-3 py-1.5 bg-stone-100 hover:bg-stone-200 text-stone-600 rounded-md transition-colors"
+              className="text-sm px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-md transition-colors"
             >
               Contact Us
             </button>
           </div>
           <div className="flex items-center gap-3">
-            <span className="text-sm text-stone-500">{session?.user?.email}</span>
+            <span className="text-sm text-gray-500">{session?.user?.email}</span>
             {isAdmin && (
               <button
                 onClick={() => router.push("/dashboard/admin")}
@@ -484,7 +484,7 @@ export default function VolunteerDashboard() {
             )}
             <button
               onClick={() => signOut({ callbackUrl: "/login" })}
-              className="text-sm px-3 py-1.5 bg-stone-100 hover:bg-stone-200 text-stone-600 rounded-md transition-colors"
+              className="text-sm px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-md transition-colors"
             >
               Sign Out
             </button>
@@ -494,7 +494,7 @@ export default function VolunteerDashboard() {
 
       {/* Tabs */}
       <div className="max-w-6xl mx-auto px-6 pt-6">
-        <div className="flex gap-1 bg-stone-200/50 p-1 rounded-xl w-fit">
+        <div className="flex gap-1 bg-gray-200/50 p-1 rounded-xl w-fit">
           {[
             { key: "browse" as Tab, label: "Browse Slots", count: 0 },
             { key: "signups" as Tab, label: "My Signups", count: mySignups.length },
@@ -516,7 +516,7 @@ export default function VolunteerDashboard() {
               className={`px-4 py-2 text-sm rounded-md transition-colors ${
                 tab === t.key
                   ? "bg-[#041E42] text-white shadow-sm font-medium"
-                  : "text-stone-500 hover:text-stone-700"
+                  : "text-gray-500 hover:text-gray-700"
               }`}
             >
               {t.label}
@@ -562,31 +562,31 @@ export default function VolunteerDashboard() {
           const renderSlot = (slot: BrowseSlot, isPast: boolean) => {
             const subBlocks = Array.from({ length: slot.endTime - slot.startTime }, (_, i) => slot.startTime + i);
             return (
-              <div key={slot.id} className={`bg-white rounded-xl border border-stone-200 p-5 ${isPast ? "opacity-50" : ""}`}>
+              <div key={slot.id} className={`bg-white rounded-xl border border-gray-200 p-5 ${isPast ? "opacity-50" : ""}`}>
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex items-center gap-3 flex-wrap">
                     <span className={`text-xs px-2 py-1 rounded-full font-medium ${LANG_COLORS[slot.language]}`}>
                       {LANG_LABELS[slot.language]}
                     </span>
-                    <span className="text-sm font-medium text-stone-800">{formatDate(slot.date)}</span>
-                    <span className="text-sm text-stone-500">
+                    <span className="text-sm font-medium text-black">{formatDate(slot.date)}</span>
+                    <span className="text-sm text-gray-500">
                       {formatHour(slot.startTime)} – {formatHour(slot.endTime)}
                     </span>
                     {isPast && (
-                      <span className="text-xs px-2 py-0.5 rounded-full bg-stone-100 text-stone-400">Past</span>
+                      <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-400">Past</span>
                     )}
                   </div>
                   <div className="text-right">
-                    <p className="text-sm font-medium text-stone-800">{slot.clinic.name}</p>
+                    <p className="text-sm font-medium text-black">{slot.clinic.name}</p>
                     {slot.clinic.address && (
-                      <p className="text-xs text-stone-400">
+                      <p className="text-xs text-gray-400">
                         {slot.clinic.address}
                         <MapsLinks address={slot.clinic.address} />
                       </p>
                     )}
                   </div>
                 </div>
-                {slot.notes && <p className="text-xs text-stone-400 italic mb-3">{slot.notes}</p>}
+                {slot.notes && <p className="text-xs text-gray-400 italic mb-3">{slot.notes}</p>}
                 <div className="space-y-2">
                   {subBlocks.map((hour) => {
                     const hourSignups = slot.signups.filter((s) => s.subBlockHour === hour);
@@ -599,20 +599,20 @@ export default function VolunteerDashboard() {
                     const key = `${slot.id}-${hour}`;
                     const signedUpNames = hourSignups.map((s) => s.volunteer.user.name ?? "Unknown");
                     return (
-                      <div key={hour} className="flex items-center justify-between px-3 py-2 rounded-md bg-stone-50">
+                      <div key={hour} className="flex items-center justify-between px-3 py-2 rounded-md bg-gray-50">
                         <div className="flex items-center gap-3">
-                          <span className="text-xs text-stone-600 w-28">
+                          <span className="text-xs text-gray-600 w-28">
                             {formatHour(hour)} – {formatHour(hour + 1)}
                           </span>
                           <div>
-                            <span className="text-xs text-stone-400">{filled}/{slot.interpreterCount} filled</span>
+                            <span className="text-xs text-gray-400">{filled}/{slot.interpreterCount} filled</span>
                             {signedUpNames.length > 0 && (
-                              <p className="text-xs text-stone-500">{signedUpNames.join(", ")}</p>
+                              <p className="text-xs text-gray-500">{signedUpNames.join(", ")}</p>
                             )}
                           </div>
                         </div>
                         {isPast ? (
-                          <span className="text-xs px-2 py-1 bg-stone-100 text-stone-400 rounded-md">Past</span>
+                          <span className="text-xs px-2 py-1 bg-gray-100 text-gray-400 rounded-md">Past</span>
                         ) : isMine ? (
                           <button
                             disabled={actionLoading === mySignupEntry.id}
@@ -623,7 +623,7 @@ export default function VolunteerDashboard() {
                             {actionLoading === mySignupEntry.id ? "..." : "Signed Up ✓"}
                           </button>
                         ) : isFull ? (
-                          <span className="text-xs px-2 py-1 bg-stone-100 text-stone-400 rounded-md">Full</span>
+                          <span className="text-xs px-2 py-1 bg-gray-100 text-gray-400 rounded-md">Full</span>
                         ) : (
                           <button
                             disabled={actionLoading === key}
@@ -653,56 +653,56 @@ export default function VolunteerDashboard() {
                     className={`px-3 py-1.5 text-xs rounded-md transition-colors ${
                       langFilter === lang
                         ? "bg-[#041E42] text-white"
-                        : "bg-white border border-stone-200 text-stone-500 hover:border-stone-300"
+                        : "bg-white border border-gray-200 text-gray-500 hover:border-gray-300"
                     }`}
                   >
                     {lang === "ALL" ? "All Languages" : (availableLanguages.find((l) => l.code === lang)?.name ?? LANG_LABELS[lang] ?? lang)}
                   </button>
                 ))}
 
-                <div className="w-px bg-stone-200 mx-1 self-stretch" />
+                <div className="w-px bg-gray-200 mx-1 self-stretch" />
 
                 {/* Clinic */}
                 <select
                   value={clinicFilter}
                   onChange={(e) => setClinicFilter(e.target.value)}
-                  className="px-2 py-1.5 text-xs border border-stone-200 rounded-md bg-white text-stone-600 focus:outline-none"
+                  className="px-2 py-1.5 text-xs border border-gray-200 rounded-md bg-white text-gray-600 focus:outline-none"
                 >
                   <option value="ALL">All Clinics</option>
                   {uniqueClinics.map((c) => <option key={c} value={c}>{c}</option>)}
                 </select>
 
-                <div className="w-px bg-stone-200 mx-1 self-stretch" />
+                <div className="w-px bg-gray-200 mx-1 self-stretch" />
 
                 {/* Date range */}
                 <div className="flex items-center gap-1.5">
-                  <span className="text-xs text-stone-400">From</span>
+                  <span className="text-xs text-gray-400">From</span>
                   <input
                     type="date"
                     value={dateFrom}
                     onChange={(e) => setDateFrom(e.target.value)}
-                    className="px-2 py-1.5 text-xs border border-stone-200 rounded-md bg-white text-stone-600 focus:outline-none"
+                    className="px-2 py-1.5 text-xs border border-gray-200 rounded-md bg-white text-gray-600 focus:outline-none"
                   />
                 </div>
                 <div className="flex items-center gap-1.5">
-                  <span className="text-xs text-stone-400">To</span>
+                  <span className="text-xs text-gray-400">To</span>
                   <input
                     type="date"
                     value={dateTo}
                     onChange={(e) => setDateTo(e.target.value)}
-                    className="px-2 py-1.5 text-xs border border-stone-200 rounded-md bg-white text-stone-600 focus:outline-none"
+                    className="px-2 py-1.5 text-xs border border-gray-200 rounded-md bg-white text-gray-600 focus:outline-none"
                   />
                 </div>
                 {(dateFrom || dateTo) && (
                   <button
                     onClick={() => { setDateFrom(""); setDateTo(""); }}
-                    className="text-xs text-stone-400 hover:text-stone-600"
+                    className="text-xs text-gray-400 hover:text-gray-600"
                   >
                     Clear
                   </button>
                 )}
 
-                <div className="w-px bg-stone-200 mx-1 self-stretch" />
+                <div className="w-px bg-gray-200 mx-1 self-stretch" />
 
                 {/* Availability */}
                 <button
@@ -710,7 +710,7 @@ export default function VolunteerDashboard() {
                   className={`px-3 py-1.5 text-xs rounded-md transition-colors ${
                     availableOnly
                       ? "bg-emerald-700 text-white"
-                      : "bg-white border border-stone-200 text-stone-500 hover:border-stone-300"
+                      : "bg-white border border-gray-200 text-gray-500 hover:border-gray-300"
                   }`}
                 >
                   Available Only
@@ -719,8 +719,8 @@ export default function VolunteerDashboard() {
 
               {/* Upcoming */}
               {upcoming.length === 0 && past.length === 0 ? (
-                <div className="bg-white rounded-xl border border-stone-200 p-12 text-center">
-                  <p className="text-stone-400">No slots match your filters.</p>
+                <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
+                  <p className="text-gray-400">No slots match your filters.</p>
                 </div>
               ) : (
                 <div className="space-y-4">
@@ -728,7 +728,7 @@ export default function VolunteerDashboard() {
 
                   {past.length > 0 && (
                     <>
-                      <p className="text-xs font-medium text-stone-400 uppercase tracking-wider pt-2">Past Slots</p>
+                      <p className="text-xs font-medium text-gray-400 uppercase tracking-wider pt-2">Past Slots</p>
                       {past.map((slot) => renderSlot(slot, true))}
                     </>
                   )}
@@ -742,26 +742,26 @@ export default function VolunteerDashboard() {
         {tab === "signups" && (
           <div>
             {mySignups.length === 0 ? (
-              <div className="bg-white rounded-xl border border-stone-200 p-12 text-center">
-                <p className="text-stone-400">No active signups. Browse available slots to sign up.</p>
+              <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
+                <p className="text-gray-400">No active signups. Browse available slots to sign up.</p>
               </div>
             ) : (
               <div className="space-y-4">
                 {Object.entries(signupsBySlot).map(([slotId, sigs]) => {
                   const slot = sigs[0].slot;
                   return (
-                    <div key={slotId} className="bg-white rounded-xl border border-stone-200 p-5">
+                    <div key={slotId} className="bg-white rounded-xl border border-gray-200 p-5">
                       <div className="flex items-center gap-3 mb-4 flex-wrap">
                         <span className={`text-xs px-2 py-1 rounded-full font-medium ${LANG_COLORS[slot.language]}`}>
                           {LANG_LABELS[slot.language]}
                         </span>
-                        <span className="text-sm font-medium text-stone-800">{formatDate(slot.date)}</span>
-                        <span className="text-sm text-stone-500">
+                        <span className="text-sm font-medium text-black">{formatDate(slot.date)}</span>
+                        <span className="text-sm text-gray-500">
                           {formatHour(slot.startTime)} – {formatHour(slot.endTime)}
                         </span>
-                        <span className="text-sm text-stone-600">{slot.clinic.name}</span>
+                        <span className="text-sm text-gray-600">{slot.clinic.name}</span>
                         {slot.clinic.address && (
-                          <span className="text-xs text-stone-400">
+                          <span className="text-xs text-gray-400">
                             {slot.clinic.address}
                             <MapsLinks address={slot.clinic.address} />
                           </span>
@@ -773,9 +773,9 @@ export default function VolunteerDashboard() {
                           .map((sig) => (
                             <div
                               key={sig.id}
-                              className="flex items-center justify-between px-3 py-2 rounded-md bg-stone-50"
+                              className="flex items-center justify-between px-3 py-2 rounded-md bg-gray-50"
                             >
-                              <span className="text-xs text-stone-600">
+                              <span className="text-xs text-gray-600">
                                 {formatHour(sig.subBlockHour)} – {formatHour(sig.subBlockHour + 1)}
                               </span>
                               <button
@@ -794,12 +794,12 @@ export default function VolunteerDashboard() {
                         if (end >= new Date()) return null;
                         const signupId = sigs[0].id;
                         if (feedbackGiven.has(slot.id)) {
-                          return <p className="mt-3 pt-3 border-t border-stone-100 text-xs text-emerald-600">✓ Feedback submitted</p>;
+                          return <p className="mt-3 pt-3 border-t border-gray-100 text-xs text-emerald-600">✓ Feedback submitted</p>;
                         }
                         const form = feedbackForms[slot.id] ?? { rating: 0, note: "" };
                         return (
-                          <div className="mt-3 pt-3 border-t border-stone-100">
-                            <p className="text-xs text-stone-500 mb-2 font-medium">How was your shift at {slot.clinic.name}?</p>
+                          <div className="mt-3 pt-3 border-t border-gray-100">
+                            <p className="text-xs text-gray-500 mb-2 font-medium">How was your shift at {slot.clinic.name}?</p>
                             <div className="flex flex-wrap gap-1.5 mb-2">
                               {RATING_OPTIONS.map((opt) => (
                                 <button
@@ -818,7 +818,7 @@ export default function VolunteerDashboard() {
                                   value={form.note}
                                   onChange={(e) => setFeedbackForms((prev) => ({ ...prev, [slot.id]: { ...form, note: e.target.value } }))}
                                   rows={2}
-                                  className="flex-1 px-2.5 py-1.5 text-xs border border-stone-200 rounded-md focus:outline-none focus:ring-1 focus:ring-stone-300 resize-none"
+                                  className="flex-1 px-2.5 py-1.5 text-xs border border-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-300 resize-none"
                                 />
                                 <button
                                   disabled={submittingFeedbackFor === slot.id}
@@ -844,15 +844,15 @@ export default function VolunteerDashboard() {
         {tab === "profile" && profile && (
           <div className="space-y-4">
             {/* Stats */}
-            <div className="bg-white rounded-xl border border-stone-200 p-5 text-center w-48">
-              <p className="text-2xl font-semibold text-stone-800">{profile.hoursVolunteered}</p>
-              <p className="text-xs text-stone-400 mt-1">Hours Volunteered</p>
+            <div className="bg-white rounded-xl border border-gray-200 p-5 text-center w-48">
+              <p className="text-2xl font-semibold text-black">{profile.hoursVolunteered}</p>
+              <p className="text-xs text-gray-400 mt-1">Hours Volunteered</p>
             </div>
 
             {/* Languages */}
-            <div className="bg-white rounded-xl border border-stone-200 p-6">
-              <h3 className="text-sm font-medium text-stone-700 mb-1">Languages</h3>
-              <p className="text-xs text-stone-400 mb-1">Select the languages you speak and can interpret.</p>
+            <div className="bg-white rounded-xl border border-gray-200 p-6">
+              <h3 className="text-sm font-medium text-gray-700 mb-1">Languages</h3>
+              <p className="text-xs text-gray-400 mb-1">Select the languages you speak and can interpret.</p>
               <p className="text-xs text-amber-600 bg-amber-50 border border-amber-100 rounded-md px-3 py-2 mb-4">
                 ⚠️ You must have a medical-level vocabulary to effectively translate in a clinical context. Only select languages you are confident interpreting in a healthcare setting.
               </p>
@@ -864,14 +864,14 @@ export default function VolunteerDashboard() {
                   placeholder="Search languages..."
                   value={langSearch}
                   onChange={(e) => setLangSearch(e.target.value)}
-                  className="w-full px-3 py-2 text-sm border border-stone-200 rounded-md focus:outline-none focus:ring-2 focus:ring-stone-300"
+                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-300"
                 />
               </div>
 
               {/* Currently selected languages */}
               {profileForm.languages.length > 0 && (
                 <div className="mb-3">
-                  <p className="text-xs font-medium text-stone-400 uppercase tracking-wider mb-2">Selected</p>
+                  <p className="text-xs font-medium text-gray-400 uppercase tracking-wider mb-2">Selected</p>
                   <div className="flex flex-wrap gap-1.5">
                     {profileForm.languages.map((code) => {
                       const lang = ALL_WORLD_LANGUAGES.find((l) => l.code === code);
@@ -882,7 +882,7 @@ export default function VolunteerDashboard() {
                           className="px-3 py-1 text-xs rounded-full bg-[#041E42] text-white hover:bg-[#03163a] transition-colors flex items-center gap-1"
                         >
                           {lang?.name ?? code}
-                          <span className="text-stone-400">×</span>
+                          <span className="text-gray-400">×</span>
                         </button>
                       );
                     })}
@@ -901,39 +901,39 @@ export default function VolunteerDashboard() {
                 const unselected = [...top10, ...others].filter((l) => !profileForm.languages.includes(l.code));
 
                 return (
-                  <div className="max-h-48 overflow-y-auto border border-stone-100 rounded-md">
+                  <div className="max-h-48 overflow-y-auto border border-gray-100 rounded-md">
                     {unselected.length === 0 ? (
-                      <p className="text-xs text-stone-400 p-3 text-center">No languages match your search.</p>
+                      <p className="text-xs text-gray-400 p-3 text-center">No languages match your search.</p>
                     ) : (
                       <>
                         {!query && top10.filter((l) => !profileForm.languages.includes(l.code)).length > 0 && (
                           <div className="px-3 pt-2 pb-1">
-                            <p className="text-xs font-medium text-stone-400 uppercase tracking-wider">Most Common</p>
+                            <p className="text-xs font-medium text-gray-400 uppercase tracking-wider">Most Common</p>
                           </div>
                         )}
                         {!query && top10.filter((l) => !profileForm.languages.includes(l.code)).map((lang) => (
                           <button
                             key={lang.code}
                             onClick={() => toggleLanguage(lang.code)}
-                            className="w-full text-left px-3 py-2 text-sm text-stone-700 hover:bg-stone-50 transition-colors flex items-center justify-between"
+                            className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors flex items-center justify-between"
                           >
                             {lang.name}
-                            <span className="text-xs text-stone-300">+</span>
+                            <span className="text-xs text-gray-300">+</span>
                           </button>
                         ))}
                         {!query && others.filter((l) => !profileForm.languages.includes(l.code)).length > 0 && (
-                          <div className="px-3 pt-2 pb-1 border-t border-stone-50">
-                            <p className="text-xs font-medium text-stone-400 uppercase tracking-wider">All Languages</p>
+                          <div className="px-3 pt-2 pb-1 border-t border-gray-50">
+                            <p className="text-xs font-medium text-gray-400 uppercase tracking-wider">All Languages</p>
                           </div>
                         )}
                         {(query ? unselected : others.filter((l) => !profileForm.languages.includes(l.code))).map((lang) => (
                           <button
                             key={lang.code}
                             onClick={() => toggleLanguage(lang.code)}
-                            className="w-full text-left px-3 py-2 text-sm text-stone-700 hover:bg-stone-50 transition-colors flex items-center justify-between"
+                            className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors flex items-center justify-between"
                           >
                             {lang.name}
-                            <span className="text-xs text-stone-300">+</span>
+                            <span className="text-xs text-gray-300">+</span>
                           </button>
                         ))}
                       </>
@@ -952,16 +952,16 @@ export default function VolunteerDashboard() {
             </div>
 
             {/* Notification Preferences */}
-            <div className="bg-white rounded-xl border border-stone-200 p-6">
+            <div className="bg-white rounded-xl border border-gray-200 p-6">
               <div className="flex items-center justify-between mb-1">
-                <h3 className="text-sm font-medium text-stone-700">Email Notifications</h3>
+                <h3 className="text-sm font-medium text-gray-700">Email Notifications</h3>
                 {notifSaved && <span className="text-xs text-emerald-600">Saved ✓</span>}
               </div>
-              <p className="text-xs text-stone-400 mb-5">Toggles save instantly. We&apos;ll never send you more than you want.</p>
+              <p className="text-xs text-gray-400 mb-5">Toggles save instantly. We&apos;ll never send you more than you want.</p>
 
               <div className="space-y-1">
                 {/* Recommended */}
-                <p className="text-xs font-medium text-stone-400 uppercase tracking-wider mb-2">Recommended</p>
+                <p className="text-xs font-medium text-gray-400 uppercase tracking-wider mb-2">Recommended</p>
 
                 {([
                   { key: "signupReceipt" as const, label: "Signup confirmation", desc: "Sent after you sign up (2 min delay so quick toggles don't flood your inbox)" },
@@ -974,41 +974,41 @@ export default function VolunteerDashboard() {
                       aria-checked={notifPrefs[key]}
                       onClick={() => toggleNotif(key)}
                       className={`mt-0.5 relative inline-flex h-5 w-9 flex-shrink-0 rounded-full border-2 border-transparent transition-colors focus:outline-none ${
-                        notifPrefs[key] ? "bg-[#041E42]" : "bg-stone-200"
+                        notifPrefs[key] ? "bg-[#041E42]" : "bg-gray-200"
                       }`}
                     >
                       <span className={`inline-block h-4 w-4 rounded-full bg-white shadow transition-transform ${notifPrefs[key] ? "translate-x-4" : "translate-x-0"}`} />
                     </button>
                     <div>
-                      <p className="text-sm text-stone-700">{label}</p>
-                      <p className="text-xs text-stone-400">{desc}</p>
+                      <p className="text-sm text-gray-700">{label}</p>
+                      <p className="text-xs text-gray-400">{desc}</p>
                     </div>
                   </label>
                 ))}
 
-                <div className="pt-3 border-t border-stone-100 mt-2">
-                  <p className="text-xs font-medium text-stone-400 uppercase tracking-wider mb-2">Optional</p>
+                <div className="pt-3 border-t border-gray-100 mt-2">
+                  <p className="text-xs font-medium text-gray-400 uppercase tracking-wider mb-2">Optional</p>
                   <label className="flex items-start gap-3 py-2.5 cursor-pointer">
                     <button
                       role="switch"
                       aria-checked={notifPrefs.unfilledSlotAlert}
                       onClick={() => toggleNotif("unfilledSlotAlert")}
                       className={`mt-0.5 relative inline-flex h-5 w-9 flex-shrink-0 rounded-full border-2 border-transparent transition-colors focus:outline-none ${
-                        notifPrefs.unfilledSlotAlert ? "bg-[#041E42]" : "bg-stone-200"
+                        notifPrefs.unfilledSlotAlert ? "bg-[#041E42]" : "bg-gray-200"
                       }`}
                     >
                       <span className={`inline-block h-4 w-4 rounded-full bg-white shadow transition-transform ${notifPrefs.unfilledSlotAlert ? "translate-x-4" : "translate-x-0"}`} />
                     </button>
                     <div>
-                      <p className="text-sm text-stone-700">Urgent: unfilled slot alerts</p>
-                      <p className="text-xs text-stone-400">Notified immediately when a qualifying slot within 24 hrs has a last-minute opening due to a cancellation</p>
+                      <p className="text-sm text-gray-700">Urgent: unfilled slot alerts</p>
+                      <p className="text-xs text-gray-400">Notified immediately when a qualifying slot within 24 hrs has a last-minute opening due to a cancellation</p>
                     </div>
                   </label>
                 </div>
 
-                <div className="pt-3 border-t border-stone-100 mt-2">
-                  <p className="text-xs font-medium text-stone-400 uppercase tracking-wider mb-2">Always On</p>
-                  <div className="space-y-1 text-xs text-stone-400 pl-1">
+                <div className="pt-3 border-t border-gray-100 mt-2">
+                  <p className="text-xs font-medium text-gray-400 uppercase tracking-wider mb-2">Always On</p>
+                  <div className="space-y-1 text-xs text-gray-400 pl-1">
                     <p>• Removed from a shift by an admin</p>
                     <p>• Slot cancelled by a clinic</p>
                     <p>• Slot edited and your signup was dropped</p>
@@ -1021,7 +1021,7 @@ export default function VolunteerDashboard() {
             <div className="mt-2 text-right">
               <button
                 onClick={() => setEasterOpen(!easterOpen)}
-                className="text-xs text-stone-200 hover:text-stone-400 transition-colors select-none"
+                className="text-xs text-gray-200 hover:text-gray-400 transition-colors select-none"
                 title="✨"
               >
                 ✦
@@ -1032,7 +1032,7 @@ export default function VolunteerDashboard() {
                 className="rounded-xl p-6 text-center transition-all duration-500"
                 style={{ backgroundColor: easterBg === "transparent" ? "#f5f5f4" : easterBg }}
               >
-                <p className="text-xs text-stone-500 mb-3">
+                <p className="text-xs text-gray-500 mb-3">
                   {easterCount === 0 ? "You found it 🎉" : easterCount < 5 ? "Keep going..." : easterCount < 10 ? "Ooh pretty 🌈" : easterCount < 20 ? "Still going? Respect." : "You absolute legend 🏆"}
                 </p>
                 <button
@@ -1046,7 +1046,7 @@ export default function VolunteerDashboard() {
                   style={{ backgroundColor: easterBg === "transparent" ? "#e7e5e4" : easterBg }}
                   title="Click me!"
                 />
-                <p className="text-xs text-stone-400 mt-3">clicks: {easterCount}</p>
+                <p className="text-xs text-gray-400 mt-3">clicks: {easterCount}</p>
               </div>
             )}
           </div>
@@ -1056,12 +1056,12 @@ export default function VolunteerDashboard() {
         {tab === "training" && (
           <div className="space-y-4">
             {!trainingLoaded ? (
-              <div className="bg-white rounded-xl border border-stone-200 p-12 text-center">
-                <p className="text-stone-400">Loading training materials...</p>
+              <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
+                <p className="text-gray-400">Loading training materials...</p>
               </div>
             ) : trainingMaterials.length === 0 ? (
-              <div className="bg-white rounded-xl border border-stone-200 p-12 text-center">
-                <p className="text-stone-400">No training materials available yet.</p>
+              <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
+                <p className="text-gray-400">No training materials available yet.</p>
               </div>
             ) : (() => {
               const categories = Array.from(new Set(trainingMaterials.map((m) => m.category))).sort();
@@ -1069,14 +1069,14 @@ export default function VolunteerDashboard() {
                 <div className="space-y-6">
                   {categories.map((cat) => (
                     <div key={cat}>
-                      <h3 className="text-xs font-medium text-stone-400 uppercase tracking-wider mb-3">{cat}</h3>
+                      <h3 className="text-xs font-medium text-gray-400 uppercase tracking-wider mb-3">{cat}</h3>
                       <div className="space-y-3">
                         {trainingMaterials.filter((m) => m.category === cat).map((m) => (
-                          <div key={m.id} className="bg-white rounded-xl border border-stone-200 p-5">
+                          <div key={m.id} className="bg-white rounded-xl border border-gray-200 p-5">
                             <div className="flex items-start justify-between gap-3">
                               <div className="min-w-0 flex-1">
                                 <div className="flex items-center gap-2 flex-wrap mb-1">
-                                  <span className="font-medium text-stone-800 text-sm">{m.title}</span>
+                                  <span className="font-medium text-black text-sm">{m.title}</span>
                                   {m.languageCode && (
                                     <span className="text-xs px-1.5 py-0.5 rounded bg-[#EBF3FC] text-[#041E42]">{m.languageCode}</span>
                                   )}
@@ -1084,9 +1084,9 @@ export default function VolunteerDashboard() {
                                     {m.type}
                                   </span>
                                 </div>
-                                {m.description && <p className="text-xs text-stone-500 mb-2">{m.description}</p>}
+                                {m.description && <p className="text-xs text-gray-500 mb-2">{m.description}</p>}
                                 {m.type === "FILE" ? (
-                                  <a href={m.url} target="_blank" rel="noopener noreferrer" className="text-xs text-stone-600 hover:text-stone-800 underline">
+                                  <a href={m.url} target="_blank" rel="noopener noreferrer" className="text-xs text-gray-600 hover:text-black underline">
                                     {m.fileName ?? "Download"}
                                   </a>
                                 ) : (
@@ -1094,7 +1094,7 @@ export default function VolunteerDashboard() {
                                     {m.url}
                                   </a>
                                 )}
-                                <p className="text-xs text-stone-400 mt-2">
+                                <p className="text-xs text-gray-400 mt-2">
                                   by {m.uploadedBy.name ?? m.uploadedBy.email} · {new Date(m.createdAt).toLocaleDateString()}
                                 </p>
                               </div>
@@ -1114,9 +1114,9 @@ export default function VolunteerDashboard() {
       {/* Suggestions */}
       {tab === "suggestions" && (
         <div className="max-w-lg space-y-4">
-          <div className="bg-white rounded-xl border border-stone-200 p-6">
-            <h3 className="text-sm font-medium text-stone-700 mb-1">Messages</h3>
-            <p className="text-xs text-stone-400 mb-5">Have a suggestion or feedback for the website? We&apos;d love to hear it.</p>
+          <div className="bg-white rounded-xl border border-gray-200 p-6">
+            <h3 className="text-sm font-medium text-gray-700 mb-1">Messages</h3>
+            <p className="text-xs text-gray-400 mb-5">Have a suggestion or feedback for the website? We&apos;d love to hear it.</p>
 
             {suggSuccess ? (
               <div className="text-center py-6">
@@ -1125,11 +1125,11 @@ export default function VolunteerDashboard() {
             ) : (
               <div className="space-y-3">
                 <div>
-                  <label className="block text-xs text-stone-500 mb-1">Type</label>
+                  <label className="block text-xs text-gray-500 mb-1">Type</label>
                   <select
                     value={suggForm.type}
                     onChange={(e) => setSuggForm({ ...suggForm, type: e.target.value })}
-                    className="w-full px-3 py-2 text-sm border border-stone-200 rounded-md focus:outline-none focus:ring-2 focus:ring-stone-300 bg-white"
+                    className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-300 bg-white"
                   >
                     <option value="FEATURE">Feature Request</option>
                     <option value="BUG">Bug Report</option>
@@ -1137,23 +1137,23 @@ export default function VolunteerDashboard() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs text-stone-500 mb-1">Subject</label>
+                  <label className="block text-xs text-gray-500 mb-1">Subject</label>
                   <input
                     type="text"
                     placeholder="Brief subject..."
                     value={suggForm.subject}
                     onChange={(e) => setSuggForm({ ...suggForm, subject: e.target.value })}
-                    className="w-full px-3 py-2 text-sm border border-stone-200 rounded-md focus:outline-none focus:ring-2 focus:ring-stone-300"
+                    className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-300"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs text-stone-500 mb-1">Message</label>
+                  <label className="block text-xs text-gray-500 mb-1">Message</label>
                   <textarea
                     placeholder="Describe your suggestion in detail..."
                     value={suggForm.message}
                     onChange={(e) => setSuggForm({ ...suggForm, message: e.target.value })}
                     rows={4}
-                    className="w-full px-3 py-2 text-sm border border-stone-200 rounded-md focus:outline-none focus:ring-2 focus:ring-stone-300 resize-none"
+                    className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-300 resize-none"
                   />
                 </div>
                 {suggError && <p className="text-xs text-red-500">{suggError}</p>}
@@ -1177,25 +1177,25 @@ export default function VolunteerDashboard() {
             {spamModal.isBlocked ? (
               <>
                 <div className="text-4xl mb-3">🎨</div>
-                <h3 className="text-sm font-semibold text-stone-800 mb-2">Looks like you enjoy clicking!</h3>
-                <p className="text-xs text-stone-500 mb-4">You&apos;ve cancelled this shift too many times. Each cancellation within 24 hours sends an urgent alert to the clinic. We made something for you to click instead.</p>
+                <h3 className="text-sm font-semibold text-black mb-2">Looks like you enjoy clicking!</h3>
+                <p className="text-xs text-gray-500 mb-4">You&apos;ve cancelled this shift too many times. Each cancellation within 24 hours sends an urgent alert to the clinic. We made something for you to click instead.</p>
                 <button
                   onClick={() => { setSpamModal(null); setTab("profile"); setEasterOpen(true); }}
                   className="w-full px-4 py-2 text-sm bg-[#041E42] text-white rounded-full hover:bg-[#03163a] transition-colors mb-2"
                 >
                   Take me there →
                 </button>
-                <button onClick={() => setSpamModal(null)} className="text-xs text-stone-400 hover:text-stone-600">Dismiss</button>
+                <button onClick={() => setSpamModal(null)} className="text-xs text-gray-400 hover:text-gray-600">Dismiss</button>
               </>
             ) : (
               <>
                 <div className="text-3xl mb-3">⚠️</div>
-                <h3 className="text-sm font-semibold text-stone-800 mb-2">Heads up</h3>
-                <p className="text-xs text-stone-500 mb-4">Cancelling a shift within 24 hours sends an urgent email alert to the clinic. Please be considerate of their time. Are you sure you want to cancel?</p>
+                <h3 className="text-sm font-semibold text-black mb-2">Heads up</h3>
+                <p className="text-xs text-gray-500 mb-4">Cancelling a shift within 24 hours sends an urgent email alert to the clinic. Please be considerate of their time. Are you sure you want to cancel?</p>
                 <div className="flex gap-2">
                   <button
                     onClick={() => setSpamModal(null)}
-                    className="flex-1 px-4 py-2 text-sm border border-stone-200 text-stone-600 rounded-lg hover:bg-stone-50"
+                    className="flex-1 px-4 py-2 text-sm border border-gray-200 text-gray-600 rounded-lg hover:bg-gray-50"
                   >
                     Keep Signup
                   </button>
