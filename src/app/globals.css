@@ -17,8 +17,3 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
-
-/* Force all text black site-wide regardless of OS dark mode */
-*, *::before, *::after {
-  color: inherit;
-}
