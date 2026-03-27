@@ -97,7 +97,7 @@ const LANG_LABELS: Record<string, string> = { ES: "Spanish", ZH: "Chinese", KO: 
 const LANG_COLORS: Record<string, string> = {
   ES: "bg-amber-50 text-amber-700",
   ZH: "bg-red-50 text-red-700",
-  KO: "bg-blue-50 text-blue-700",
+  KO: "bg-[#EBF3FC] text-[#041E42]",
 };
 
 function MapsLinks({ address }: { address: string }) {
@@ -108,7 +108,7 @@ function MapsLinks({ address }: { address: string }) {
         href={`https://www.google.com/maps/search/?api=1&query=${q}`}
         target="_blank"
         rel="noopener noreferrer"
-        className="text-xs text-blue-500 hover:text-blue-700 underline"
+        className="text-xs text-[#4A90D9] hover:text-[#041E42] underline"
         title="Google Maps"
       >
         G Maps
@@ -118,7 +118,7 @@ function MapsLinks({ address }: { address: string }) {
         href={`https://maps.apple.com/?q=${q}`}
         target="_blank"
         rel="noopener noreferrer"
-        className="text-xs text-blue-500 hover:text-blue-700 underline"
+        className="text-xs text-[#4A90D9] hover:text-[#041E42] underline"
         title="Apple Maps"
       >
         Apple Maps
@@ -759,7 +759,7 @@ export default function AdminDashboard() {
                         disabled={actionLoading === signupKey || !canSignUp}
                         onClick={() => signUp(slot.id, hour)}
                         title={!canSignUp ? "Add this language to your volunteer profile first" : undefined}
-                        className="text-xs px-3 py-1 bg-stone-800 text-white hover:bg-stone-700 rounded-md transition-colors disabled:opacity-40"
+                        className="text-xs px-3 py-1 bg-[#041E42] text-white hover:bg-[#03163a] rounded-full transition-colors disabled:opacity-40"
                       >
                         {actionLoading === signupKey ? "..." : "Sign Up"}
                       </button>
@@ -840,7 +840,7 @@ export default function AdminDashboard() {
 
       {/* Tabs */}
       <div className="max-w-6xl mx-auto px-6 pt-6">
-        <div className="flex gap-1 bg-stone-200/50 p-1 rounded-lg w-fit">
+        <div className="flex gap-1 bg-stone-200/50 p-1 rounded-xl w-fit">
           {[
             { key: "slots" as Tab, label: "Browse Slots", count: 0 },
             { key: "users" as Tab, label: "All Users", count: users.length, pendingCount: pendingUsers.length },
@@ -862,7 +862,7 @@ export default function AdminDashboard() {
               onClick={() => setTab(t.key)}
               className={`px-4 py-2 text-sm rounded-md transition-colors ${
                 tab === t.key
-                  ? "bg-white text-stone-800 shadow-sm font-medium"
+                  ? "bg-[#041E42] text-white shadow-sm font-medium"
                   : "text-stone-500 hover:text-stone-700"
               }`}
             >
@@ -926,7 +926,7 @@ export default function AdminDashboard() {
                   onClick={() => setLangFilter(lang)}
                   className={`px-3 py-1.5 text-xs rounded-md transition-colors ${
                     langFilter === lang
-                      ? "bg-stone-800 text-white"
+                      ? "bg-[#041E42] text-white"
                       : "bg-white border border-stone-200 text-stone-500 hover:border-stone-300"
                   }`}
                 >
@@ -1041,7 +1041,7 @@ export default function AdminDashboard() {
                           user.role === "SUPER_ADMIN" ? "bg-violet-100 text-violet-800 border border-violet-200" :
                           user.role === "ADMIN" ? "bg-violet-50 text-violet-700 border border-violet-100" :
                           user.role === "INSTRUCTOR" ? "bg-indigo-50 text-indigo-700 border border-indigo-100" :
-                          user.role === "CLINIC" ? "bg-blue-50 text-blue-700 border border-blue-100" :
+                          user.role === "CLINIC" ? "bg-[#EBF3FC] text-[#041E42] border border-[#4A90D9]/20" :
                           user.role === "VOLUNTEER" ? "bg-emerald-50 text-emerald-700 border border-emerald-100" :
                           "bg-stone-100 text-stone-500 border border-stone-200"
                         }`}>
@@ -1146,7 +1146,7 @@ export default function AdminDashboard() {
                               {user.role === "CLINIC" && (
                                 <button
                                   onClick={() => setAssignModal({ userId: user.id, userName: user.name })}
-                                  className="text-xs px-2 py-1 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded transition-colors"
+                                  className="text-xs px-2 py-1 bg-[#EBF3FC] text-[#041E42] hover:bg-[#4A90D9]/20 rounded transition-colors"
                                 >
                                   Assign Clinic
                                 </button>
@@ -1184,7 +1184,7 @@ export default function AdminDashboard() {
             <div className="flex justify-end mb-4">
               <button
                 onClick={() => setShowClinicForm(!showClinicForm)}
-                className="px-4 py-2 text-sm bg-stone-800 text-white hover:bg-stone-700 rounded-md transition-colors"
+                className="px-4 py-2 text-sm bg-[#041E42] text-white hover:bg-[#03163a] rounded-full transition-colors"
               >
                 {showClinicForm ? "Cancel" : "+ Add Clinic"}
               </button>
@@ -1227,7 +1227,7 @@ export default function AdminDashboard() {
                 <button
                   disabled={actionLoading === "clinic-form" || !clinicForm.name || !clinicForm.contactEmail}
                   onClick={createClinic}
-                  className="mt-4 px-4 py-2 text-sm bg-stone-800 text-white hover:bg-stone-700 rounded-md transition-colors disabled:opacity-50"
+                  className="mt-4 px-4 py-2 text-sm bg-[#041E42] text-white hover:bg-[#03163a] rounded-full transition-colors disabled:opacity-50"
                 >
                   {actionLoading === "clinic-form" ? "Creating..." : "Create Clinic"}
                 </button>
@@ -1313,7 +1313,7 @@ export default function AdminDashboard() {
                     onClick={() => toggleLanguage(code)}
                     className={`px-4 py-2 text-sm rounded-md border transition-colors ${
                       profileForm.languages.includes(code)
-                        ? "border-stone-800 bg-stone-800 text-white"
+                        ? "border-[#041E42] bg-[#041E42] text-white"
                         : "border-stone-200 text-stone-600 hover:border-stone-400"
                     }`}
                   >
@@ -1326,7 +1326,7 @@ export default function AdminDashboard() {
                 <button
                   disabled={actionLoading === "profile"}
                   onClick={saveProfile}
-                  className="px-4 py-2 text-sm bg-stone-800 text-white hover:bg-stone-700 rounded-md transition-colors disabled:opacity-50"
+                  className="px-4 py-2 text-sm bg-[#041E42] text-white hover:bg-[#03163a] rounded-full transition-colors disabled:opacity-50"
                 >
                   {actionLoading === "profile" ? "Saving..." : "Save Profile"}
                 </button>
@@ -1354,7 +1354,7 @@ export default function AdminDashboard() {
                 <button
                   disabled={!langForm.name}
                   onClick={createLanguage}
-                  className="px-4 py-2 text-sm bg-stone-800 text-white hover:bg-stone-700 rounded-md transition-colors disabled:opacity-50"
+                  className="px-4 py-2 text-sm bg-[#041E42] text-white hover:bg-[#03163a] rounded-full transition-colors disabled:opacity-50"
                 >
                   Add
                 </button>
@@ -1486,10 +1486,10 @@ export default function AdminDashboard() {
                     <div className="space-y-2">
                       <p className="text-xs font-medium text-stone-400 uppercase tracking-wider mb-2">Recent Feedback</p>
                       {allFeedback.slice(0, 10).map((fb) => (
-                        <div key={fb.id} className="border border-stone-100 rounded-lg px-4 py-3">
+                        <div key={fb.id} className="border border-stone-100 rounded-xl px-4 py-3">
                           <div className="flex items-center justify-between mb-1">
                             <div className="flex items-center gap-2">
-                              <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${fb.authorRole === "CLINIC" ? "bg-blue-50 text-blue-700" : "bg-emerald-50 text-emerald-700"}`}>
+                              <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${fb.authorRole === "CLINIC" ? "bg-[#EBF3FC] text-[#041E42]" : "bg-emerald-50 text-emerald-700"}`}>
                                 {fb.authorRole}
                               </span>
                               {fb.rating != null && (
@@ -1523,7 +1523,7 @@ export default function AdminDashboard() {
             <div className="flex justify-end">
               <button
                 onClick={() => setShowTrainingForm(!showTrainingForm)}
-                className="px-4 py-2 text-sm bg-stone-800 text-white hover:bg-stone-700 rounded-md transition-colors"
+                className="px-4 py-2 text-sm bg-[#041E42] text-white hover:bg-[#03163a] rounded-full transition-colors"
               >
                 {showTrainingForm ? "Cancel" : "+ Add Material"}
               </button>
@@ -1588,7 +1588,7 @@ export default function AdminDashboard() {
                 <button
                   disabled={trainingSubmitting || !trainingForm.title || (trainingForm.type === "LINK" && !trainingForm.url)}
                   onClick={submitTraining}
-                  className="px-4 py-2 text-sm bg-stone-800 text-white hover:bg-stone-700 rounded-md transition-colors disabled:opacity-50"
+                  className="px-4 py-2 text-sm bg-[#041E42] text-white hover:bg-[#03163a] rounded-full transition-colors disabled:opacity-50"
                 >
                   {trainingSubmitting ? "Saving..." : "Add Material"}
                 </button>
@@ -1609,7 +1609,7 @@ export default function AdminDashboard() {
                           <span className="font-medium text-stone-800 text-sm">{m.title}</span>
                           <span className="text-xs px-1.5 py-0.5 rounded bg-stone-100 text-stone-600">{m.category}</span>
                           {m.languageCode && (
-                            <span className="text-xs px-1.5 py-0.5 rounded bg-blue-50 text-blue-700">{m.languageCode}</span>
+                            <span className="text-xs px-1.5 py-0.5 rounded bg-[#EBF3FC] text-[#041E42]">{m.languageCode}</span>
                           )}
                           <span className={`text-xs px-1.5 py-0.5 rounded ${m.type === "FILE" ? "bg-amber-50 text-amber-700" : "bg-emerald-50 text-emerald-700"}`}>
                             {m.type}
@@ -1621,7 +1621,7 @@ export default function AdminDashboard() {
                             {m.fileName ?? "Download"}
                           </a>
                         ) : (
-                          <a href={m.url} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:text-blue-800 underline break-all">
+                          <a href={m.url} target="_blank" rel="noopener noreferrer" className="text-xs text-[#4A90D9] hover:text-[#041E42] underline break-all">
                             {m.url}
                           </a>
                         )}
@@ -1687,7 +1687,7 @@ export default function AdminDashboard() {
                 <button
                   disabled={!ruleEmail.trim() || actionLoading === "email-rule"}
                   onClick={addEmailRule}
-                  className="w-full py-2 text-sm bg-stone-800 text-white hover:bg-stone-700 rounded-md transition-colors disabled:opacity-50"
+                  className="w-full py-2 text-sm bg-[#041E42] text-white hover:bg-[#03163a] rounded-full transition-colors disabled:opacity-50"
                 >
                   {actionLoading === "email-rule" ? "Saving..." : "Add Rule"}
                 </button>
@@ -1751,7 +1751,7 @@ export default function AdminDashboard() {
                       aria-checked={flag.enabled}
                       onClick={() => toggleFlag(flag.key, !flag.enabled)}
                       className={`relative inline-flex h-5 w-9 flex-shrink-0 rounded-full border-2 border-transparent transition-colors focus:outline-none ${
-                        flag.enabled ? "bg-stone-800" : "bg-stone-200"
+                        flag.enabled ? "bg-[#041E42]" : "bg-stone-200"
                       }`}
                     >
                       <span className={`inline-block h-4 w-4 rounded-full bg-white shadow transition-transform ${flag.enabled ? "translate-x-4" : "translate-x-0"}`} />
@@ -1776,7 +1776,7 @@ export default function AdminDashboard() {
                 <button
                   disabled={!testEmailTo.trim() || testEmailStatus === "sending"}
                   onClick={sendTestEmailFn}
-                  className="px-4 py-2 text-sm bg-stone-800 text-white hover:bg-stone-700 rounded-md transition-colors disabled:opacity-50"
+                  className="px-4 py-2 text-sm bg-[#041E42] text-white hover:bg-[#03163a] rounded-full transition-colors disabled:opacity-50"
                 >
                   {testEmailStatus === "sending" ? "Sending..." : "Send Test Email"}
                 </button>
@@ -1803,7 +1803,7 @@ export default function AdminDashboard() {
                         <div className="flex items-center gap-2 flex-wrap mb-1">
                           <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
                             s.type === "BUG" ? "bg-red-50 text-red-700" :
-                            s.type === "FEATURE" ? "bg-blue-50 text-blue-700" :
+                            s.type === "FEATURE" ? "bg-[#EBF3FC] text-[#041E42]" :
                             s.type === "CONTACT" ? "bg-teal-50 text-teal-700" :
                             "bg-stone-100 text-stone-600"
                           }`}>
@@ -1832,7 +1832,7 @@ export default function AdminDashboard() {
                       <div className="shrink-0 flex flex-col items-end gap-2">
                         <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
                           s.status === "OPEN" ? "bg-amber-50 text-amber-700" :
-                          s.status === "NOTED" ? "bg-blue-50 text-blue-700" :
+                          s.status === "NOTED" ? "bg-[#EBF3FC] text-[#041E42]" :
                           "bg-stone-100 text-stone-500"
                         }`}>
                           {s.status}
@@ -2040,7 +2040,7 @@ export default function AdminDashboard() {
                     <button
                       disabled={assignLoading}
                       onClick={assignVolunteer}
-                      className="flex-1 px-4 py-2 text-sm bg-stone-800 text-white rounded-lg hover:bg-stone-700 transition-colors disabled:opacity-50"
+                      className="flex-1 px-4 py-2 text-sm bg-[#041E42] text-white rounded-full hover:bg-[#03163a] transition-colors disabled:opacity-50"
                     >
                       {assignLoading ? "Assigning..." : "Confirm Assignment"}
                     </button>
@@ -2077,7 +2077,7 @@ export default function AdminDashboard() {
             </div>
             <button
               onClick={() => setPinReveal(null)}
-              className="w-full px-4 py-2 text-sm bg-stone-800 text-white hover:bg-stone-700 rounded-lg transition-colors"
+              className="w-full px-4 py-2 text-sm bg-[#041E42] text-white hover:bg-[#03163a] rounded-lg transition-colors"
             >
               Done
             </button>

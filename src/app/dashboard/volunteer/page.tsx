@@ -78,7 +78,7 @@ const LANG_LABELS: Record<string, string> = {
 const LANG_COLORS: Record<string, string> = {
   ES: "bg-amber-50 text-amber-700",
   ZH: "bg-red-50 text-red-700",
-  KO: "bg-blue-50 text-blue-700",
+  KO: "bg-[#EBF3FC] text-[#041E42]",
 };
 
 // Top 10 most spoken world languages first, then rest alphabetically
@@ -186,7 +186,7 @@ function MapsLinks({ address }: { address: string }) {
         href={`https://www.google.com/maps/search/?api=1&query=${q}`}
         target="_blank"
         rel="noopener noreferrer"
-        className="text-xs text-blue-500 hover:text-blue-700 underline"
+        className="text-xs text-[#4A90D9] hover:text-[#041E42] underline"
         title="Google Maps"
       >
         G Maps
@@ -196,7 +196,7 @@ function MapsLinks({ address }: { address: string }) {
         href={`https://maps.apple.com/?q=${q}`}
         target="_blank"
         rel="noopener noreferrer"
-        className="text-xs text-blue-500 hover:text-blue-700 underline"
+        className="text-xs text-[#4A90D9] hover:text-[#041E42] underline"
         title="Apple Maps"
       >
         Apple Maps
@@ -494,7 +494,7 @@ export default function VolunteerDashboard() {
 
       {/* Tabs */}
       <div className="max-w-6xl mx-auto px-6 pt-6">
-        <div className="flex gap-1 bg-stone-200/50 p-1 rounded-lg w-fit">
+        <div className="flex gap-1 bg-stone-200/50 p-1 rounded-xl w-fit">
           {[
             { key: "browse" as Tab, label: "Browse Slots", count: 0 },
             { key: "signups" as Tab, label: "My Signups", count: mySignups.length },
@@ -515,7 +515,7 @@ export default function VolunteerDashboard() {
               }}
               className={`px-4 py-2 text-sm rounded-md transition-colors ${
                 tab === t.key
-                  ? "bg-white text-stone-800 shadow-sm font-medium"
+                  ? "bg-[#041E42] text-white shadow-sm font-medium"
                   : "text-stone-500 hover:text-stone-700"
               }`}
             >
@@ -628,7 +628,7 @@ export default function VolunteerDashboard() {
                           <button
                             disabled={actionLoading === key}
                             onClick={() => signUp(slot.id, hour)}
-                            className="text-xs px-3 py-1 bg-stone-800 text-white hover:bg-stone-700 rounded-md transition-colors disabled:opacity-50"
+                            className="text-xs px-3 py-1 bg-[#041E42] text-white hover:bg-[#03163a] rounded-full transition-colors disabled:opacity-50"
                           >
                             {actionLoading === key ? "..." : "Sign Up"}
                           </button>
@@ -652,7 +652,7 @@ export default function VolunteerDashboard() {
                     onClick={() => setLangFilter(lang)}
                     className={`px-3 py-1.5 text-xs rounded-md transition-colors ${
                       langFilter === lang
-                        ? "bg-stone-800 text-white"
+                        ? "bg-[#041E42] text-white"
                         : "bg-white border border-stone-200 text-stone-500 hover:border-stone-300"
                     }`}
                   >
@@ -823,7 +823,7 @@ export default function VolunteerDashboard() {
                                 <button
                                   disabled={submittingFeedbackFor === slot.id}
                                   onClick={() => submitInlineFeedback(slot.id, signupId)}
-                                  className="px-3 py-1.5 text-xs bg-stone-800 text-white rounded-md hover:bg-stone-700 transition-colors disabled:opacity-50 whitespace-nowrap"
+                                  className="px-3 py-1.5 text-xs bg-[#041E42] text-white rounded-full hover:bg-[#03163a] transition-colors disabled:opacity-50 whitespace-nowrap"
                                 >
                                   {submittingFeedbackFor === slot.id ? "..." : "Submit"}
                                 </button>
@@ -879,7 +879,7 @@ export default function VolunteerDashboard() {
                         <button
                           key={code}
                           onClick={() => toggleLanguage(code)}
-                          className="px-3 py-1 text-xs rounded-full bg-stone-800 text-white hover:bg-stone-600 transition-colors flex items-center gap-1"
+                          className="px-3 py-1 text-xs rounded-full bg-[#041E42] text-white hover:bg-[#03163a] transition-colors flex items-center gap-1"
                         >
                           {lang?.name ?? code}
                           <span className="text-stone-400">×</span>
@@ -945,7 +945,7 @@ export default function VolunteerDashboard() {
               <button
                 disabled={actionLoading === "profile"}
                 onClick={saveProfile}
-                className="mt-4 px-4 py-2 text-sm bg-stone-800 text-white hover:bg-stone-700 rounded-md transition-colors disabled:opacity-50"
+                className="mt-4 px-4 py-2 text-sm bg-[#041E42] text-white hover:bg-[#03163a] rounded-full transition-colors disabled:opacity-50"
               >
                 {actionLoading === "profile" ? "Saving..." : "Save Languages"}
               </button>
@@ -974,7 +974,7 @@ export default function VolunteerDashboard() {
                       aria-checked={notifPrefs[key]}
                       onClick={() => toggleNotif(key)}
                       className={`mt-0.5 relative inline-flex h-5 w-9 flex-shrink-0 rounded-full border-2 border-transparent transition-colors focus:outline-none ${
-                        notifPrefs[key] ? "bg-stone-800" : "bg-stone-200"
+                        notifPrefs[key] ? "bg-[#041E42]" : "bg-stone-200"
                       }`}
                     >
                       <span className={`inline-block h-4 w-4 rounded-full bg-white shadow transition-transform ${notifPrefs[key] ? "translate-x-4" : "translate-x-0"}`} />
@@ -994,7 +994,7 @@ export default function VolunteerDashboard() {
                       aria-checked={notifPrefs.unfilledSlotAlert}
                       onClick={() => toggleNotif("unfilledSlotAlert")}
                       className={`mt-0.5 relative inline-flex h-5 w-9 flex-shrink-0 rounded-full border-2 border-transparent transition-colors focus:outline-none ${
-                        notifPrefs.unfilledSlotAlert ? "bg-stone-800" : "bg-stone-200"
+                        notifPrefs.unfilledSlotAlert ? "bg-[#041E42]" : "bg-stone-200"
                       }`}
                     >
                       <span className={`inline-block h-4 w-4 rounded-full bg-white shadow transition-transform ${notifPrefs.unfilledSlotAlert ? "translate-x-4" : "translate-x-0"}`} />
@@ -1078,7 +1078,7 @@ export default function VolunteerDashboard() {
                                 <div className="flex items-center gap-2 flex-wrap mb-1">
                                   <span className="font-medium text-stone-800 text-sm">{m.title}</span>
                                   {m.languageCode && (
-                                    <span className="text-xs px-1.5 py-0.5 rounded bg-blue-50 text-blue-700">{m.languageCode}</span>
+                                    <span className="text-xs px-1.5 py-0.5 rounded bg-[#EBF3FC] text-[#041E42]">{m.languageCode}</span>
                                   )}
                                   <span className={`text-xs px-1.5 py-0.5 rounded ${m.type === "FILE" ? "bg-amber-50 text-amber-700" : "bg-emerald-50 text-emerald-700"}`}>
                                     {m.type}
@@ -1090,7 +1090,7 @@ export default function VolunteerDashboard() {
                                     {m.fileName ?? "Download"}
                                   </a>
                                 ) : (
-                                  <a href={m.url} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:text-blue-800 underline break-all">
+                                  <a href={m.url} target="_blank" rel="noopener noreferrer" className="text-xs text-[#4A90D9] hover:text-[#041E42] underline break-all">
                                     {m.url}
                                   </a>
                                 )}
@@ -1160,7 +1160,7 @@ export default function VolunteerDashboard() {
                 <button
                   disabled={suggSubmitting || !suggForm.subject.trim() || !suggForm.message.trim()}
                   onClick={submitSuggestion}
-                  className="px-4 py-2 text-sm bg-stone-800 text-white hover:bg-stone-700 rounded-md transition-colors disabled:opacity-50"
+                  className="px-4 py-2 text-sm bg-[#041E42] text-white hover:bg-[#03163a] rounded-full transition-colors disabled:opacity-50"
                 >
                   {suggSubmitting ? "Submitting..." : "Submit Suggestion"}
                 </button>
@@ -1181,7 +1181,7 @@ export default function VolunteerDashboard() {
                 <p className="text-xs text-stone-500 mb-4">You&apos;ve cancelled this shift too many times. Each cancellation within 24 hours sends an urgent alert to the clinic. We made something for you to click instead.</p>
                 <button
                   onClick={() => { setSpamModal(null); setTab("profile"); setEasterOpen(true); }}
-                  className="w-full px-4 py-2 text-sm bg-stone-800 text-white rounded-lg hover:bg-stone-700 transition-colors mb-2"
+                  className="w-full px-4 py-2 text-sm bg-[#041E42] text-white rounded-full hover:bg-[#03163a] transition-colors mb-2"
                 >
                   Take me there →
                 </button>
@@ -1201,7 +1201,7 @@ export default function VolunteerDashboard() {
                   </button>
                   <button
                     onClick={spamModal.onProceed ?? (() => setSpamModal(null))}
-                    className="flex-1 px-4 py-2 text-sm bg-stone-800 text-white rounded-lg hover:bg-stone-700"
+                    className="flex-1 px-4 py-2 text-sm bg-[#041E42] text-white rounded-full hover:bg-[#03163a]"
                   >
                     Yes, Cancel
                   </button>

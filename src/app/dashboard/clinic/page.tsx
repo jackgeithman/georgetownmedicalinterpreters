@@ -54,7 +54,7 @@ const RATING_OPTIONS = [
 const LANG_COLORS: Record<string, string> = {
   ES: "bg-amber-50 text-amber-700",
   ZH: "bg-red-50 text-red-700",
-  KO: "bg-blue-50 text-blue-700",
+  KO: "bg-[#EBF3FC] text-[#041E42]",
 };
 
 function MapsLinks({ address }: { address: string }) {
@@ -65,7 +65,7 @@ function MapsLinks({ address }: { address: string }) {
         href={`https://www.google.com/maps/search/?api=1&query=${q}`}
         target="_blank"
         rel="noopener noreferrer"
-        className="text-xs text-blue-500 hover:text-blue-700 underline"
+        className="text-xs text-[#4A90D9] hover:text-[#041E42] underline"
         title="Google Maps"
       >
         G Maps
@@ -75,7 +75,7 @@ function MapsLinks({ address }: { address: string }) {
         href={`https://maps.apple.com/?q=${q}`}
         target="_blank"
         rel="noopener noreferrer"
-        className="text-xs text-blue-500 hover:text-blue-700 underline"
+        className="text-xs text-[#4A90D9] hover:text-[#041E42] underline"
         title="Apple Maps"
       >
         Apple Maps
@@ -376,7 +376,7 @@ export default function ClinicDashboard() {
 
       {/* Tabs */}
       <div className="max-w-6xl mx-auto px-6 pt-6 flex items-center justify-between">
-        <div className="flex gap-1 bg-stone-200/50 p-1 rounded-lg w-fit">
+        <div className="flex gap-1 bg-stone-200/50 p-1 rounded-xl w-fit">
           {[
             { key: "upcoming" as Tab, label: "Upcoming", count: upcoming.length },
             { key: "past" as Tab, label: "Past", count: past.length, pendingFeedback: pendingFeedbackCount },
@@ -387,7 +387,7 @@ export default function ClinicDashboard() {
               onClick={() => setTab(t.key)}
               className={`relative px-4 py-2 text-sm rounded-md transition-colors ${
                 tab === t.key
-                  ? "bg-white text-stone-800 shadow-sm font-medium"
+                  ? "bg-[#041E42] text-white shadow-sm font-medium"
                   : "text-stone-500 hover:text-stone-700"
               }`}
             >
@@ -411,7 +411,7 @@ export default function ClinicDashboard() {
             <button
               onClick={() => setShowPostForm(true)}
               disabled={upcoming.length >= 100}
-              className="px-4 py-2 text-sm bg-stone-800 text-white hover:bg-stone-700 rounded-md transition-colors disabled:opacity-40"
+              className="px-4 py-2 text-sm bg-[#041E42] text-white hover:bg-[#03163a] rounded-full transition-colors disabled:opacity-40"
               title={upcoming.length >= 100 ? "You have reached the 100-slot limit" : undefined}
             >
               + Post Slot
@@ -548,7 +548,7 @@ export default function ClinicDashboard() {
                 (form.isRecurring && !form.recurrenceEndDate)
               }
               onClick={postSlot}
-              className="mt-4 px-4 py-2 text-sm bg-stone-800 text-white hover:bg-stone-700 rounded-md transition-colors disabled:opacity-50"
+              className="mt-4 px-4 py-2 text-sm bg-[#041E42] text-white hover:bg-[#03163a] rounded-full transition-colors disabled:opacity-50"
             >
               {actionLoading === "post" ? "Posting..." : form.isRecurring ? "Post Recurring Slots" : "Post Slot"}
             </button>
@@ -778,7 +778,7 @@ export default function ClinicDashboard() {
                                 <button
                                   disabled={submittingFeedbackFor === feedbackKey}
                                   onClick={() => submitInlineFeedback(feedbackKey, s.id)}
-                                  className="px-3 py-1.5 text-xs bg-stone-800 text-white rounded-md hover:bg-stone-700 transition-colors disabled:opacity-50 whitespace-nowrap"
+                                  className="px-3 py-1.5 text-xs bg-[#041E42] text-white rounded-full hover:bg-[#03163a] transition-colors disabled:opacity-50 whitespace-nowrap"
                                 >
                                   {submittingFeedbackFor === feedbackKey ? "..." : "Submit"}
                                 </button>
@@ -812,7 +812,7 @@ export default function ClinicDashboard() {
                     aria-checked={notifPrefs.dailySummary}
                     onClick={() => saveNotifPrefs({ ...notifPrefs, dailySummary: !notifPrefs.dailySummary })}
                     className={`mt-0.5 relative inline-flex h-5 w-9 flex-shrink-0 rounded-full border-2 border-transparent transition-colors focus:outline-none ${
-                      notifPrefs.dailySummary ? "bg-stone-800" : "bg-stone-200"
+                      notifPrefs.dailySummary ? "bg-[#041E42]" : "bg-stone-200"
                     }`}
                   >
                     <span className={`inline-block h-4 w-4 rounded-full bg-white shadow transition-transform ${notifPrefs.dailySummary ? "translate-x-4" : "translate-x-0"}`} />
@@ -830,7 +830,7 @@ export default function ClinicDashboard() {
                     aria-checked={notifPrefs.unfilledAlert24h}
                     onClick={() => saveNotifPrefs({ ...notifPrefs, unfilledAlert24h: !notifPrefs.unfilledAlert24h })}
                     className={`mt-0.5 relative inline-flex h-5 w-9 flex-shrink-0 rounded-full border-2 border-transparent transition-colors focus:outline-none ${
-                      notifPrefs.unfilledAlert24h ? "bg-stone-800" : "bg-stone-200"
+                      notifPrefs.unfilledAlert24h ? "bg-[#041E42]" : "bg-stone-200"
                     }`}
                   >
                     <span className={`inline-block h-4 w-4 rounded-full bg-white shadow transition-transform ${notifPrefs.unfilledAlert24h ? "translate-x-4" : "translate-x-0"}`} />
@@ -852,7 +852,7 @@ export default function ClinicDashboard() {
                         onClick={() => saveNotifPrefs({ ...notifPrefs, volunteerCancelWindow: v })}
                         className={`px-3 py-1.5 text-xs rounded-md border transition-colors ${
                           notifPrefs.volunteerCancelWindow === v
-                            ? "bg-stone-800 text-white border-stone-800"
+                            ? "bg-[#041E42] text-white border-[#041E42]"
                             : "bg-white text-stone-500 border-stone-200 hover:border-stone-300"
                         }`}
                       >
@@ -882,7 +882,7 @@ export default function ClinicDashboard() {
                     onClick={() => setEditScope(scope)}
                     className={`w-full text-left px-4 py-2.5 text-sm transition-colors ${
                       editScope === scope
-                        ? "bg-stone-800 text-white"
+                        ? "bg-[#041E42] text-white"
                         : "bg-white text-stone-600 hover:bg-stone-50"
                     }`}
                   >
@@ -962,7 +962,7 @@ export default function ClinicDashboard() {
               <button
                 disabled={actionLoading === "edit" || editSlot.endTime <= editSlot.startTime}
                 onClick={requestSaveEdit}
-                className="px-4 py-2 text-sm bg-stone-800 text-white hover:bg-stone-700 rounded-md transition-colors disabled:opacity-50"
+                className="px-4 py-2 text-sm bg-[#041E42] text-white hover:bg-[#03163a] rounded-full transition-colors disabled:opacity-50"
               >
                 {actionLoading === "edit" ? "Saving..." : "Save Changes"}
               </button>
@@ -1000,7 +1000,7 @@ export default function ClinicDashboard() {
               <button
                 disabled={actionLoading === "edit"}
                 onClick={confirmSaveEdit}
-                className="w-full px-4 py-2.5 text-sm bg-stone-800 hover:bg-stone-700 text-white font-medium rounded-lg transition-colors disabled:opacity-50"
+                className="w-full px-4 py-2.5 text-sm bg-[#041E42] hover:bg-[#03163a] text-white font-medium rounded-lg transition-colors disabled:opacity-50"
               >
                 {actionLoading === "edit" ? "Saving..." : "Save Changes Anyway"}
               </button>
