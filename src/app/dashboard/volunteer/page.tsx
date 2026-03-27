@@ -443,7 +443,7 @@ export default function VolunteerDashboard() {
   if (status === "loading" || loading) {
     return (
       <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--page-bg)" }}>
-        <p style={{ color: "var(--gray-600)", fontFamily: "'DM Sans', sans-serif" }}>
+        <p style={{ color: "var(--gray-600)", fontFamily: "'DM Sans', sans-serif" }}>Loading…</p>
       </div>
     );
   }
