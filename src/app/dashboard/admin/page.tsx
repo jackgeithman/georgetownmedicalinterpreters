@@ -875,7 +875,7 @@ export default function AdminDashboard() {
                 cursor: "pointer",
                 border: "none",
                 background: tab === t.key ? "var(--blue)" : "none",
-                color: tab === t.key ? "#fff" : "var(--gray-600)",
+                color: tab === t.key ? "#fff" : "var(--gray-900)",
                 whiteSpace: "nowrap",
                 fontFamily: "'DM Sans', sans-serif",
               }}
@@ -1178,7 +1178,7 @@ export default function AdminDashboard() {
 
             {showClinicForm && (
               <div style={{ background: "var(--card-bg)", borderRadius: "14px", border: "1.5px solid var(--card-border)", padding: "24px", marginBottom: "16px" }}>
-                <h3 style={{ fontSize: "0.875rem", fontWeight: 600, color: "var(--gray-600)", marginBottom: "16px" }}>New Clinic</h3>
+                <h3 style={{ fontSize: "0.875rem", fontWeight: 600, color: "var(--gray-900)", marginBottom: "16px" }}>New Clinic</h3>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
                   <input
                     placeholder="Clinic Name"
@@ -1288,7 +1288,7 @@ export default function AdminDashboard() {
             </div>
 
             <div style={{ background: "var(--card-bg)", borderRadius: "14px", border: "1.5px solid var(--card-border)", padding: "24px" }}>
-              <h3 style={{ fontSize: "0.875rem", fontWeight: 600, color: "var(--gray-600)", marginBottom: "4px" }}>Languages</h3>
+              <h3 style={{ fontSize: "0.875rem", fontWeight: 600, color: "var(--gray-900)", marginBottom: "4px" }}>Languages</h3>
               <p style={{ fontSize: "0.75rem", color: "var(--gray-400)", marginBottom: "16px" }}>Click to toggle. Filled = you speak it. Only matching slots will let you sign up.</p>
               <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", marginBottom: "20px" }}>
                 {Object.entries(LANG_LABELS).map(([code, label]) => (
@@ -1322,7 +1322,7 @@ export default function AdminDashboard() {
         {tab === "languages" && (
           <div style={{ maxWidth: "640px", display: "flex", flexDirection: "column", gap: "16px" }}>
             <div style={{ background: "var(--card-bg)", borderRadius: "14px", border: "1.5px solid var(--card-border)", padding: "24px" }}>
-              <h3 style={{ fontSize: "0.875rem", fontWeight: 600, color: "var(--gray-600)", marginBottom: "4px" }}>Add Language</h3>
+              <h3 style={{ fontSize: "0.875rem", fontWeight: 600, color: "var(--gray-900)", marginBottom: "4px" }}>Add Language</h3>
               <p style={{ fontSize: "0.75rem", color: "var(--gray-400)", marginBottom: "16px" }}>Inactive languages are hidden from dropdowns but shown here.</p>
               <div style={{ display: "flex", gap: "10px" }}>
                 <input
@@ -1398,7 +1398,7 @@ export default function AdminDashboard() {
 
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" }}>
                   <div style={{ background: "var(--card-bg)", borderRadius: "14px", border: "1.5px solid var(--card-border)", padding: "20px" }}>
-                    <h3 style={{ fontSize: "0.875rem", fontWeight: 600, color: "var(--gray-600)", marginBottom: "12px" }}>Hours by Language</h3>
+                    <h3 style={{ fontSize: "0.875rem", fontWeight: 600, color: "var(--gray-900)", marginBottom: "12px" }}>Hours by Language</h3>
                     {metrics.hoursByLanguage.length === 0 ? (
                       <p style={{ fontSize: "0.75rem", color: "var(--gray-400)" }}>No data yet.</p>
                     ) : (
@@ -1417,7 +1417,7 @@ export default function AdminDashboard() {
                   </div>
 
                   <div style={{ background: "var(--card-bg)", borderRadius: "14px", border: "1.5px solid var(--card-border)", padding: "20px" }}>
-                    <h3 style={{ fontSize: "0.875rem", fontWeight: 600, color: "var(--gray-600)", marginBottom: "12px" }}>Hours by Clinic</h3>
+                    <h3 style={{ fontSize: "0.875rem", fontWeight: 600, color: "var(--gray-900)", marginBottom: "12px" }}>Hours by Clinic</h3>
                     {metrics.hoursByClinic.length === 0 ? (
                       <p style={{ fontSize: "0.75rem", color: "var(--gray-400)" }}>No data yet.</p>
                     ) : (
@@ -1436,7 +1436,7 @@ export default function AdminDashboard() {
                 <p style={{ fontSize: "0.75rem", color: "var(--gray-400)", textAlign: "center" }}>Graphs coming soon</p>
 
                 <div style={{ background: "var(--card-bg)", borderRadius: "14px", border: "1.5px solid var(--card-border)", padding: "20px" }}>
-                  <h3 style={{ fontSize: "0.875rem", fontWeight: 600, color: "var(--gray-600)", marginBottom: "12px" }}>Feedback Overview</h3>
+                  <h3 style={{ fontSize: "0.875rem", fontWeight: 600, color: "var(--gray-900)", marginBottom: "12px" }}>Feedback Overview</h3>
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "14px", marginBottom: "16px" }}>
                     {[
                       { value: metrics.feedbackCount ?? 0, label: "Total Feedback" },
@@ -1614,7 +1614,7 @@ export default function AdminDashboard() {
         {tab === "access" && session?.user?.role === "SUPER_ADMIN" && (
           <div style={{ maxWidth: "560px", display: "flex", flexDirection: "column", gap: "16px" }}>
             <div style={{ background: "var(--card-bg)", borderRadius: "14px", border: "1.5px solid var(--card-border)", padding: "24px" }}>
-              <h3 style={{ fontSize: "0.875rem", fontWeight: 600, color: "var(--gray-600)", marginBottom: "4px" }}>Add Email Rule</h3>
+              <h3 style={{ fontSize: "0.875rem", fontWeight: 600, color: "var(--gray-900)", marginBottom: "4px" }}>Add Email Rule</h3>
               <p style={{ fontSize: "0.75rem", color: "var(--gray-400)", marginBottom: "16px" }}>
                 <strong>Allow</strong> lets a non-Georgetown email sign in. <strong>Block</strong> prevents any email from signing in.
               </p>
@@ -1718,7 +1718,7 @@ export default function AdminDashboard() {
             )}
 
             <div style={{ background: "var(--card-bg)", borderRadius: "14px", border: "1.5px solid var(--card-border)", padding: "24px" }}>
-              <h3 style={{ fontSize: "0.875rem", fontWeight: 600, color: "var(--gray-600)", marginBottom: "4px" }}>Test Email</h3>
+              <h3 style={{ fontSize: "0.875rem", fontWeight: 600, color: "var(--gray-900)", marginBottom: "4px" }}>Test Email</h3>
               <p style={{ fontSize: "0.75rem", color: "var(--gray-400)", marginBottom: "16px" }}>Send a test email to verify email delivery is working.</p>
               <div style={{ display: "flex", gap: "10px" }}>
                 <input
@@ -2074,7 +2074,7 @@ export default function AdminDashboard() {
       {assignModal && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.35)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 200 }}>
           <div style={{ background: "var(--card-bg)", borderRadius: "16px", padding: "24px", width: "100%", maxWidth: "380px", boxShadow: "0 8px 32px rgba(0,0,0,.18)" }}>
-            <h3 style={{ fontSize: "0.875rem", fontWeight: 600, color: "var(--gray-600)", marginBottom: "12px" }}>
+            <h3 style={{ fontSize: "0.875rem", fontWeight: 600, color: "var(--gray-900)", marginBottom: "12px" }}>
               Assign {assignModal.userName} to a clinic
             </h3>
             <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
