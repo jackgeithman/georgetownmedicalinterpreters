@@ -73,6 +73,7 @@ model User {
   emailVerified     DateTime?
   image             String?
   role              Role                @default(PENDING)
+  roles             String[]            @default([])
   status            UserStatus          @default(PENDING_APPROVAL)
   clinicId          String?
   clinic            Clinic?             @relation(fields: [clinicId], references: [id])
@@ -145,14 +146,15 @@ model VolunteerProfile {
 }
 
 model ClearanceLog {
-  id          String           @id @default(uuid())
-  volunteerId String
-  volunteer   VolunteerProfile @relation(fields: [volunteerId], references: [id])
-  clearedById String
-  clearedBy   User             @relation("ClearancesGiven", fields: [clearedById], references: [id])
-  isCleared   Boolean
-  note        String?
-  createdAt   DateTime         @default(now())
+  id           String           @id @default(uuid())
+  volunteerId  String
+  volunteer    VolunteerProfile @relation(fields: [volunteerId], references: [id])
+  clearedById  String
+  clearedBy    User             @relation("ClearancesGiven", fields: [clearedById], references: [id])
+  isCleared    Boolean
+  note         String?
+  languageCode String?          // null = general clearance (legacy), set = per-language clearance
+  createdAt    DateTime         @default(now())
 }
 
 model Slot {

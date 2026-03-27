@@ -20,6 +20,7 @@ type User = {
   email: string;
   name: string;
   role: string;
+  roles: string[];
   status: string;
   clinicId: string | null;
   createdAt: string;
@@ -177,6 +178,12 @@ export default function AdminDashboard() {
   const [testEmailStatus, setTestEmailStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
   const [langDeactivateConflict, setLangDeactivateConflict] = useState<{ langId: string; langName: string; conflicts: { id: string; clinicName: string; date: string; language: string }[] } | null>(null);
   const [langDeactivateLoading, setLangDeactivateLoading] = useState(false);
+  const [roleFilter, setRoleFilter] = useState<string[]>([]);
+  const [roleFilterOpen, setRoleFilterOpen] = useState(false);
+  const [emailExpanded, setEmailExpanded] = useState<Set<string>>(new Set());
+  const [addRoleTarget, setAddRoleTarget] = useState<string | null>(null);
+  const [volunteerRemoveWarning, setVolunteerRemoveWarning] = useState<{ userId: string; userName: string; upcomingCount: number } | null>(null);
+  const [roleActionLoading, setRoleActionLoading] = useState<string | null>(null);
 
   useEffect(() => {
     if (status === "unauthenticated") router.push("/login");
@@ -616,6 +623,86 @@ export default function AdminDashboard() {
 
   const pendingUsers = users.filter((u) => u.status === "PENDING_APPROVAL");
 
+  // ── Role chip helpers ────────────────────────────────────────────
+  const ROLE_CHIPS = [
+    { key: "SUPER_ADMIN", label: "Super Admin", bg: "#EDE9FE", color: "#5B21B6", border: "#DDD6FE" },
+    { key: "ADMIN",       label: "Admin",       bg: "#F5F3FF", color: "#6D28D9", border: "#EDE9FE" },
+    { key: "VOLUNTEER",   label: "Volunteer",   bg: "#DCFCE7", color: "#15803D", border: "#BBF7D0" },
+    { key: "INSTRUCTOR",  label: "Instructor",  bg: "#EEF2FF", color: "#4338CA", border: "#C7D2FE" },
+    { key: "PENDING",     label: "Unassigned",  bg: "#F1F5F9", color: "#475569", border: "#CBD5E1" },
+  ] as const;
+
+  const LANG_LABELS_MAP: Record<string, string> = {
+    ES: "Spanish", ZH: "Mandarin", KO: "Korean", AR: "Arabic", FR: "French",
+    HI: "Hindi", PT: "Portuguese", RU: "Russian", DE: "German", JA: "Japanese",
+    VI: "Vietnamese", IT: "Italian", PL: "Polish", TR: "Turkish", UK: "Ukrainian",
+    FA: "Persian", UR: "Urdu", BN: "Bengali", SW: "Swahili", TL: "Filipino",
+  };
+
+  function getLangLabel(code: string) {
+    return LANG_LABELS_MAP[code] ?? code;
+  }
+
+  function parseUserRoles(roles: string[]) {
+    const roleChips: string[] = [];
+    const langMap: Record<string, boolean> = {};
+    for (const r of roles) {
+      if (r.startsWith("LANG_")) {
+        const cleared = r.endsWith("_CLEARED");
+        const code = cleared ? r.slice(5, -8) : r.slice(5);
+        langMap[code] = cleared;
+      } else {
+        roleChips.push(r);
+      }
+    }
+    const langChips = Object.entries(langMap).map(([code, cleared]) => ({ code, cleared }));
+    return { roleChips, langChips };
+  }
+
+  const handleAddRole = async (userId: string, role: string) => {
+    setRoleActionLoading(`add-${userId}-${role}`);
+    const res = await fetch("/api/admin/users", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId, addRole: role }),
+    });
+    if (res.ok) await fetchData();
+    setAddRoleTarget(null);
+    setRoleActionLoading(null);
+  };
+
+  const handleRemoveRole = async (userId: string, role: string, confirm?: boolean) => {
+    setRoleActionLoading(`remove-${userId}-${role}`);
+    const res = await fetch("/api/admin/users", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId, removeRole: role, confirmRemoveVolunteer: confirm }),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data.needsConfirm) {
+        const u = users.find((x) => x.id === userId);
+        setVolunteerRemoveWarning({ userId, userName: u?.name ?? userId, upcomingCount: data.upcomingCount });
+        setRoleActionLoading(null);
+        return;
+      }
+      await fetchData();
+    }
+    setRoleActionLoading(null);
+  };
+
+  const handleToggleLangClearance = async (userId: string, langCode: string) => {
+    setRoleActionLoading(`lang-${userId}-${langCode}`);
+    const res = await fetch("/api/admin/users", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId, toggleLanguageClearance: langCode }),
+    });
+    if (res.ok) await fetchData();
+    setRoleActionLoading(null);
+  };
+  // ─────────────────────────────────────────────────────────────────
+
   if (status === "loading" || loading) {
     return (
       <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--page-bg)" }}>
@@ -1013,154 +1100,268 @@ export default function AdminDashboard() {
 
         {/* All Users */}
         {tab === "users" && (
-          <div style={{ background: "var(--card-bg)", borderRadius: "14px", border: "1.5px solid var(--card-border)", overflow: "hidden" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse" }}>
-              <thead>
-                <tr style={{ borderBottom: "1.5px solid var(--card-border)" }}>
-                  <th style={{ textAlign: "left", fontSize: "0.68rem", fontWeight: 700, color: "var(--gray-400)", textTransform: "uppercase", letterSpacing: "0.09em", padding: "12px 20px" }}>Name</th>
-                  <th style={{ textAlign: "left", fontSize: "0.68rem", fontWeight: 700, color: "var(--gray-400)", textTransform: "uppercase", letterSpacing: "0.09em", padding: "12px 20px" }}>Email</th>
-                  <th style={{ textAlign: "left", fontSize: "0.68rem", fontWeight: 700, color: "var(--gray-400)", textTransform: "uppercase", letterSpacing: "0.09em", padding: "12px 20px" }}>Role</th>
-                  <th style={{ textAlign: "left", fontSize: "0.68rem", fontWeight: 700, color: "var(--gray-400)", textTransform: "uppercase", letterSpacing: "0.09em", padding: "12px 20px" }}>Volunteer Stats</th>
-                  <th style={{ textAlign: "right", fontSize: "0.68rem", fontWeight: 700, color: "var(--gray-400)", textTransform: "uppercase", letterSpacing: "0.09em", padding: "12px 20px" }}>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {(() => {
-                  const sortedUsers = [...users].sort((a, b) => {
-                    if (a.status === "PENDING_APPROVAL" && b.status !== "PENDING_APPROVAL") return -1;
-                    if (a.status !== "PENDING_APPROVAL" && b.status === "PENDING_APPROVAL") return 1;
-                    return 0;
-                  });
-                  return sortedUsers;
-                })().map((user) => (
-                  <tr key={user.id} style={{ borderBottom: "1px solid var(--card-border)", background: user.status === "PENDING_APPROVAL" ? "rgba(251,191,36,.06)" : "transparent" }}>
-                    <td style={{ padding: "14px 20px", fontSize: "0.875rem", color: "var(--gray-900)", fontWeight: 500 }}>{user.name}</td>
-                    <td style={{ padding: "14px 20px", fontSize: "0.875rem", color: "var(--gray-600)" }}>{user.email}</td>
-                    <td style={{ padding: "14px 20px" }}>
-                      <div style={{ display: "flex", flexWrap: "wrap", gap: "4px" }}>
-                        <span style={{ fontSize: "0.72rem", padding: "2px 8px", borderRadius: "4px", fontWeight: 600,
-                          background: user.role === "SUPER_ADMIN" ? "#EDE9FE" : user.role === "ADMIN" ? "#F5F3FF" : user.role === "INSTRUCTOR" ? "#EEF2FF" : user.role === "CLINIC" ? "#EBF3FC" : user.role === "VOLUNTEER" ? "#DCFCE7" : "var(--gray-200)",
-                          color: user.role === "SUPER_ADMIN" ? "#5B21B6" : user.role === "ADMIN" ? "#6D28D9" : user.role === "INSTRUCTOR" ? "#4338CA" : user.role === "CLINIC" ? "#0D1F3C" : user.role === "VOLUNTEER" ? "#15803D" : "var(--gray-600)",
-                          border: user.role === "SUPER_ADMIN" ? "1px solid #DDD6FE" : user.role === "ADMIN" ? "1px solid #EDE9FE" : user.role === "INSTRUCTOR" ? "1px solid #C7D2FE" : user.role === "CLINIC" ? "1px solid #BFDBFE" : user.role === "VOLUNTEER" ? "1px solid #BBF7D0" : "1px solid var(--card-border)"
-                        }}>
-                          {user.role === "SUPER_ADMIN" ? "Super Admin" : user.role.charAt(0) + user.role.slice(1).toLowerCase()}
-                        </span>
-                        {(user.role === "ADMIN" || user.role === "SUPER_ADMIN" || user.role === "INSTRUCTOR") && user.volunteer && (
-                          <span style={{ fontSize: "0.72rem", padding: "2px 8px", borderRadius: "4px", fontWeight: 600, background: "#DCFCE7", color: "#15803D", border: "1px solid #BBF7D0" }}>
-                            Volunteer
-                          </span>
-                        )}
-                        {user.volunteer && (
+          <div>
+            {/* Filter bar */}
+            <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "16px", flexWrap: "wrap" }}>
+              <div style={{ position: "relative" }}>
+                <button
+                  onClick={() => setRoleFilterOpen(!roleFilterOpen)}
+                  style={{ display: "flex", alignItems: "center", gap: "6px", padding: "7px 14px", fontSize: "0.82rem", fontWeight: 500, border: roleFilter.length > 0 ? "1.5px solid var(--blue)" : "1.5px solid var(--card-border)", borderRadius: "9px", background: roleFilter.length > 0 ? "#EFF6FF" : "var(--card-bg)", color: roleFilter.length > 0 ? "var(--blue)" : "var(--gray-900)", cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}
+                >
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+                  Filter{roleFilter.length > 0 && ` (${roleFilter.length})`}
+                </button>
+                {roleFilterOpen && (
+                  <div style={{ position: "absolute", top: "calc(100% + 6px)", left: 0, zIndex: 50, background: "var(--card-bg)", border: "1.5px solid var(--card-border)", borderRadius: "12px", padding: "12px", minWidth: "220px", boxShadow: "0 8px 24px rgba(0,0,0,.12)" }}>
+                    <p style={{ fontSize: "0.68rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--gray-400)", marginBottom: "8px" }}>Roles</p>
+                    {(["SUPER_ADMIN","ADMIN","VOLUNTEER","INSTRUCTOR","PENDING","SUSPENDED"] as const).map(r => (
+                      <label key={r} style={{ display: "flex", alignItems: "center", gap: "8px", padding: "5px 4px", cursor: "pointer", fontSize: "0.82rem", color: "var(--gray-900)" }}>
+                        <input type="checkbox" checked={roleFilter.includes(r)} onChange={() => setRoleFilter(prev => prev.includes(r) ? prev.filter(x => x !== r) : [...prev, r])} style={{ accentColor: "var(--blue)", width: "14px", height: "14px" }} />
+                        {r === "SUPER_ADMIN" ? "Super Admin" : r === "PENDING" ? "Unassigned" : r.charAt(0) + r.slice(1).toLowerCase()}
+                      </label>
+                    ))}
+                    <div style={{ borderTop: "1px solid var(--card-border)", marginTop: "8px", paddingTop: "8px" }}>
+                      <p style={{ fontSize: "0.68rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--gray-400)", marginBottom: "8px" }}>Languages</p>
+                      {["ES","ZH","KO","AR","FR","HI","PT","RU","DE","JA","VI"].map(code => (
+                        <label key={code} style={{ display: "flex", alignItems: "center", gap: "8px", padding: "5px 4px", cursor: "pointer", fontSize: "0.82rem", color: "var(--gray-900)" }}>
+                          <input type="checkbox" checked={roleFilter.includes(`LANG_${code}`)} onChange={() => setRoleFilter(prev => prev.includes(`LANG_${code}`) ? prev.filter(x => x !== `LANG_${code}`) : [...prev, `LANG_${code}`])} style={{ accentColor: "var(--blue)", width: "14px", height: "14px" }} />
+                          {getLangLabel(code)}
+                        </label>
+                      ))}
+                    </div>
+                    {roleFilter.length > 0 && (
+                      <button onClick={() => setRoleFilter([])} style={{ marginTop: "8px", width: "100%", padding: "6px", fontSize: "0.78rem", color: "var(--gray-500)", background: "none", border: "none", cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>Clear all</button>
+                    )}
+                  </div>
+                )}
+              </div>
+              {roleFilter.map(f => (
+                <span key={f} style={{ display: "inline-flex", alignItems: "center", gap: "4px", padding: "3px 8px", fontSize: "0.75rem", fontWeight: 600, background: "#EFF6FF", color: "var(--blue)", borderRadius: "6px", border: "1px solid #BFDBFE" }}>
+                  {f.startsWith("LANG_") ? getLangLabel(f.slice(5)) : f === "SUPER_ADMIN" ? "Super Admin" : f === "PENDING" ? "Unassigned" : f.charAt(0) + f.slice(1).toLowerCase()}
+                  <button onClick={() => setRoleFilter(prev => prev.filter(x => x !== f))} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--blue)", fontSize: "0.85rem", lineHeight: 1, padding: 0 }}>×</button>
+                </span>
+              ))}
+            </div>
+
+            <div style={{ background: "var(--card-bg)", borderRadius: "14px", border: "1.5px solid var(--card-border)", overflow: "hidden" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                <thead>
+                  <tr style={{ borderBottom: "1.5px solid var(--card-border)" }}>
+                    <th style={{ textAlign: "left", fontSize: "0.68rem", fontWeight: 700, color: "var(--gray-400)", textTransform: "uppercase", letterSpacing: "0.09em", padding: "12px 20px" }}>Name</th>
+                    <th style={{ textAlign: "left", fontSize: "0.68rem", fontWeight: 700, color: "var(--gray-400)", textTransform: "uppercase", letterSpacing: "0.09em", padding: "12px 20px" }}>Email</th>
+                    <th style={{ textAlign: "left", fontSize: "0.68rem", fontWeight: 700, color: "var(--gray-400)", textTransform: "uppercase", letterSpacing: "0.09em", padding: "12px 20px" }}>Roles</th>
+                    <th style={{ textAlign: "left", fontSize: "0.68rem", fontWeight: 700, color: "var(--gray-400)", textTransform: "uppercase", letterSpacing: "0.09em", padding: "12px 20px" }}>Languages</th>
+                    <th style={{ textAlign: "left", fontSize: "0.68rem", fontWeight: 700, color: "var(--gray-400)", textTransform: "uppercase", letterSpacing: "0.09em", padding: "12px 20px" }}>Stats</th>
+                    <th style={{ textAlign: "right", fontSize: "0.68rem", fontWeight: 700, color: "var(--gray-400)", textTransform: "uppercase", letterSpacing: "0.09em", padding: "12px 20px" }}>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(() => {
+                    const sorted = [...users].sort((a, b) => {
+                      if (a.status === "PENDING_APPROVAL" && b.status !== "PENDING_APPROVAL") return -1;
+                      if (a.status !== "PENDING_APPROVAL" && b.status === "PENDING_APPROVAL") return 1;
+                      return 0;
+                    });
+                    if (roleFilter.length === 0) return sorted;
+                    return sorted.filter(u =>
+                      roleFilter.every(f => {
+                        if (f === "SUSPENDED") return u.status === "SUSPENDED";
+                        if (f.startsWith("LANG_")) {
+                          const code = f.slice(5);
+                          return (u.roles ?? []).some(r => r === `LANG_${code}` || r === `LANG_${code}_CLEARED`);
+                        }
+                        return (u.roles ?? []).includes(f);
+                      })
+                    );
+                  })().map((user) => {
+                    const { roleChips, langChips } = parseUserRoles(user.roles ?? []);
+                    const isSuperAdmin = user.role === "SUPER_ADMIN";
+                    const canModify = !isSuperAdmin && (session?.user?.role === "SUPER_ADMIN" || user.role !== "ADMIN");
+                    const emailFull = user.email ?? "";
+                    const isExpanded = emailExpanded.has(user.id);
+                    const addableRoles = ROLE_CHIPS.filter(r => {
+                      if (roleChips.includes(r.key)) return false;
+                      if ((r.key === "SUPER_ADMIN" || r.key === "ADMIN") && session?.user?.role !== "SUPER_ADMIN") return false;
+                      if (isSuperAdmin) return false;
+                      return true;
+                    });
+                    return (
+                      <tr key={user.id} style={{ borderBottom: "1px solid var(--card-border)", background: user.status === "PENDING_APPROVAL" ? "rgba(251,191,36,.06)" : "transparent" }}>
+
+                        {/* Name */}
+                        <td style={{ padding: "14px 20px", fontSize: "0.875rem", color: "var(--gray-900)", fontWeight: 500, whiteSpace: "nowrap" }}>{user.name}</td>
+
+                        {/* Email — truncated, click to expand */}
+                        <td style={{ padding: "14px 20px" }}>
                           <button
-                            disabled={actionLoading === `clearance-${user.id}`}
-                            onClick={() => setClearance(user.id, !user.volunteer!.isCleared)}
-                            title={user.volunteer.isCleared ? "Click to revoke clearance" : "Click to mark as cleared"}
-                            style={{ fontSize: "0.72rem", padding: "2px 8px", borderRadius: "4px", fontWeight: 600, cursor: "pointer", opacity: actionLoading === `clearance-${user.id}` ? 0.5 : 1, background: user.volunteer.isCleared ? "#F0FDFA" : "#FFFBEB", color: user.volunteer.isCleared ? "#0F766E" : "#D97706", border: user.volunteer.isCleared ? "1px solid #99F6E4" : "1px solid #FDE68A", fontFamily: "'DM Sans', sans-serif" }}
+                            onClick={() => setEmailExpanded(prev => { const n = new Set(prev); isExpanded ? n.delete(user.id) : n.add(user.id); return n; })}
+                            title={emailFull}
+                            style={{ fontSize: "0.82rem", color: "var(--gray-600)", background: "none", border: "none", cursor: emailFull.length > 18 ? "pointer" : "default", fontFamily: "'DM Sans', sans-serif", padding: 0, textAlign: "left" }}
                           >
-                            {actionLoading === `clearance-${user.id}` ? "…" : user.volunteer.isCleared ? "Cleared" : "Uncleared"}
+                            {isExpanded ? emailFull : emailFull.length > 18 ? `${emailFull.slice(0, 18)}…` : emailFull}
                           </button>
-                        )}
-                        {user.status === "SUSPENDED" && (
-                          <span style={{ fontSize: "0.72rem", padding: "2px 8px", borderRadius: "4px", fontWeight: 600, background: "#FEF2F2", color: "#DC2626", border: "1px solid #FECACA" }}>
-                            Suspended
-                          </span>
-                        )}
-                        {user.status === "PENDING_APPROVAL" && (
-                          <span style={{ fontSize: "0.72rem", padding: "2px 8px", borderRadius: "4px", fontWeight: 600, background: "#FFFBEB", color: "#B45309", border: "1px solid #FDE68A" }}>
-                            Pending
-                          </span>
-                        )}
-                      </div>
-                      {user.volunteer?.clearanceLogs?.[0] && (
-                        <p style={{ fontSize: "0.72rem", color: "var(--gray-400)", marginTop: "4px" }}>
-                          by {user.volunteer.clearanceLogs[0].clearedBy.name ?? user.volunteer.clearanceLogs[0].clearedBy.email}{" "}
-                          · {new Date(user.volunteer.clearanceLogs[0].createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
-                        </p>
-                      )}
-                    </td>
-                    <td style={{ padding: "14px 20px" }}>
-                      {user.volunteer ? (
-                        <div style={{ display: "flex", gap: "12px", fontSize: "0.78rem", color: "var(--gray-600)" }}>
-                          <span title="Hours volunteered">⏱ {user.volunteer.hoursVolunteered}h</span>
-                          <span title="No-shows" style={{ color: user.volunteer.noShows > 0 ? "#EF4444" : undefined }}>
-                            NS {user.volunteer.noShows}
-                          </span>
-                          <span title="Cancellations within 24 hours" style={{ color: user.volunteer.cancellationsWithin24h > 0 ? "#D97706" : undefined }}>
-                            24h {user.volunteer.cancellationsWithin24h}
-                          </span>
-                          <span title="Cancellations within 2 hours" style={{ color: user.volunteer.cancellationsWithin2h > 0 ? "#EF4444" : undefined }}>
-                            2h {user.volunteer.cancellationsWithin2h}
-                          </span>
-                        </div>
-                      ) : (
-                        <span style={{ fontSize: "0.78rem", color: "var(--gray-400)" }}>—</span>
-                      )}
-                    </td>
-                    <td style={{ padding: "14px 20px", textAlign: "right" }}>
-                      <div style={{ display: "flex", flexDirection: "column", gap: "6px", alignItems: "flex-end" }}>
-                        {user.status === "PENDING_APPROVAL" ? (
-                          <div style={{ display: "flex", gap: "4px" }}>
-                            <button
-                              disabled={actionLoading === user.id}
-                              onClick={() => updateUser(user.id, { status: "ACTIVE", role: "VOLUNTEER" })}
-                              style={{ padding: "6px 12px", fontSize: "0.75rem", background: "#DCFCE7", color: "#15803D", border: "none", borderRadius: "6px", cursor: "pointer", opacity: actionLoading === user.id ? 0.5 : 1, fontFamily: "'DM Sans', sans-serif" }}
-                            >
-                              Approve
-                            </button>
-                            <button
-                              disabled={actionLoading === user.id}
-                              onClick={() => updateUser(user.id, { status: "SUSPENDED" })}
-                              style={{ padding: "6px 12px", fontSize: "0.75rem", background: "#FEF2F2", color: "#DC2626", border: "none", borderRadius: "6px", cursor: "pointer", opacity: actionLoading === user.id ? 0.5 : 1, fontFamily: "'DM Sans', sans-serif" }}
-                            >
-                              Reject
-                            </button>
-                          </div>
-                        ) : (
-                          user.role !== "SUPER_ADMIN" && (user.role !== "ADMIN" || session?.user?.role === "SUPER_ADMIN") && (
-                            <div style={{ display: "flex", gap: "4px", alignItems: "center" }}>
-                              <select
-                                style={{ fontSize: "0.75rem", border: "1.5px solid var(--card-border)", borderRadius: "6px", padding: "4px 8px", color: "var(--gray-600)", background: "var(--card-bg)", outline: "none", fontFamily: "'DM Sans', sans-serif", cursor: "pointer" }}
-                                value={user.role}
-                                onChange={(e) => updateUser(user.id, { role: e.target.value })}
-                              >
-                                <option value="VOLUNTEER">Volunteer</option>
-                                <option value="CLINIC">Clinic</option>
-                                {session?.user?.role === "SUPER_ADMIN" && (
-                                  <option value="ADMIN">Admin</option>
-                                )}
-                              </select>
-                              {user.role === "CLINIC" && (
+                        </td>
+
+                        {/* Roles — Discord chips */}
+                        <td style={{ padding: "14px 20px" }}>
+                          <div style={{ display: "flex", flexWrap: "wrap", gap: "4px", alignItems: "center" }}>
+                            {user.status === "SUSPENDED" && (
+                              <span style={{ display: "inline-flex", alignItems: "center", fontSize: "0.72rem", padding: "2px 8px", borderRadius: "99px", fontWeight: 600, background: "#FEF2F2", color: "#DC2626", border: "1px solid #FECACA" }}>
+                                Suspended
+                              </span>
+                            )}
+                            {roleChips.map(r => {
+                              const chip = ROLE_CHIPS.find(c => c.key === r);
+                              const label = chip?.label ?? (r === "PENDING" ? "Unassigned" : r.charAt(0) + r.slice(1).toLowerCase());
+                              const bg    = chip?.bg    ?? "#F1F5F9";
+                              const color = chip?.color ?? "#475569";
+                              const border = chip?.border ?? "#CBD5E1";
+                              const isLoading = roleActionLoading === `remove-${user.id}-${r}`;
+                              return (
+                                <span key={r} style={{ display: "inline-flex", alignItems: "center", gap: "3px", fontSize: "0.72rem", padding: "2px 6px 2px 8px", borderRadius: "99px", fontWeight: 600, background: bg, color, border: `1px solid ${border}` }}>
+                                  {label}
+                                  {canModify && r !== "PENDING" && (
+                                    <button
+                                      onClick={() => handleRemoveRole(user.id, r)}
+                                      disabled={!!isLoading}
+                                      title={`Remove ${label}`}
+                                      style={{ background: "none", border: "none", cursor: "pointer", color, opacity: isLoading ? 0.4 : 0.55, fontSize: "0.9rem", lineHeight: 1, padding: "0 1px", fontFamily: "'DM Sans', sans-serif" }}
+                                    >×</button>
+                                  )}
+                                </span>
+                              );
+                            })}
+                            {/* + Add role */}
+                            {canModify && addableRoles.length > 0 && (
+                              <div style={{ position: "relative" }}>
                                 <button
-                                  onClick={() => setAssignModal({ userId: user.id, userName: user.name })}
-                                  style={{ fontSize: "0.75rem", padding: "4px 10px", background: "#EBF3FC", color: "#0D1F3C", border: "none", borderRadius: "6px", cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}
+                                  onClick={() => setAddRoleTarget(addRoleTarget === user.id ? null : user.id)}
+                                  title="Add role"
+                                  style={{ width: "20px", height: "20px", borderRadius: "99px", border: "1.5px dashed var(--gray-300)", background: "none", cursor: "pointer", color: "var(--gray-400)", fontSize: "1rem", lineHeight: 1, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'DM Sans', sans-serif" }}
+                                >+</button>
+                                {addRoleTarget === user.id && (
+                                  <div style={{ position: "absolute", top: "calc(100% + 4px)", left: 0, zIndex: 50, background: "var(--card-bg)", border: "1.5px solid var(--card-border)", borderRadius: "10px", padding: "6px", minWidth: "140px", boxShadow: "0 6px 20px rgba(0,0,0,.12)" }}>
+                                    {addableRoles.map(r => (
+                                      <button
+                                        key={r.key}
+                                        onClick={() => handleAddRole(user.id, r.key)}
+                                        disabled={roleActionLoading === `add-${user.id}-${r.key}`}
+                                        style={{ display: "block", width: "100%", textAlign: "left", padding: "6px 10px", fontSize: "0.78rem", fontWeight: 600, background: "none", border: "none", cursor: "pointer", color: r.color, borderRadius: "6px", fontFamily: "'DM Sans', sans-serif" }}
+                                      >
+                                        {roleActionLoading === `add-${user.id}-${r.key}` ? "…" : r.label}
+                                      </button>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        </td>
+
+                        {/* Languages */}
+                        <td style={{ padding: "14px 20px" }}>
+                          <div style={{ display: "flex", flexWrap: "wrap", gap: "4px" }}>
+                            {langChips.map(({ code, cleared }) => {
+                              const isLoading = roleActionLoading === `lang-${user.id}-${code}`;
+                              return (
+                                <button
+                                  key={code}
+                                  onClick={() => handleToggleLangClearance(user.id, code)}
+                                  disabled={isLoading}
+                                  title={cleared ? `${getLangLabel(code)} — Cleared. Click to revoke.` : `${getLangLabel(code)} — Not cleared. Click to clear.`}
+                                  style={{ display: "inline-flex", alignItems: "center", gap: "5px", fontSize: "0.72rem", padding: "2px 8px", borderRadius: "99px", fontWeight: 600, cursor: "pointer", opacity: isLoading ? 0.5 : 1, background: cleared ? "#F0FDFA" : "#FAFAFA", color: cleared ? "#0F766E" : "#64748B", border: cleared ? "1px solid #99F6E4" : "1px solid #CBD5E1", fontFamily: "'DM Sans', sans-serif" }}
                                 >
-                                  Assign Clinic
+                                  <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: cleared ? "#10B981" : "#94A3B8", flexShrink: 0 }} />
+                                  {getLangLabel(code)}
                                 </button>
+                              );
+                            })}
+                            {langChips.length === 0 && <span style={{ fontSize: "0.78rem", color: "var(--gray-400)" }}>—</span>}
+                          </div>
+                        </td>
+
+                        {/* Stats */}
+                        <td style={{ padding: "14px 20px" }}>
+                          {user.volunteer ? (
+                            <div style={{ display: "flex", flexDirection: "column", gap: "2px", fontSize: "0.75rem" }}>
+                              <span style={{ color: "var(--gray-600)" }}>⏱ {user.volunteer.hoursVolunteered}h</span>
+                              {user.volunteer.noShows > 0 && <span style={{ color: "#EF4444" }}>NS {user.volunteer.noShows}</span>}
+                              {(user.volunteer.cancellationsWithin24h > 0 || user.volunteer.cancellationsWithin2h > 0) && (
+                                <span style={{ color: "#D97706" }}>
+                                  {user.volunteer.cancellationsWithin24h > 0 && `24h ${user.volunteer.cancellationsWithin24h}`}
+                                  {user.volunteer.cancellationsWithin24h > 0 && user.volunteer.cancellationsWithin2h > 0 && " · "}
+                                  {user.volunteer.cancellationsWithin2h > 0 && `2h ${user.volunteer.cancellationsWithin2h}`}
+                                </span>
                               )}
+                            </div>
+                          ) : (
+                            <span style={{ fontSize: "0.78rem", color: "var(--gray-400)" }}>—</span>
+                          )}
+                        </td>
+
+                        {/* Actions */}
+                        <td style={{ padding: "14px 20px", textAlign: "right" }}>
+                          {user.status === "PENDING_APPROVAL" ? (
+                            <div style={{ display: "flex", gap: "4px", justifyContent: "flex-end" }}>
+                              <button
+                                disabled={actionLoading === user.id}
+                                onClick={() => updateUser(user.id, { status: "ACTIVE", role: "VOLUNTEER" })}
+                                style={{ padding: "6px 12px", fontSize: "0.75rem", background: "#DCFCE7", color: "#15803D", border: "none", borderRadius: "6px", cursor: "pointer", opacity: actionLoading === user.id ? 0.5 : 1, fontFamily: "'DM Sans', sans-serif" }}
+                              >Approve</button>
+                              <button
+                                disabled={actionLoading === user.id}
+                                onClick={() => updateUser(user.id, { status: "SUSPENDED" })}
+                                style={{ padding: "6px 12px", fontSize: "0.75rem", background: "#FEF2F2", color: "#DC2626", border: "none", borderRadius: "6px", cursor: "pointer", opacity: actionLoading === user.id ? 0.5 : 1, fontFamily: "'DM Sans', sans-serif" }}
+                              >Reject</button>
+                            </div>
+                          ) : !isSuperAdmin && (
+                            <div style={{ display: "flex", gap: "4px", justifyContent: "flex-end" }}>
                               {user.status === "ACTIVE" ? (
                                 <button
                                   onClick={() => updateUser(user.id, { status: "SUSPENDED" })}
-                                  style={{ fontSize: "0.75rem", padding: "4px 10px", background: "#FEF2F2", color: "#DC2626", border: "none", borderRadius: "6px", cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}
-                                >
-                                  Suspend
-                                </button>
-                              ) : (
+                                  style={{ padding: "5px 10px", fontSize: "0.75rem", background: "#FEF2F2", color: "#DC2626", border: "none", borderRadius: "6px", cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}
+                                >Suspend</button>
+                              ) : user.status === "SUSPENDED" ? (
                                 <button
                                   onClick={() => updateUser(user.id, { status: "ACTIVE" })}
-                                  style={{ fontSize: "0.75rem", padding: "4px 10px", background: "#DCFCE7", color: "#15803D", border: "none", borderRadius: "6px", cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}
-                                >
-                                  Activate
-                                </button>
-                              )}
+                                  style={{ padding: "5px 10px", fontSize: "0.75rem", background: "#DCFCE7", color: "#15803D", border: "none", borderRadius: "6px", cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}
+                                >Activate</button>
+                              ) : null}
                             </div>
-                          )
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Volunteer-remove warning modal */}
+            {volunteerRemoveWarning && (
+              <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.4)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <div style={{ background: "var(--card-bg)", borderRadius: "16px", border: "1.5px solid var(--card-border)", padding: "28px", maxWidth: "420px", width: "90%", boxShadow: "0 20px 60px rgba(0,0,0,.2)" }}>
+                  <h3 style={{ fontSize: "1rem", fontWeight: 700, color: "var(--gray-900)", marginBottom: "10px" }}>Remove Volunteer Role?</h3>
+                  <p style={{ fontSize: "0.875rem", color: "var(--gray-600)", marginBottom: "20px", lineHeight: 1.5 }}>
+                    <strong>{volunteerRemoveWarning.userName}</strong> has <strong>{volunteerRemoveWarning.upcomingCount} upcoming shift{volunteerRemoveWarning.upcomingCount !== 1 ? "s" : ""}</strong>. Removing their Volunteer role will cancel all of them.
+                  </p>
+                  <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end" }}>
+                    <button
+                      onClick={() => setVolunteerRemoveWarning(null)}
+                      style={{ padding: "8px 16px", fontSize: "0.875rem", background: "var(--card-bg)", border: "1.5px solid var(--card-border)", borderRadius: "8px", cursor: "pointer", fontFamily: "'DM Sans', sans-serif", color: "var(--gray-900)" }}
+                    >Cancel</button>
+                    <button
+                      onClick={async () => {
+                        const { userId } = volunteerRemoveWarning;
+                        setVolunteerRemoveWarning(null);
+                        await handleRemoveRole(userId, "VOLUNTEER", true);
+                      }}
+                      style={{ padding: "8px 16px", fontSize: "0.875rem", background: "#DC2626", color: "#fff", border: "none", borderRadius: "8px", cursor: "pointer", fontFamily: "'DM Sans', sans-serif", fontWeight: 600 }}
+                    >Remove &amp; Cancel Shifts</button>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
 

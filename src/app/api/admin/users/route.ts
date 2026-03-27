@@ -2,7 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { notifyUserApproved, notifyUserSuspended } from "@/lib/notifications";
+
+function primaryRole(roles: string[]): string {
+  if (roles.includes("SUPER_ADMIN")) return "SUPER_ADMIN";
+  if (roles.includes("ADMIN")) return "ADMIN";
+  if (roles.includes("INSTRUCTOR")) return "INSTRUCTOR";
+  if (roles.includes("VOLUNTEER")) return "VOLUNTEER";
+  return "PENDING";
+}
 
 async function getAdminUser() {
   const session = await getServerSession(authOptions);
@@ -40,93 +47,217 @@ export async function GET() {
     },
   });
 
+  // Include roles in the response (already part of user model)
   return NextResponse.json(users);
 }
 
 export async function PATCH(req: NextRequest) {
-  const admin = await getAdminUser();
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.email) return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+
+  const admin = await prisma.user.findUnique({ where: { email: session.user.email } });
   if (!admin) return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
 
+  const isAdmin = admin.role === "ADMIN" || admin.role === "SUPER_ADMIN";
+  const isSuperAdmin = admin.role === "SUPER_ADMIN";
+  const isInstructor = admin.roles.includes("INSTRUCTOR");
+
+  if (!isAdmin && !isInstructor) return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+
   const body = await req.json();
-  const { userId, ...data } = body;
+  const { userId, addRole, removeRole, toggleLanguageClearance, confirmRemoveVolunteer, status, clinicId } = body;
 
   if (!userId) return NextResponse.json({ error: "userId required" }, { status: 400 });
 
-  const target = await prisma.user.findUnique({ where: { id: userId } });
+  const target = await prisma.user.findUnique({
+    where: { id: userId },
+    include: { volunteer: { include: { signups: { include: { slot: true } } } } },
+  });
   if (!target) return NextResponse.json({ error: "User not found" }, { status: 404 });
 
-  // Nobody can modify a SUPER_ADMIN (including other super admins via the UI)
+  // Nobody modifies SUPER_ADMIN
   if (target.role === "SUPER_ADMIN") {
     return NextResponse.json({ error: "Cannot modify the super admin account" }, { status: 403 });
   }
 
-  // Only SUPER_ADMIN can promote someone to ADMIN
-  if (data.role === "ADMIN" && admin.role !== "SUPER_ADMIN") {
-    return NextResponse.json({ error: "Only the super admin can promote users to Admin" }, { status: 403 });
+  // Handle status and clinicId (existing logic, kept for backwards compat)
+  if (status !== undefined || clinicId !== undefined) {
+    if (!isAdmin) return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+
+    // ADMIN cannot modify other ADMINs (only SUPER_ADMIN can)
+    if (target.role === "ADMIN" && !isSuperAdmin) {
+      return NextResponse.json({ error: "Only the super admin can modify Admin accounts" }, { status: 403 });
+    }
+
+    const updateData: Record<string, unknown> = {};
+    if (status !== undefined) updateData.status = status;
+    if (clinicId !== undefined) updateData.clinicId = clinicId;
+    const updated = await prisma.user.update({ where: { id: userId }, data: updateData });
+
+    if (target.email && status) {
+      const wasApproved = target.status === "PENDING_APPROVAL" && status === "ACTIVE";
+      const wasSuspended = target.status !== "SUSPENDED" && status === "SUSPENDED";
+      if (wasApproved) {
+        const { notifyUserApproved } = await import("@/lib/notifications");
+        await notifyUserApproved({ email: target.email, name: target.name ?? target.email, role: updated.role }).catch(console.error);
+      } else if (wasSuspended) {
+        const { notifyUserSuspended } = await import("@/lib/notifications");
+        await notifyUserSuspended({ email: target.email, name: target.name ?? target.email }).catch(console.error);
+      }
+    }
+    return NextResponse.json(updated);
   }
 
-  // ADMIN cannot modify other ADMINs (only SUPER_ADMIN can)
-  if (target.role === "ADMIN" && admin.role !== "SUPER_ADMIN") {
-    return NextResponse.json({ error: "Only the super admin can modify Admin accounts" }, { status: 403 });
-  }
-
-  // Handle volunteer clearance separately (updates VolunteerProfile + creates audit log)
-  if (typeof data.isCleared === "boolean") {
-    const volunteerProfile = await prisma.volunteerProfile.findUnique({
-      where: { userId: target.id },
-    });
+  // Handle isCleared (backwards compat — legacy general clearance)
+  if (typeof body.isCleared === "boolean") {
+    if (!isAdmin) return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+    const volunteerProfile = await prisma.volunteerProfile.findUnique({ where: { userId: target.id } });
     if (!volunteerProfile) {
       return NextResponse.json({ error: "User has no volunteer profile" }, { status: 400 });
     }
     await prisma.$transaction([
       prisma.volunteerProfile.update({
         where: { userId: target.id },
-        data: { isCleared: data.isCleared, clearedById: admin.id, clearedAt: new Date() },
+        data: { isCleared: body.isCleared, clearedById: admin.id, clearedAt: new Date() },
       }),
       prisma.clearanceLog.create({
         data: {
           volunteerId: volunteerProfile.id,
           clearedById: admin.id,
-          isCleared: data.isCleared,
-          note: data.note ?? null,
+          isCleared: body.isCleared,
+          note: body.note ?? null,
         },
       }),
     ]);
     return NextResponse.json({ ok: true });
   }
 
-  const updateData: Record<string, string | null> = {};
-  if (data.status) updateData.status = data.status;
-  if (data.role) updateData.role = data.role;
-  if (data.clinicId !== undefined) updateData.clinicId = data.clinicId;
-
-  const updated = await prisma.user.update({
-    where: { id: userId },
-    data: updateData,
-  });
-
-  // Send status-change notifications — only for Google-authenticated users (volunteers/admins)
-  if (target.email && data.status) {
-    const wasApproved =
-      target.status === "PENDING_APPROVAL" &&
-      data.status === "ACTIVE";
-    const wasSuspended =
-      target.status !== "SUSPENDED" &&
-      data.status === "SUSPENDED";
-
-    if (wasApproved) {
-      await notifyUserApproved({
-        email: target.email,
-        name: target.name ?? target.email,
-        role: updated.role,
-      }).catch(console.error);
-    } else if (wasSuspended) {
-      await notifyUserSuspended({
-        email: target.email,
-        name: target.name ?? target.email,
-      }).catch(console.error);
+  // Handle language clearance toggle
+  if (toggleLanguageClearance) {
+    const langCode = toggleLanguageClearance.toUpperCase();
+    // Permission: must be admin or instructor cleared for this language
+    if (!isAdmin) {
+      const adminClearedForLang = admin.roles.includes(`LANG_${langCode}_CLEARED`);
+      if (!adminClearedForLang) return NextResponse.json({ error: "You are not cleared for this language" }, { status: 403 });
     }
+    const currentRoles = target.roles;
+    const hasCleared = currentRoles.includes(`LANG_${langCode}_CLEARED`);
+    const hasUncleared = currentRoles.includes(`LANG_${langCode}`);
+    let newRoles: string[];
+    let nowCleared: boolean;
+    if (hasCleared) {
+      // Remove clearance: LANG_XX_CLEARED → LANG_XX
+      newRoles = currentRoles.filter((r) => r !== `LANG_${langCode}_CLEARED`).concat(`LANG_${langCode}`);
+      nowCleared = false;
+    } else if (hasUncleared) {
+      // Grant clearance: LANG_XX → LANG_XX_CLEARED
+      newRoles = currentRoles.filter((r) => r !== `LANG_${langCode}`).concat(`LANG_${langCode}_CLEARED`);
+      nowCleared = true;
+    } else {
+      return NextResponse.json({ error: "User does not have this language" }, { status: 400 });
+    }
+    // Get volunteer profile for audit log
+    const vp = await prisma.volunteerProfile.findUnique({ where: { userId: target.id } });
+    await prisma.$transaction(async (tx) => {
+      await tx.user.update({ where: { id: userId }, data: { roles: newRoles } });
+      if (vp) {
+        await tx.clearanceLog.create({
+          data: { volunteerId: vp.id, clearedById: admin.id, isCleared: nowCleared, languageCode: langCode },
+        });
+      }
+    });
+    return NextResponse.json({ ok: true, roles: newRoles });
   }
 
-  return NextResponse.json(updated);
+  // Handle addRole
+  if (addRole) {
+    if (!isAdmin) return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+    // Permission check
+    if ((addRole === "SUPER_ADMIN" || addRole === "ADMIN") && !isSuperAdmin) {
+      return NextResponse.json({ error: "Only SUPER_ADMIN can assign this role" }, { status: 403 });
+    }
+    if (target.roles.includes(addRole)) return NextResponse.json({ error: "User already has this role" }, { status: 400 });
+
+    const newRoles = [...target.roles.filter((r) => r !== "PENDING"), addRole];
+    // If adding INSTRUCTOR, also ensure VOLUNTEER is present
+    if (addRole === "INSTRUCTOR" && !newRoles.includes("VOLUNTEER")) {
+      newRoles.push("VOLUNTEER");
+    }
+    const newPrimaryRole = primaryRole(newRoles);
+
+    // Ensure volunteer profile exists if adding VOLUNTEER or INSTRUCTOR
+    if (addRole === "VOLUNTEER" || addRole === "INSTRUCTOR") {
+      await prisma.volunteerProfile.upsert({
+        where: { userId: target.id },
+        create: { userId: target.id, languages: [] },
+        update: {},
+      });
+    }
+
+    await prisma.user.update({
+      where: { id: userId },
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      data: { roles: newRoles, role: newPrimaryRole as any },
+    });
+    return NextResponse.json({ ok: true, roles: newRoles });
+  }
+
+  // Handle removeRole
+  if (removeRole) {
+    if (!isAdmin) return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+    // Permission check
+    if ((removeRole === "SUPER_ADMIN" || removeRole === "ADMIN") && !isSuperAdmin) {
+      return NextResponse.json({ error: "Only SUPER_ADMIN can remove this role" }, { status: 403 });
+    }
+
+    // VOLUNTEER removal: check for upcoming signups
+    if (removeRole === "VOLUNTEER" && !confirmRemoveVolunteer) {
+      const now = new Date();
+      const vp = await prisma.volunteerProfile.findUnique({ where: { userId: target.id } });
+      if (vp) {
+        const upcomingCount = await prisma.subBlockSignup.count({
+          where: {
+            volunteerId: vp.id,
+            status: "ACTIVE",
+            slot: { date: { gte: now }, status: "ACTIVE" },
+          },
+        });
+        if (upcomingCount > 0) {
+          return NextResponse.json({ needsConfirm: true, upcomingCount });
+        }
+      }
+    }
+
+    // If confirmed VOLUNTEER removal: cancel future signups
+    if (removeRole === "VOLUNTEER" && confirmRemoveVolunteer) {
+      const now = new Date();
+      const vp = await prisma.volunteerProfile.findUnique({ where: { userId: target.id } });
+      if (vp) {
+        await prisma.subBlockSignup.updateMany({
+          where: {
+            volunteerId: vp.id,
+            status: "ACTIVE",
+            slot: { date: { gte: now }, status: "ACTIVE" },
+          },
+          data: { status: "CANCELLED", cancelledAt: now },
+        });
+      }
+    }
+
+    let newRoles = target.roles.filter((r) => r !== removeRole);
+    // If roles is now empty or only has LANG_ entries, add PENDING
+    if (newRoles.length === 0 || newRoles.every((r) => r.startsWith("LANG_"))) {
+      newRoles = [...newRoles.filter((r) => r.startsWith("LANG_")), "PENDING"];
+    }
+    const newPrimaryRole = primaryRole(newRoles);
+
+    await prisma.user.update({
+      where: { id: userId },
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      data: { roles: newRoles, role: newPrimaryRole as any },
+    });
+    return NextResponse.json({ ok: true, roles: newRoles });
+  }
+
+  return NextResponse.json({ error: "No valid operation specified" }, { status: 400 });
 }
