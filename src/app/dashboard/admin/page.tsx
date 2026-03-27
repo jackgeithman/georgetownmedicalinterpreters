@@ -1526,36 +1526,13 @@ export default function AdminDashboard() {
                   rows={2}
                   className="w-full px-3 py-2 text-sm border border-stone-200 rounded-md focus:outline-none focus:ring-2 focus:ring-stone-300 resize-none"
                 />
-                <div className="flex gap-2">
-                  {(["LINK", "FILE"] as const).map((t) => (
-                    <button
-                      key={t}
-                      onClick={() => setTrainingForm({ ...trainingForm, type: t })}
-                      className={`flex-1 py-2 text-sm rounded-md border transition-colors ${
-                        trainingForm.type === t
-                          ? "bg-stone-800 text-white border-stone-800"
-                          : "border-stone-200 text-stone-600 hover:border-stone-400"
-                      }`}
-                    >
-                      {t === "LINK" ? "Link" : "File Upload"}
-                    </button>
-                  ))}
-                </div>
-                {trainingForm.type === "LINK" ? (
-                  <input
-                    placeholder="URL (https://...)"
-                    value={trainingForm.url}
-                    onChange={(e) => setTrainingForm({ ...trainingForm, url: e.target.value })}
-                    className="w-full px-3 py-2 text-sm border border-stone-200 rounded-md focus:outline-none focus:ring-2 focus:ring-stone-300"
-                  />
-                ) : (
-                  <input
-                    type="file"
-                    accept=".pdf,.doc,.docx,.pptx,.mp4,.mov"
-                    onChange={(e) => setTrainingFile(e.target.files?.[0] ?? null)}
-                    className="w-full text-sm text-stone-600"
-                  />
-                )}
+                {/* Link only — file upload requires Supabase Storage setup */}
+                <input
+                  placeholder="URL (https://docs.google.com/... or any link)"
+                  value={trainingForm.url}
+                  onChange={(e) => setTrainingForm({ ...trainingForm, url: e.target.value, type: "LINK" })}
+                  className="w-full px-3 py-2 text-sm border border-stone-200 rounded-md focus:outline-none focus:ring-2 focus:ring-stone-300"
+                />
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="text-xs text-stone-500 mb-1 block">Language</label>

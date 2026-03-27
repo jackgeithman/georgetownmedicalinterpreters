@@ -138,13 +138,10 @@ export default function ClinicDashboard() {
   });
   const [selectedSlotIds, setSelectedSlotIds] = useState<Set<string>>(new Set());
   const [postError, setPostError] = useState("");
-  // Feedback state
-  const [feedbackModal, setFeedbackModal] = useState<{ signupId: string; feedbackKey: string; volunteerName: string } | null>(null);
-  const [feedbackRating, setFeedbackRating] = useState(0);
-  const [feedbackNote, setFeedbackNote] = useState("");
-  const [feedbackSubmitting, setFeedbackSubmitting] = useState(false);
-  const [feedbackError, setFeedbackError] = useState("");
+  // Feedback state — inline (no modal), keyed by "${slotId}-${volunteerId}"
   const [feedbackGiven, setFeedbackGiven] = useState<Set<string>>(new Set());
+  const [feedbackForms, setFeedbackForms] = useState<Record<string, { rating: number; note: string }>>({});
+  const [submittingFeedbackFor, setSubmittingFeedbackFor] = useState<string | null>(null);
 
   useEffect(() => {
     if (status === "unauthenticated") router.push("/login");
@@ -152,12 +149,17 @@ export default function ClinicDashboard() {
   }, [status, session, router]);
 
   const fetchSlots = useCallback(async () => {
-    const [slotsRes, notifRes] = await Promise.all([
+    const [slotsRes, notifRes, statusRes] = await Promise.all([
       fetch("/api/clinic/slots"),
       fetch("/api/clinic/notif-prefs"),
+      fetch("/api/feedback/my-status"),
     ]);
     if (slotsRes.ok) setSlots(await slotsRes.json());
     if (notifRes.ok) setNotifPrefs(await notifRes.json());
+    if (statusRes.ok) {
+      const { givenKeys } = await statusRes.json();
+      setFeedbackGiven(new Set<string>(givenKeys ?? []));
+    }
     setLoading(false);
   }, []);
 
@@ -284,36 +286,30 @@ export default function ClinicDashboard() {
     setActionLoading(null);
   };
 
-  const submitFeedback = async () => {
-    if (!feedbackModal) return;
-    setFeedbackSubmitting(true);
-    setFeedbackError("");
+  const submitInlineFeedback = async (feedbackKey: string, signupId: string) => {
+    const form = feedbackForms[feedbackKey];
+    if (!form?.rating) return;
+    setSubmittingFeedbackFor(feedbackKey);
     const res = await fetch("/api/feedback", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ signupId: feedbackModal.signupId, rating: feedbackRating, note: feedbackNote }),
+      body: JSON.stringify({ signupId, rating: form.rating, note: form.note ?? "" }),
     });
-    if (res.ok) {
-      setFeedbackGiven((prev) => new Set([...prev, feedbackModal.feedbackKey]));
-      setFeedbackModal(null);
-      setFeedbackRating(0);
-      setFeedbackNote("");
-    } else {
-      const err = await res.json().catch(() => ({}));
-      if (res.status === 409) {
-        setFeedbackGiven((prev) => new Set([...prev, feedbackModal.feedbackKey]));
-        setFeedbackModal(null);
-        setFeedbackRating(0);
-        setFeedbackNote("");
-      } else {
-        setFeedbackError(err.error ?? "Could not submit feedback.");
-      }
+    if (res.ok || res.status === 409) {
+      setFeedbackGiven((prev) => new Set([...prev, feedbackKey]));
     }
-    setFeedbackSubmitting(false);
+    setSubmittingFeedbackFor(null);
   };
 
   const upcoming = slots.filter((s) => s.status === "ACTIVE" && isUpcoming(s));
   const past = slots.filter((s) => !isUpcoming(s) || s.status !== "ACTIVE");
+
+  // Count how many volunteer ratings are still pending across all past slots
+  const pendingFeedbackCount = past.reduce((total, slot) => {
+    const uniqueVolunteers = [...new Map(slot.signups.map((s) => [s.volunteer.id, s])).values()];
+    const pending = uniqueVolunteers.filter((s) => !feedbackGiven.has(`${slot.id}-${s.volunteer.id}`)).length;
+    return total + pending;
+  }, 0);
 
   if (status === "loading" || loading) {
     return (
@@ -376,13 +372,13 @@ export default function ClinicDashboard() {
         <div className="flex gap-1 bg-stone-200/50 p-1 rounded-lg w-fit">
           {[
             { key: "upcoming" as Tab, label: "Upcoming", count: upcoming.length },
-            { key: "past" as Tab, label: "Past", count: past.length },
+            { key: "past" as Tab, label: "Past", count: past.length, pendingFeedback: pendingFeedbackCount },
             { key: "settings" as Tab, label: "Notifications", count: 0 },
           ].map((t) => (
             <button
               key={t.key}
               onClick={() => setTab(t.key)}
-              className={`px-4 py-2 text-sm rounded-md transition-colors ${
+              className={`relative px-4 py-2 text-sm rounded-md transition-colors ${
                 tab === t.key
                   ? "bg-white text-stone-800 shadow-sm font-medium"
                   : "text-stone-500 hover:text-stone-700"
@@ -392,6 +388,11 @@ export default function ClinicDashboard() {
               {t.count > 0 && (
                 <span className="ml-2 text-xs px-1.5 py-0.5 rounded-full bg-stone-100 text-stone-500">
                   {t.count}
+                </span>
+              )}
+              {"pendingFeedback" in t && (t.pendingFeedback ?? 0) > 0 && (
+                <span className="ml-1.5 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 text-[10px] font-bold rounded-full bg-red-500 text-white">
+                  {t.pendingFeedback}
                 </span>
               )}
             </button>
@@ -693,31 +694,7 @@ export default function ClinicDashboard() {
                                           No-Show
                                         </button>
                                       )}
-                                      {(() => {
-                                        const feedbackKey = `${slot.id}-${signup.volunteer.id}`;
-                                        // Only show the button on the first hour row for this volunteer in this slot
-                                        const firstHourForVolunteer = Math.min(
-                                          ...slot.signups
-                                            .filter((s) => s.volunteer.id === signup.volunteer.id)
-                                            .map((s) => s.subBlockHour)
-                                        );
-                                        if (signup.subBlockHour !== firstHourForVolunteer) return null;
-                                        return feedbackGiven.has(feedbackKey) ? (
-                                          <span className="text-xs text-emerald-600">✓ Rated</span>
-                                        ) : (
-                                          <button
-                                            onClick={() => {
-                                              setFeedbackModal({ signupId: signup.id, feedbackKey, volunteerName: signup.volunteer.user.name ?? signup.volunteer.user.email });
-                                              setFeedbackRating(0);
-                                              setFeedbackNote("");
-                                              setFeedbackError("");
-                                            }}
-                                            className="text-xs px-2 py-1 bg-blue-50 text-blue-700 hover:bg-blue-100 rounded transition-colors"
-                                          >
-                                            Rate
-                                          </button>
-                                        );
-                                      })()}
+                                      {/* Rate button removed — ratings now in the section below the table */}
                                     </div>
                                   </td>
                                 )}
@@ -743,6 +720,69 @@ export default function ClinicDashboard() {
                     </tbody>
                   </table>
                 </div>
+
+                {/* Inline volunteer feedback section — only for past slots with actual signups */}
+                {isPast && (() => {
+                  const uniqueVols = [...new Map(
+                    slot.signups.map((s) => [s.volunteer.id, s])
+                  ).values()];
+                  if (uniqueVols.length === 0) return null;
+                  const anyPending = uniqueVols.some((s) => !feedbackGiven.has(`${slot.id}-${s.volunteer.id}`));
+                  if (!anyPending) return (
+                    <p className="px-5 pb-4 text-xs text-emerald-600">✓ All volunteers rated</p>
+                  );
+                  return (
+                    <div className="border-t border-stone-100 px-5 py-4 space-y-4">
+                      <p className="text-xs font-medium text-stone-500">Rate volunteers from this shift</p>
+                      {uniqueVols.map((s) => {
+                        const feedbackKey = `${slot.id}-${s.volunteer.id}`;
+                        const form = feedbackForms[feedbackKey] ?? { rating: 0, note: "" };
+                        if (feedbackGiven.has(feedbackKey)) {
+                          return (
+                            <div key={s.volunteer.id} className="flex items-center gap-2">
+                              <span className="text-xs font-medium text-stone-700">{s.volunteer.user.name ?? s.volunteer.user.email}</span>
+                              <span className="text-xs text-emerald-600">✓ Rated</span>
+                            </div>
+                          );
+                        }
+                        return (
+                          <div key={s.volunteer.id}>
+                            <p className="text-xs font-medium text-stone-700 mb-1.5">{s.volunteer.user.name ?? s.volunteer.user.email}</p>
+                            <div className="flex flex-wrap gap-1.5 mb-2">
+                              {RATING_OPTIONS.map((opt) => (
+                                <button
+                                  key={opt.value}
+                                  onClick={() => setFeedbackForms((prev) => ({ ...prev, [feedbackKey]: { ...form, rating: opt.value } }))}
+                                  className={`px-2.5 py-1 text-xs rounded-md border transition-colors ${form.rating === opt.value ? opt.active : opt.idle}`}
+                                >
+                                  {opt.label}
+                                </button>
+                              ))}
+                            </div>
+                            {form.rating > 0 && (
+                              <div className="flex gap-2 items-start">
+                                <textarea
+                                  placeholder="Any comments? (optional)"
+                                  value={form.note}
+                                  onChange={(e) => setFeedbackForms((prev) => ({ ...prev, [feedbackKey]: { ...form, note: e.target.value } }))}
+                                  rows={2}
+                                  className="flex-1 px-2.5 py-1.5 text-xs border border-stone-200 rounded-md focus:outline-none focus:ring-1 focus:ring-stone-300 resize-none"
+                                />
+                                <button
+                                  disabled={submittingFeedbackFor === feedbackKey}
+                                  onClick={() => submitInlineFeedback(feedbackKey, s.id)}
+                                  className="px-3 py-1.5 text-xs bg-stone-800 text-white rounded-md hover:bg-stone-700 transition-colors disabled:opacity-50 whitespace-nowrap"
+                                >
+                                  {submittingFeedbackFor === feedbackKey ? "..." : "Submit"}
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })()}
               </div>
             );
           })
@@ -962,55 +1002,6 @@ export default function ClinicDashboard() {
                 className="w-full px-4 py-2.5 text-sm bg-stone-100 hover:bg-stone-200 text-stone-700 font-medium rounded-lg transition-colors"
               >
                 Go Back &amp; Edit
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Feedback Modal */}
-      {feedbackModal && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-sm p-6">
-            <h3 className="text-sm font-semibold text-stone-800 mb-1">How did {feedbackModal.volunteerName} perform?</h3>
-            <p className="text-xs text-stone-400 mb-4">Your feedback helps us improve volunteer quality.</p>
-
-            {/* Rating */}
-            <div className="flex flex-col gap-2 mb-4">
-              {RATING_OPTIONS.map((opt) => (
-                <button
-                  key={opt.value}
-                  onClick={() => setFeedbackRating(opt.value)}
-                  className={`px-3 py-2 text-sm rounded-md border transition-colors text-left ${feedbackRating === opt.value ? opt.active : opt.idle}`}
-                >
-                  {opt.label}
-                </button>
-              ))}
-            </div>
-
-            <textarea
-              placeholder="Any additional comments? (optional)"
-              value={feedbackNote}
-              onChange={(e) => setFeedbackNote(e.target.value)}
-              rows={3}
-              className="w-full px-3 py-2 text-sm border border-stone-200 rounded-md focus:outline-none focus:ring-2 focus:ring-stone-300 resize-none mb-3"
-            />
-
-            {feedbackError && <p className="text-xs text-red-500 mb-3">{feedbackError}</p>}
-
-            <div className="flex gap-2">
-              <button
-                onClick={() => { setFeedbackModal(null); setFeedbackRating(0); setFeedbackNote(""); setFeedbackError(""); }}
-                className="flex-1 px-4 py-2 text-sm border border-stone-200 text-stone-600 rounded-lg hover:bg-stone-50 transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                disabled={feedbackSubmitting || feedbackRating === 0}
-                onClick={submitFeedback}
-                className="flex-1 px-4 py-2 text-sm bg-stone-800 text-white rounded-lg hover:bg-stone-700 transition-colors disabled:opacity-50"
-              >
-                {feedbackSubmitting ? "Submitting..." : "Submit"}
               </button>
             </div>
           </div>
