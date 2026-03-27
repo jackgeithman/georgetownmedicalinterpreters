@@ -46,10 +46,10 @@ export default function ClinicLoginPage({
 
   if (notFound) {
     return (
-      <div className="min-h-screen bg-stone-50 flex items-center justify-center px-4">
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
         <div className="text-center">
-          <p className="text-stone-600 font-medium">Link not found</p>
-          <p className="text-stone-400 text-sm mt-1">
+          <p className="text-gray-600 font-medium">Link not found</p>
+          <p className="text-gray-400 text-sm mt-1">
             This login link is invalid or has been removed.
           </p>
         </div>
@@ -58,24 +58,24 @@ export default function ClinicLoginPage({
   }
 
   return (
-    <div className="min-h-screen bg-stone-50 flex items-center justify-center px-4">
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
-          <h1 className="text-xl font-semibold text-stone-800 tracking-tight">
+          <h1 className="text-xl font-semibold text-black tracking-tight">
             Georgetown Medical Interpreters
           </h1>
           {clinicName ? (
-            <p className="text-sm text-stone-400 mt-1">{clinicName}</p>
+            <p className="text-sm text-gray-400 mt-1">{clinicName}</p>
           ) : (
-            <p className="text-sm text-stone-300 mt-1">Loading...</p>
+            <p className="text-sm text-gray-300 mt-1">Loading...</p>
           )}
         </div>
 
-        <div className="bg-white rounded-xl border border-stone-200 p-6">
-          <p className="text-xs font-medium text-stone-500 uppercase tracking-wider mb-1">
+        <div className="bg-white rounded-xl border border-gray-200 p-6">
+          <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">
             Clinic Sign In
           </p>
-          <p className="text-sm text-stone-400 mb-4">Enter your 8-digit PIN to continue.</p>
+          <p className="text-sm text-gray-400 mb-4">Enter your 8-digit PIN to continue.</p>
 
           {error && (
             <div className="mb-3 px-3 py-2 bg-red-50 border border-red-100 rounded-lg text-sm text-red-600">
@@ -93,12 +93,12 @@ export default function ClinicLoginPage({
               value={pin}
               onChange={(e) => setPin(e.target.value.replace(/\D/g, ""))}
               disabled={!clinicName || loading}
-              className="w-full px-3 py-2.5 text-sm border border-stone-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-stone-300 tracking-widest text-center disabled:bg-stone-50"
+              className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4A90D9] tracking-widest text-center disabled:bg-gray-50"
             />
             <button
               type="submit"
               disabled={pin.length !== 8 || loading || !clinicName}
-              className="w-full px-4 py-2.5 bg-stone-800 hover:bg-stone-700 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50"
+              className="w-full px-4 py-2.5 bg-[#4A90D9] hover:bg-[#357ABD] text-white text-sm font-medium rounded-full transition-colors disabled:opacity-50"
             >
               {loading ? "Signing in..." : "Sign In"}
             </button>

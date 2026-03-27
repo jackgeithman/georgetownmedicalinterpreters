@@ -4,5 +4,43 @@
       "path": "/api/cron/daily",
       "schedule": "0 13 * * *"
     }
+  ],
+  "redirects": [
+    {
+      "source": "/(.*)",
+      "destination": "https://georgetownmedicalinterpreters.org/$1",
+      "permanent": true,
+      "has": [{ "type": "host", "value": "gumedinterpreter.org" }]
+    },
+    {
+      "source": "/(.*)",
+      "destination": "https://georgetownmedicalinterpreters.org/$1",
+      "permanent": true,
+      "has": [{ "type": "host", "value": "www.gumedinterpreter.org" }]
+    },
+    {
+      "source": "/(.*)",
+      "destination": "https://georgetownmedicalinterpreters.org/$1",
+      "permanent": true,
+      "has": [{ "type": "host", "value": "gumedinterpreters.org" }]
+    },
+    {
+      "source": "/(.*)",
+      "destination": "https://georgetownmedicalinterpreters.org/$1",
+      "permanent": true,
+      "has": [{ "type": "host", "value": "www.gumedinterpreters.org" }]
+    },
+    {
+      "source": "/(.*)",
+      "destination": "https://georgetownmedicalinterpreters.org/$1",
+      "permanent": true,
+      "has": [{ "type": "host", "value": "georgetownmedicalinterpreter.org" }]
+    },
+    {
+      "source": "/(.*)",
+      "destination": "https://georgetownmedicalinterpreters.org/$1",
+      "permanent": true,
+      "has": [{ "type": "host", "value": "www.georgetownmedicalinterpreter.org" }]
+    }
   ]
 }

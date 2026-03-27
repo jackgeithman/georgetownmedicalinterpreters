@@ -43,6 +43,50 @@ const LANG_LABELS: Record<string, string> = {
   KO: "Korean",
 };
 
+<<<<<<< HEAD
+=======
+const RATING_OPTIONS = [
+  { value: 1, label: "Needs Improvement", active: "bg-red-100 text-red-700 border-red-300", idle: "bg-white text-gray-500 border-gray-200 hover:border-red-200 hover:text-red-600" },
+  { value: 2, label: "Okay",              active: "bg-orange-100 text-orange-700 border-orange-300", idle: "bg-white text-gray-500 border-gray-200 hover:border-orange-200 hover:text-orange-600" },
+  { value: 3, label: "Good",              active: "bg-yellow-100 text-yellow-700 border-yellow-300", idle: "bg-white text-gray-500 border-gray-200 hover:border-yellow-200 hover:text-yellow-600" },
+  { value: 4, label: "Excellent",         active: "bg-green-100 text-green-700 border-green-300",  idle: "bg-white text-gray-500 border-gray-200 hover:border-green-200 hover:text-green-600" },
+  { value: 5, label: "Exceptional", active: "bg-emerald-100 text-emerald-700 border-emerald-300", idle: "bg-white text-gray-500 border-gray-200 hover:border-emerald-200 hover:text-emerald-600" },
+];
+
+const LANG_COLORS: Record<string, string> = {
+  ES: "bg-amber-50 text-amber-700",
+  ZH: "bg-red-50 text-red-700",
+  KO: "bg-[#EBF3FC] text-[#041E42]",
+};
+
+function MapsLinks({ address }: { address: string }) {
+  const q = encodeURIComponent(address);
+  return (
+    <span className="inline-flex gap-1.5 ml-1.5 items-center">
+      <a
+        href={`https://www.google.com/maps/search/?api=1&query=${q}`}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="text-xs text-[#4A90D9] hover:text-[#041E42] underline"
+        title="Google Maps"
+      >
+        G Maps
+      </a>
+      <span className="text-gray-300">·</span>
+      <a
+        href={`https://maps.apple.com/?q=${q}`}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="text-xs text-[#4A90D9] hover:text-[#041E42] underline"
+        title="Apple Maps"
+      >
+        Apple Maps
+      </a>
+    </span>
+  );
+}
+
+>>>>>>> origin/main
 function formatHour(h: number): string {
   if (h === 0) return "12 AM";
   if (h < 12) return `${h} AM`;
@@ -112,6 +156,11 @@ export default function ClinicDashboard() {
   const [form, setForm] = useState({ language: "ES", date: "", startTime: 9, endTime: 12, interpreterCount: 1, notes: "", isRecurring: false, recurrenceEndDate: "" });
   const [selectedSlotIds, setSelectedSlotIds] = useState<Set<string>>(new Set());
   const [postError, setPostError] = useState("");
+  const [activeLanguages, setActiveLanguages] = useState<{ code: string; name: string }[]>([]);
+  // Feedback state — inline (no modal), keyed by "${slotId}-${volunteerId}"
+  const [feedbackGiven, setFeedbackGiven] = useState<Set<string>>(new Set());
+  const [feedbackForms, setFeedbackForms] = useState<Record<string, { rating: number; note: string }>>({});
+  const [submittingFeedbackFor, setSubmittingFeedbackFor] = useState<string | null>(null);
 
   useEffect(() => {
     if (status === "unauthenticated") router.push("/login");
@@ -119,13 +168,37 @@ export default function ClinicDashboard() {
   }, [status, session, router]);
 
   const fetchSlots = useCallback(async () => {
+<<<<<<< HEAD
     const [slotsRes, notifRes] = await Promise.all([fetch("/api/clinic/slots"), fetch("/api/clinic/notif-prefs")]);
+=======
+    const [slotsRes, notifRes, statusRes] = await Promise.all([
+      fetch("/api/clinic/slots"),
+      fetch("/api/clinic/notif-prefs"),
+      fetch("/api/feedback/my-status"),
+    ]);
+>>>>>>> origin/main
     if (slotsRes.ok) setSlots(await slotsRes.json());
     if (notifRes.ok) setNotifPrefs(await notifRes.json());
+    if (statusRes.ok) {
+      const { givenKeys } = await statusRes.json();
+      setFeedbackGiven(new Set<string>(givenKeys ?? []));
+    }
     setLoading(false);
   }, []);
 
+<<<<<<< HEAD
   useEffect(() => { if (session?.user?.role === "CLINIC") fetchSlots(); }, [session, fetchSlots]);
+=======
+  useEffect(() => {
+    if (session?.user?.role === "CLINIC") {
+      fetchSlots();
+      fetch("/api/languages")
+        .then((r) => r.json())
+        .then((data) => { if (Array.isArray(data)) setActiveLanguages(data); })
+        .catch(() => {});
+    }
+  }, [session, fetchSlots]);
+>>>>>>> origin/main
 
   const saveNotifPrefs = async (updated: ClinicNotifPrefs) => {
     await fetch("/api/clinic/notif-prefs", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(updated) });
@@ -188,9 +261,25 @@ export default function ClinicDashboard() {
     if (res.ok) await fetchSlots(); setActionLoading(null);
   };
 
+  const submitInlineFeedback = async (feedbackKey: string, signupId: string) => {
+    const form = feedbackForms[feedbackKey];
+    if (!form?.rating) return;
+    setSubmittingFeedbackFor(feedbackKey);
+    const res = await fetch("/api/feedback", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ signupId, rating: form.rating, note: form.note ?? "" }),
+    });
+    if (res.ok || res.status === 409) {
+      setFeedbackGiven((prev) => new Set([...prev, feedbackKey]));
+    }
+    setSubmittingFeedbackFor(null);
+  };
+
   const upcoming = slots.filter((s) => s.status === "ACTIVE" && isUpcoming(s));
   const past = slots.filter((s) => !isUpcoming(s) || s.status !== "ACTIVE");
 
+<<<<<<< HEAD
   if (status === "loading" || loading) return <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--page-bg)" }}><p style={{ color: "var(--gray-400)" }}>Loading…</p></div>;
 
   if (!session?.user?.clinicId) return (
@@ -198,6 +287,32 @@ export default function ClinicDashboard() {
       <div style={{ textAlign: "center" }}>
         <p style={{ fontWeight: 600, color: "var(--gray-900)" }}>No clinic assigned</p>
         <p style={{ color: "var(--gray-600)", fontSize: "0.875rem", marginTop: "6px" }}>Contact your admin to be assigned to a clinic.</p>
+=======
+  // Count how many volunteer ratings are still pending across all past slots
+  const pendingFeedbackCount = past.reduce((total, slot) => {
+    const uniqueVolunteers = [...new Map(slot.signups.map((s) => [s.volunteer.id, s])).values()];
+    const pending = uniqueVolunteers.filter((s) => !feedbackGiven.has(`${slot.id}-${s.volunteer.id}`)).length;
+    return total + pending;
+  }, 0);
+
+  if (status === "loading" || loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <p className="text-gray-400">Loading...</p>
+      </div>
+    );
+  }
+
+  if (!session?.user?.clinicId) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <p className="text-gray-600 font-medium">No clinic assigned</p>
+          <p className="text-gray-400 text-sm mt-1">
+            Contact your admin to be assigned to a clinic.
+          </p>
+        </div>
+>>>>>>> origin/main
       </div>
     </div>
   );
@@ -208,6 +323,7 @@ export default function ClinicDashboard() {
   const postDisabled = !form.date || form.endTime <= form.startTime || (form.isRecurring && !form.recurrenceEndDate) || actionLoading === "post";
 
   return (
+<<<<<<< HEAD
     <div style={{ minHeight: "100vh", background: "var(--page-bg)" }}>
       {/* Topbar */}
       <header style={{ background: "var(--navy)", height: "64px", position: "sticky", top: 0, zIndex: 100, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 32px" }}>
@@ -216,6 +332,36 @@ export default function ClinicDashboard() {
           <div>
             <div style={{ color: "#fff", fontSize: "0.95rem", fontWeight: 600 }}>Georgetown Medical Interpreters</div>
             <div style={{ color: "#94A3B8", fontSize: "0.72rem" }}>Clinic Dashboard{session?.user?.name ? ` — ${session.user.name}` : ""}</div>
+=======
+    <div className="min-h-screen bg-gray-50">
+      {/* Header */}
+      <header className="bg-[#041E42]">
+        <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div>
+              <h1 className="text-lg font-semibold text-white tracking-tight">Georgetown Medical Interpreters</h1>
+              <p className="text-xs text-white/60">
+                Clinic Dashboard
+                {session?.user?.name && (
+                  <span className="ml-1 text-white/80">— {session.user.name}</span>
+                )}
+              </p>
+            </div>
+            <a
+              href="mailto:georgetownmedicalinterpreters@gmail.com"
+              className="text-sm px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white rounded-md transition-colors"
+            >
+              Contact Us
+            </a>
+          </div>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => signOut({ callbackUrl: "/login" })}
+              className="text-sm px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white rounded-md transition-colors"
+            >
+              Sign Out
+            </button>
+>>>>>>> origin/main
           </div>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
@@ -224,6 +370,7 @@ export default function ClinicDashboard() {
         </div>
       </header>
 
+<<<<<<< HEAD
       <main style={{ maxWidth: "920px", margin: "0 auto", padding: "36px 24px" }}>
         {/* Tabs + action */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "28px" }}>
@@ -245,9 +392,65 @@ export default function ClinicDashboard() {
             </div>
           )}
         </div>
+=======
+      {/* Tabs */}
+      <div className="max-w-6xl mx-auto px-6 pt-6 flex items-center justify-between">
+        <div className="flex gap-1 bg-gray-200/50 p-1 rounded-xl w-fit">
+          {[
+            { key: "upcoming" as Tab, label: "Upcoming", count: upcoming.length },
+            { key: "past" as Tab, label: "Past", count: past.length, pendingFeedback: pendingFeedbackCount },
+            { key: "settings" as Tab, label: "Notifications", count: 0 },
+          ].map((t) => (
+            <button
+              key={t.key}
+              onClick={() => setTab(t.key)}
+              className={`relative px-4 py-2 text-sm rounded-md transition-colors ${
+                tab === t.key
+                  ? "bg-[#4A90D9] text-white shadow-sm font-medium"
+                  : "text-gray-500 hover:text-gray-700"
+              }`}
+            >
+              {t.label}
+              {t.count > 0 && (
+                <span className="ml-2 text-xs px-1.5 py-0.5 rounded-full bg-gray-100 text-gray-500">
+                  {t.count}
+                </span>
+              )}
+              {"pendingFeedback" in t && (t.pendingFeedback ?? 0) > 0 && (
+                <span className="ml-1.5 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 text-[10px] font-bold rounded-full bg-red-500 text-white">
+                  {t.pendingFeedback}
+                </span>
+              )}
+            </button>
+          ))}
+        </div>
+        {tab === "upcoming" && !showPostForm && (
+          <div className="flex items-center gap-3">
+            <span className="text-xs text-gray-400">{upcoming.length}/100 slots</span>
+            <button
+              onClick={() => setShowPostForm(true)}
+              disabled={upcoming.length >= 100}
+              className="px-4 py-2 text-sm bg-[#4A90D9] text-white hover:bg-[#357ABD] rounded-full transition-colors disabled:opacity-40"
+              title={upcoming.length >= 100 ? "You have reached the 100-slot limit" : undefined}
+            >
+              + Post Slot
+            </button>
+          </div>
+        )}
+        {tab === "upcoming" && showPostForm && (
+          <button
+            onClick={() => setShowPostForm(false)}
+            className="px-4 py-2 text-sm bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-md transition-colors"
+          >
+            Cancel
+          </button>
+        )}
+      </div>
+>>>>>>> origin/main
 
         {/* Post Slot Form */}
         {showPostForm && tab === "upcoming" && (
+<<<<<<< HEAD
           <div style={{ ...card, padding: "24px", marginBottom: "20px" }}>
             <h3 style={{ fontSize: "1.05rem", fontWeight: 700, color: "var(--navy)", marginBottom: "18px" }}>New Slot</h3>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" }}>
@@ -270,11 +473,113 @@ export default function ClinicDashboard() {
                   {form.date && form.recurrenceEndDate && form.recurrenceEndDate >= form.date && (
                     <span style={{ fontSize: "0.82rem", color: "var(--gray-400)" }}>
                       {Math.floor((new Date(form.recurrenceEndDate + "T12:00:00").getTime() - new Date(form.date + "T12:00:00").getTime()) / (7 * 24 * 60 * 60 * 1000)) + 1} occurrences
+=======
+          <div className="bg-white rounded-xl border border-gray-200 p-6">
+            <h3 className="text-sm font-medium text-gray-700 mb-4">New Slot</h3>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">Language</label>
+                <select
+                  value={form.language}
+                  onChange={(e) => setForm({ ...form, language: e.target.value })}
+                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-300"
+                >
+                  {(activeLanguages.length > 0 ? activeLanguages : Object.entries(LANG_LABELS).map(([code, name]) => ({ code, name }))).map(({ code, name }) => (
+                    <option key={code} value={code}>{name}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">Date</label>
+                <input
+                  type="date"
+                  value={form.date}
+                  onChange={(e) => setForm({ ...form, date: e.target.value })}
+                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-300"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">Start Time</label>
+                <select
+                  value={form.startTime}
+                  onChange={(e) => setForm({ ...form, startTime: Number(e.target.value) })}
+                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-300"
+                >
+                  {HOUR_OPTIONS.map((h) => (
+                    <option key={h} value={h}>{formatHour(h)}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">End Time</label>
+                <select
+                  value={form.endTime}
+                  onChange={(e) => setForm({ ...form, endTime: Number(e.target.value) })}
+                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-300"
+                >
+                  {HOUR_OPTIONS.map((h) => (
+                    <option key={h} value={h}>{formatHour(h)}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">Interpreters per Hour</label>
+                <input
+                  type="number"
+                  min={1}
+                  max={10}
+                  value={form.interpreterCount}
+                  onChange={(e) => setForm({ ...form, interpreterCount: Number(e.target.value) })}
+                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-300"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">Notes (optional)</label>
+                <input
+                  placeholder="Any notes for volunteers..."
+                  value={form.notes}
+                  onChange={(e) => setForm({ ...form, notes: e.target.value })}
+                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-300"
+                />
+              </div>
+            </div>
+
+            {/* Recurring toggle */}
+            <div className="mt-4 border-t border-gray-100 pt-4">
+              <label className="flex items-center gap-2 cursor-pointer w-fit">
+                <input
+                  type="checkbox"
+                  checked={form.isRecurring}
+                  onChange={(e) => setForm({ ...form, isRecurring: e.target.checked, recurrenceEndDate: "" })}
+                  className="w-4 h-4 accent-gray-700"
+                />
+                <span className="text-sm text-gray-700">Repeat weekly</span>
+              </label>
+              {form.isRecurring && (
+                <div className="mt-3 flex items-center gap-3">
+                  <label className="text-xs text-gray-500">Repeat until</label>
+                  <input
+                    type="date"
+                    value={form.recurrenceEndDate}
+                    min={form.date || undefined}
+                    onChange={(e) => setForm({ ...form, recurrenceEndDate: e.target.value })}
+                    className="px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-300"
+                  />
+                  {form.date && form.recurrenceEndDate && form.recurrenceEndDate >= form.date && (
+                    <span className="text-xs text-gray-400">
+                      {Math.floor(
+                        (new Date(form.recurrenceEndDate + "T12:00:00").getTime() -
+                          new Date(form.date + "T12:00:00").getTime()) /
+                          (7 * 24 * 60 * 60 * 1000)
+                      ) + 1}{" "}
+                      occurrences
+>>>>>>> origin/main
                     </span>
                   )}
                 </div>
               )}
             </div>
+<<<<<<< HEAD
             {postError && <p style={{ marginTop: "10px", fontSize: "0.82rem", color: "#DC2626" }}>{postError}</p>}
             {form.endTime <= form.startTime && form.date && <p style={{ marginTop: "6px", fontSize: "0.82rem", color: "#DC2626" }}>End time must be after start time.</p>}
             <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "18px" }}>
@@ -282,6 +587,27 @@ export default function ClinicDashboard() {
                 {actionLoading === "post" ? "Posting…" : form.isRecurring ? "Post Recurring Slots" : "Post Slot"}
               </button>
             </div>
+=======
+
+            {postError && (
+              <p className="mt-2 text-xs text-red-500">{postError}</p>
+            )}
+            <button
+              disabled={
+                actionLoading === "post" ||
+                !form.date ||
+                form.endTime <= form.startTime ||
+                (form.isRecurring && !form.recurrenceEndDate)
+              }
+              onClick={postSlot}
+              className="mt-4 px-4 py-2 text-sm bg-[#4A90D9] text-white hover:bg-[#357ABD] rounded-full transition-colors disabled:opacity-50"
+            >
+              {actionLoading === "post" ? "Posting..." : form.isRecurring ? "Post Recurring Slots" : "Post Slot"}
+            </button>
+            {form.endTime <= form.startTime && form.date && (
+              <p className="mt-2 text-xs text-red-500">End time must be after start time.</p>
+            )}
+>>>>>>> origin/main
           </div>
         )}
 
@@ -294,6 +620,7 @@ export default function ClinicDashboard() {
           </div>
         )}
 
+<<<<<<< HEAD
         {/* Slot list */}
         {tab !== "settings" && (
           displaySlots.length === 0
@@ -332,6 +659,286 @@ export default function ClinicDashboard() {
                   <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
                     {([null, 2, 4, 12, 24] as (number | null)[]).map((v) => (
                       <button key={String(v)} onClick={() => saveNotifPrefs({ ...notifPrefs, volunteerCancelWindow: v })} style={{ padding: "8px 16px", fontSize: "0.82rem", fontFamily: "inherit", cursor: "pointer", borderRadius: "8px", border: "1.5px solid", background: notifPrefs.volunteerCancelWindow === v ? "var(--blue)" : "transparent", color: notifPrefs.volunteerCancelWindow === v ? "#fff" : "var(--gray-600)", borderColor: notifPrefs.volunteerCancelWindow === v ? "var(--blue)" : "var(--card-border)", fontWeight: 500 }}>
+=======
+        {/* Slot List */}
+        {tab !== "settings" && (displaySlots.length === 0 ? (
+          <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
+            <p className="text-gray-400">
+              {tab === "upcoming" ? "No upcoming slots. Post one to get started." : "No past slots."}
+            </p>
+          </div>
+        ) : (
+          displaySlots.map((slot) => {
+            const subBlocks = Array.from(
+              { length: slot.endTime - slot.startTime },
+              (_, i) => slot.startTime + i
+            );
+            const isPast = !isUpcoming(slot);
+
+            return (
+              <div key={slot.id} className="bg-white rounded-xl border border-gray-200 p-5">
+                {/* Slot Header */}
+                <div className="flex items-start justify-between mb-4">
+                  <div className="flex items-center gap-3 flex-wrap">
+                    {!isPast && slot.status === "ACTIVE" && (
+                      <input
+                        type="checkbox"
+                        checked={selectedSlotIds.has(slot.id)}
+                        onChange={() => toggleSelectSlot(slot.id)}
+                        className="w-4 h-4 accent-gray-700 cursor-pointer"
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                    )}
+                    <span className={`text-xs px-2 py-1 rounded-full font-medium ${LANG_COLORS[slot.language]}`}>
+                      {LANG_LABELS[slot.language]}
+                    </span>
+                    <span className="text-sm font-medium text-black">{formatDate(slot.date)}</span>
+                    <span className="text-sm text-gray-500">
+                      {formatHour(slot.startTime)} – {formatHour(slot.endTime)}
+                    </span>
+                    <span className="text-xs text-gray-400">
+                      {slot.interpreterCount} interpreter{slot.interpreterCount !== 1 ? "s" : ""}/hour
+                    </span>
+                    {slot.isRecurring && (
+                      <span className="text-xs px-2 py-0.5 rounded-full bg-violet-50 text-violet-600 font-medium">
+                        Weekly
+                      </span>
+                    )}
+                  </div>
+                  {!isPast && slot.status === "ACTIVE" && (
+                    <div className="flex gap-2 shrink-0">
+                      <button
+                        onClick={() => { setEditSlot({ ...slot }); setEditScope("single"); }}
+                        className="text-xs px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-md transition-colors"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        disabled={actionLoading === slot.id}
+                        onClick={() => setCancelConfirm({ slotId: slot.id, isRecurring: slot.isRecurring && !!slot.recurrenceGroupId })}
+                        className="text-xs px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-md transition-colors disabled:opacity-50"
+                      >
+                        Cancel Slot
+                      </button>
+                    </div>
+                  )}
+                  {slot.status === "CANCELLED" && (
+                    <span className="text-xs px-2 py-1 bg-gray-100 text-gray-400 rounded-full">Cancelled</span>
+                  )}
+                </div>
+                {slot.notes && (
+                  <p className="text-xs text-gray-400 mb-3 italic">{slot.notes}</p>
+                )}
+
+                {/* Sub-blocks */}
+                <div className="border border-gray-100 rounded-lg overflow-hidden">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="bg-gray-50 border-b border-gray-100">
+                        <th className="text-left text-xs text-gray-400 font-medium px-4 py-2">Hour</th>
+                        <th className="text-left text-xs text-gray-400 font-medium px-4 py-2">Volunteer</th>
+                        <th className="text-left text-xs text-gray-400 font-medium px-4 py-2">Status</th>
+                        {isPast && (
+                          <th className="text-right text-xs text-gray-400 font-medium px-4 py-2">Action</th>
+                        )}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {subBlocks.map((hour) => {
+                        const hourSignups = slot.signups.filter((s) => s.subBlockHour === hour);
+                        const filled = hourSignups.length;
+                        const empty = slot.interpreterCount - filled;
+
+                        return (
+                          <Fragment key={hour}>
+                            {hourSignups.map((signup) => (
+                              <tr key={signup.id} className="border-b border-gray-50 last:border-0">
+                                <td className="px-4 py-2.5 text-gray-600 text-xs">
+                                  {formatHour(hour)} – {formatHour(hour + 1)}
+                                </td>
+                                <td className="px-4 py-2.5 text-black text-xs">
+                                  {signup.volunteer.user.name}
+                                  <span className="ml-1 text-gray-400">{signup.volunteer.user.email}</span>
+                                </td>
+                                <td className="px-4 py-2.5">
+                                  <span className={`text-xs px-2 py-0.5 rounded-full ${
+                                    signup.status === "ACTIVE"
+                                      ? "bg-emerald-50 text-emerald-700"
+                                      : signup.status === "NO_SHOW"
+                                      ? "bg-red-50 text-red-600"
+                                      : "bg-gray-100 text-gray-500"
+                                  }`}>
+                                    {signup.status === "ACTIVE" ? "Confirmed" : signup.status.replace("_", " ")}
+                                  </span>
+                                </td>
+                                {isPast && (
+                                  <td className="px-4 py-2.5 text-right">
+                                    <div className="flex items-center justify-end gap-2">
+                                      {signup.status === "ACTIVE" && (
+                                        <button
+                                          disabled={actionLoading === signup.id}
+                                          onClick={() => reportNoShow(slot.id, signup.id)}
+                                          className="text-xs px-2 py-1 bg-amber-50 text-amber-700 hover:bg-amber-100 rounded transition-colors disabled:opacity-50"
+                                        >
+                                          No-Show
+                                        </button>
+                                      )}
+                                      {/* Rate button removed — ratings now in the section below the table */}
+                                    </div>
+                                  </td>
+                                )}
+                              </tr>
+                            ))}
+                            {Array.from({ length: empty }).map((_, i) => (
+                              <tr key={`empty-${hour}-${i}`} className="border-b border-gray-50 last:border-0">
+                                <td className="px-4 py-2.5 text-gray-600 text-xs">
+                                  {formatHour(hour)} – {formatHour(hour + 1)}
+                                </td>
+                                <td className="px-4 py-2.5 text-gray-300 text-xs italic">Open</td>
+                                <td className="px-4 py-2.5">
+                                  <span className="text-xs px-2 py-0.5 rounded-full bg-gray-50 text-gray-300">
+                                    Available
+                                  </span>
+                                </td>
+                                {isPast && <td />}
+                              </tr>
+                            ))}
+                          </Fragment>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Inline volunteer feedback section — only for past slots with actual signups */}
+                {isPast && (() => {
+                  const uniqueVols = [...new Map(
+                    slot.signups.map((s) => [s.volunteer.id, s])
+                  ).values()];
+                  if (uniqueVols.length === 0) return null;
+                  const anyPending = uniqueVols.some((s) => !feedbackGiven.has(`${slot.id}-${s.volunteer.id}`));
+                  if (!anyPending) return (
+                    <p className="px-5 pb-4 text-xs text-emerald-600">✓ All volunteers rated</p>
+                  );
+                  return (
+                    <div className="border-t border-gray-100 px-5 py-4 space-y-4">
+                      <p className="text-xs font-medium text-gray-500">Rate volunteers from this shift</p>
+                      {uniqueVols.map((s) => {
+                        const feedbackKey = `${slot.id}-${s.volunteer.id}`;
+                        const form = feedbackForms[feedbackKey] ?? { rating: 0, note: "" };
+                        if (feedbackGiven.has(feedbackKey)) {
+                          return (
+                            <div key={s.volunteer.id} className="flex items-center gap-2">
+                              <span className="text-xs font-medium text-gray-700">{s.volunteer.user.name ?? s.volunteer.user.email}</span>
+                              <span className="text-xs text-emerald-600">✓ Rated</span>
+                            </div>
+                          );
+                        }
+                        return (
+                          <div key={s.volunteer.id}>
+                            <p className="text-xs font-medium text-gray-700 mb-1.5">{s.volunteer.user.name ?? s.volunteer.user.email}</p>
+                            <div className="flex flex-wrap gap-1.5 mb-2">
+                              {RATING_OPTIONS.map((opt) => (
+                                <button
+                                  key={opt.value}
+                                  onClick={() => setFeedbackForms((prev) => ({ ...prev, [feedbackKey]: { ...form, rating: opt.value } }))}
+                                  className={`px-2.5 py-1 text-xs rounded-md border transition-colors ${form.rating === opt.value ? opt.active : opt.idle}`}
+                                >
+                                  {opt.label}
+                                </button>
+                              ))}
+                            </div>
+                            {form.rating > 0 && (
+                              <div className="flex gap-2 items-start">
+                                <textarea
+                                  placeholder="Any comments? (optional)"
+                                  value={form.note}
+                                  onChange={(e) => setFeedbackForms((prev) => ({ ...prev, [feedbackKey]: { ...form, note: e.target.value } }))}
+                                  rows={2}
+                                  className="flex-1 px-2.5 py-1.5 text-xs border border-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-300 resize-none"
+                                />
+                                <button
+                                  disabled={submittingFeedbackFor === feedbackKey}
+                                  onClick={() => submitInlineFeedback(feedbackKey, s.id)}
+                                  className="px-3 py-1.5 text-xs bg-[#4A90D9] text-white rounded-full hover:bg-[#357ABD] transition-colors disabled:opacity-50 whitespace-nowrap"
+                                >
+                                  {submittingFeedbackFor === feedbackKey ? "..." : "Submit"}
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })()}
+              </div>
+            );
+          })
+        ))}
+        {/* Notification Settings */}
+        {tab === "settings" && (
+          <div className="max-w-lg space-y-6">
+            <div className="bg-white rounded-xl border border-gray-200 p-6">
+              <div className="flex items-center justify-between mb-1">
+                <h3 className="text-sm font-medium text-gray-700">Email Notifications</h3>
+                {notifSaved && <span className="text-xs text-emerald-600">Saved ✓</span>}
+              </div>
+              <p className="text-xs text-gray-400 mb-5">Changes save instantly.</p>
+
+              <div className="space-y-4">
+                {/* Daily summary */}
+                <label className="flex items-start gap-3 cursor-pointer">
+                  <button
+                    role="switch"
+                    aria-checked={notifPrefs.dailySummary}
+                    onClick={() => saveNotifPrefs({ ...notifPrefs, dailySummary: !notifPrefs.dailySummary })}
+                    className={`mt-0.5 relative inline-flex h-5 w-9 flex-shrink-0 rounded-full border-2 border-transparent transition-colors focus:outline-none ${
+                      notifPrefs.dailySummary ? "bg-[#4A90D9]" : "bg-gray-200"
+                    }`}
+                  >
+                    <span className={`inline-block h-4 w-4 rounded-full bg-white shadow transition-transform ${notifPrefs.dailySummary ? "translate-x-4" : "translate-x-0"}`} />
+                  </button>
+                  <div>
+                    <p className="text-sm text-gray-700">Daily summary email</p>
+                    <p className="text-xs text-gray-400">Sent each morning with all your upcoming slots and their current roster</p>
+                  </div>
+                </label>
+
+                {/* Unfilled alert */}
+                <label className="flex items-start gap-3 cursor-pointer">
+                  <button
+                    role="switch"
+                    aria-checked={notifPrefs.unfilledAlert24h}
+                    onClick={() => saveNotifPrefs({ ...notifPrefs, unfilledAlert24h: !notifPrefs.unfilledAlert24h })}
+                    className={`mt-0.5 relative inline-flex h-5 w-9 flex-shrink-0 rounded-full border-2 border-transparent transition-colors focus:outline-none ${
+                      notifPrefs.unfilledAlert24h ? "bg-[#4A90D9]" : "bg-gray-200"
+                    }`}
+                  >
+                    <span className={`inline-block h-4 w-4 rounded-full bg-white shadow transition-transform ${notifPrefs.unfilledAlert24h ? "translate-x-4" : "translate-x-0"}`} />
+                  </button>
+                  <div>
+                    <p className="text-sm text-gray-700">Unfilled slot alert (24 hrs before)</p>
+                    <p className="text-xs text-gray-400">Email if any sub-block is still open within 24 hours of the appointment</p>
+                  </div>
+                </label>
+
+                {/* Volunteer cancel window */}
+                <div className="pt-2 border-t border-gray-100">
+                  <p className="text-sm text-gray-700 mb-1">Volunteer cancellation alert</p>
+                  <p className="text-xs text-gray-400 mb-3">Get notified when a volunteer cancels within a certain window of the appointment</p>
+                  <div className="flex flex-wrap gap-2">
+                    {([null, 2, 4, 12, 24] as (number | null)[]).map((v) => (
+                      <button
+                        key={String(v)}
+                        onClick={() => saveNotifPrefs({ ...notifPrefs, volunteerCancelWindow: v })}
+                        className={`px-3 py-1.5 text-xs rounded-md border transition-colors ${
+                          notifPrefs.volunteerCancelWindow === v
+                            ? "bg-[#4A90D9] text-white border-[#4A90D9]"
+                            : "bg-white text-gray-500 border-gray-200 hover:border-gray-300"
+                        }`}
+                      >
+>>>>>>> origin/main
                         {v === null ? "Don't notify" : `Within ${v}h`}
                       </button>
                     ))}
@@ -345,6 +952,7 @@ export default function ClinicDashboard() {
 
       {/* Edit Slot Modal */}
       {editSlot && (
+<<<<<<< HEAD
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.3)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 50, padding: "16px" }}>
           <div style={{ background: "#fff", borderRadius: "16px", width: "100%", maxWidth: "520px", boxShadow: "0 20px 60px rgba(0,0,0,.2)", overflow: "hidden" }}>
             <div style={{ padding: "20px 24px", borderBottom: "1.5px solid var(--card-border)" }}>
@@ -372,6 +980,111 @@ export default function ClinicDashboard() {
                 <button disabled={actionLoading === "edit" || editSlot.endTime <= editSlot.startTime} onClick={requestSaveEdit} style={{ ...btnPrimary, opacity: actionLoading === "edit" || editSlot.endTime <= editSlot.startTime ? 0.5 : 1 }}>{actionLoading === "edit" ? "Saving…" : "Save Changes"}</button>
                 <button onClick={() => setEditSlot(null)} style={{ padding: "10px 22px", borderRadius: "9px", background: "none", border: "1.5px solid var(--card-border)", color: "var(--gray-600)", fontFamily: "inherit", fontSize: "0.875rem", cursor: "pointer" }}>Cancel</button>
               </div>
+=======
+        <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl p-6 w-full max-w-md shadow-xl">
+            <h3 className="text-sm font-medium text-gray-700 mb-4">Edit Slot</h3>
+
+            {/* Scope selector for recurring slots */}
+            {editSlot.isRecurring && editSlot.recurrenceGroupId && (
+              <div className="mb-4 border border-gray-200 rounded-lg overflow-hidden">
+                {(["single", "this_and_future"] as const).map((scope) => (
+                  <button
+                    key={scope}
+                    onClick={() => setEditScope(scope)}
+                    className={`w-full text-left px-4 py-2.5 text-sm transition-colors ${
+                      editScope === scope
+                        ? "bg-[#4A90D9] text-white"
+                        : "bg-white text-gray-600 hover:bg-gray-50"
+                    }`}
+                  >
+                    {scope === "single" ? "This date only" : "This and all future dates"}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">Language</label>
+                <select
+                  value={editSlot.language}
+                  onChange={(e) => setEditSlot({ ...editSlot, language: e.target.value })}
+                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-300"
+                >
+                  {(activeLanguages.length > 0 ? activeLanguages : Object.entries(LANG_LABELS).map(([code, name]) => ({ code, name }))).map(({ code, name }) => (
+                    <option key={code} value={code}>{name}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">Date</label>
+                <input
+                  type="date"
+                  value={editSlot.date.split("T")[0]}
+                  onChange={(e) => setEditSlot({ ...editSlot, date: e.target.value })}
+                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-300"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">Start Time</label>
+                <select
+                  value={editSlot.startTime}
+                  onChange={(e) => setEditSlot({ ...editSlot, startTime: Number(e.target.value) })}
+                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-300"
+                >
+                  {HOUR_OPTIONS.map((h) => (
+                    <option key={h} value={h}>{formatHour(h)}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">End Time</label>
+                <select
+                  value={editSlot.endTime}
+                  onChange={(e) => setEditSlot({ ...editSlot, endTime: Number(e.target.value) })}
+                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-300"
+                >
+                  {HOUR_OPTIONS.map((h) => (
+                    <option key={h} value={h}>{formatHour(h)}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">Interpreters per Hour</label>
+                <input
+                  type="number"
+                  min={1}
+                  max={10}
+                  value={editSlot.interpreterCount}
+                  onChange={(e) => setEditSlot({ ...editSlot, interpreterCount: Number(e.target.value) })}
+                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-300"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">Notes</label>
+                <input
+                  value={editSlot.notes ?? ""}
+                  onChange={(e) => setEditSlot({ ...editSlot, notes: e.target.value })}
+                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-300"
+                />
+              </div>
+            </div>
+            <div className="flex gap-2 mt-4">
+              <button
+                disabled={actionLoading === "edit" || editSlot.endTime <= editSlot.startTime}
+                onClick={requestSaveEdit}
+                className="px-4 py-2 text-sm bg-[#4A90D9] text-white hover:bg-[#357ABD] rounded-full transition-colors disabled:opacity-50"
+              >
+                {actionLoading === "edit" ? "Saving..." : "Save Changes"}
+              </button>
+              <button
+                onClick={() => setEditSlot(null)}
+                className="px-4 py-2 text-sm bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-md transition-colors"
+              >
+                Cancel
+              </button>
+>>>>>>> origin/main
             </div>
           </div>
         </div>
@@ -386,6 +1099,7 @@ export default function ClinicDashboard() {
                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="#D97706" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" /></svg>
               </div>
               <div>
+<<<<<<< HEAD
                 <h3 style={{ fontSize: "0.95rem", fontWeight: 700, color: "var(--navy)", marginBottom: "6px" }}>Volunteers will be removed</h3>
                 <p style={{ fontSize: "0.875rem", color: "var(--gray-600)" }}>{editWarning.cancelCount} volunteer signup{editWarning.cancelCount !== 1 ? "s" : ""} conflict with your changes and will be cancelled.</p>
               </div>
@@ -393,6 +1107,30 @@ export default function ClinicDashboard() {
             <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
               <button disabled={actionLoading === "edit"} onClick={confirmSaveEdit} style={{ ...btnPrimary, width: "100%", textAlign: "center", opacity: actionLoading === "edit" ? 0.5 : 1 }}>{actionLoading === "edit" ? "Saving…" : "Save Changes Anyway"}</button>
               <button onClick={() => setEditWarning(null)} style={{ padding: "10px", borderRadius: "9px", background: "var(--page-bg)", border: "1.5px solid var(--card-border)", color: "var(--gray-600)", fontFamily: "inherit", fontSize: "0.875rem", fontWeight: 500, cursor: "pointer" }}>Go Back &amp; Edit</button>
+=======
+                <h3 className="text-sm font-semibold text-black">Volunteers will be removed</h3>
+                <p className="text-sm text-gray-500 mt-1">
+                  {editWarning.cancelCount} volunteer signup{editWarning.cancelCount !== 1 ? "s" : ""}{" "}
+                  conflict{editWarning.cancelCount === 1 ? "s" : ""} with your changes and will be cancelled
+                  if you proceed.
+                </p>
+              </div>
+            </div>
+            <div className="flex flex-col gap-2">
+              <button
+                disabled={actionLoading === "edit"}
+                onClick={confirmSaveEdit}
+                className="w-full px-4 py-2.5 text-sm bg-[#4A90D9] hover:bg-[#357ABD] text-white font-medium rounded-lg transition-colors disabled:opacity-50"
+              >
+                {actionLoading === "edit" ? "Saving..." : "Save Changes Anyway"}
+              </button>
+              <button
+                onClick={() => setEditWarning(null)}
+                className="w-full px-4 py-2.5 text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium rounded-lg transition-colors"
+              >
+                Go Back &amp; Edit
+              </button>
+>>>>>>> origin/main
             </div>
           </div>
         </div>
@@ -400,6 +1138,7 @@ export default function ClinicDashboard() {
 
       {/* Cancel Confirm Modal */}
       {cancelConfirm && (
+<<<<<<< HEAD
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.3)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 50, padding: "16px" }}>
           <div style={{ background: "#fff", borderRadius: "16px", padding: "24px", width: "100%", maxWidth: "360px", boxShadow: "0 20px 60px rgba(0,0,0,.2)" }}>
             <h3 style={{ fontSize: "0.95rem", fontWeight: 700, color: "var(--navy)", marginBottom: "6px" }}>Cancel Slot</h3>
@@ -423,6 +1162,50 @@ export default function ClinicDashboard() {
               )}
             </div>
             <button onClick={() => setCancelConfirm(null)} style={{ width: "100%", padding: "10px", borderRadius: "9px", background: "none", border: "1.5px solid var(--card-border)", color: "var(--gray-600)", fontFamily: "inherit", fontSize: "0.875rem", cursor: "pointer" }}>Keep Slot</button>
+=======
+        <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl p-6 w-full max-w-sm shadow-xl">
+            <h3 className="text-sm font-medium text-gray-700 mb-2">Cancel Slot</h3>
+            <p className="text-xs text-gray-500 mb-4">
+              All volunteer signups for the cancelled slot(s) will be removed.
+            </p>
+            {cancelConfirm.isRecurring ? (
+              <div className="space-y-2 mb-4">
+                <button
+                  disabled={!!actionLoading}
+                  onClick={() => cancelSlot(cancelConfirm.slotId, "single")}
+                  className="w-full text-left px-4 py-3 text-sm border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
+                >
+                  <span className="font-medium text-gray-700">This date only</span>
+                  <p className="text-xs text-gray-400 mt-0.5">Cancel just this occurrence</p>
+                </button>
+                <button
+                  disabled={!!actionLoading}
+                  onClick={() => cancelSlot(cancelConfirm.slotId, "this_and_future")}
+                  className="w-full text-left px-4 py-3 text-sm border border-red-100 rounded-lg hover:bg-red-50 transition-colors disabled:opacity-50 text-red-700"
+                >
+                  <span className="font-medium">This and all future dates</span>
+                  <p className="text-xs text-red-400 mt-0.5">Cancel this occurrence and all future ones</p>
+                </button>
+              </div>
+            ) : (
+              <div className="mb-4">
+                <button
+                  disabled={!!actionLoading}
+                  onClick={() => cancelSlot(cancelConfirm.slotId, "single")}
+                  className="w-full text-left px-4 py-3 text-sm border border-red-100 rounded-lg hover:bg-red-50 transition-colors disabled:opacity-50 text-red-700 font-medium"
+                >
+                  {actionLoading ? "Cancelling..." : "Confirm Cancel"}
+                </button>
+              </div>
+            )}
+            <button
+              onClick={() => setCancelConfirm(null)}
+              className="w-full px-4 py-2 text-sm bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-md transition-colors"
+            >
+              Keep Slot
+            </button>
+>>>>>>> origin/main
           </div>
         </div>
       )}

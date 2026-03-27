@@ -1,8 +1,14 @@
 import { Resend } from "resend";
+import { prisma } from "./prisma";
 
 // Set DISABLE_EMAIL=true in .env to suppress all sends during local development
-function emailDisabled() {
-  return process.env.DISABLE_EMAIL === "true";
+async function emailDisabled(): Promise<boolean> {
+  if (process.env.DISABLE_EMAIL === "true") return true;
+  try {
+    const flag = await prisma.featureFlag.findUnique({ where: { key: "EMAILS" } });
+    if (flag && !flag.enabled) return true;
+  } catch { /* ignore DB errors — don't block email */ }
+  return false;
 }
 
 // Lazy singleton — avoids instantiation at build time when env vars aren't present
@@ -27,7 +33,7 @@ function fmtTime(hour: number) {
 }
 
 async function send(payload: Parameters<ReturnType<typeof resend>["emails"]["send"]>[0]) {
-  if (emailDisabled()) {
+  if (await emailDisabled()) {
     console.log("[email disabled]", payload.subject, "→", payload.to);
     return;
   }
@@ -104,6 +110,7 @@ export async function sendReminder(opts: {
 <ul>
   <li><strong>Clinic:</strong> ${opts.clinicName}</li>
   <li><strong>Address:</strong> ${opts.clinicAddress}</li>
+  <li><strong>Directions:</strong> <a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(opts.clinicAddress)}">Google Maps</a> · <a href="https://maps.apple.com/?q=${encodeURIComponent(opts.clinicAddress)}">Apple Maps</a></li>
   <li><strong>Date:</strong> ${fmt(opts.date)}</li>
   <li><strong>Time:</strong> ${fmtTime(opts.subBlockHour)} – ${fmtTime(opts.subBlockHour + 1)}</li>
   <li><strong>Language:</strong> ${opts.language}</li>
@@ -327,5 +334,16 @@ export async function sendAdminPendingVolunteerAlert(opts: {
     html: `<p>The following volunteers have been waiting more than 24 hours for approval:</p>
 <ul>${rows}</ul>
 <p><a href="${process.env.NEXTAUTH_URL}/dashboard">Review in admin dashboard →</a></p>`,
+  });
+}
+
+export async function sendTestEmail(to: string, sentBy: string) {
+  await send({
+    from: FROM(),
+    to,
+    subject: "Test Email — Georgetown Medical Interpreters",
+    html: `<p>This is a test email sent by <strong>${sentBy}</strong> from the GMI admin dashboard.</p>
+<p>If you received this, email delivery is working correctly.</p>
+<p style="color:#888;font-size:12px">Sent at ${new Date().toISOString()}</p>`,
   });
 }
