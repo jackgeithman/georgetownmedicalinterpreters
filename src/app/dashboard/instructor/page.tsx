@@ -214,7 +214,7 @@ export default function InstructorDashboard() {
 
       {/* Tabs */}
       <div className="max-w-6xl mx-auto px-6 pt-6">
-        <div className="flex gap-1 bg-stone-200/50 p-1 rounded-lg w-fit">
+        <div className="flex gap-1 bg-stone-200/50 p-1 rounded-xl w-fit">
           {[
             { key: "training" as Tab, label: "Training" },
             { key: "volunteers" as Tab, label: "Volunteers" },
@@ -225,7 +225,7 @@ export default function InstructorDashboard() {
               onClick={() => setTab(t.key)}
               className={`px-4 py-2 text-sm rounded-md transition-colors ${
                 tab === t.key
-                  ? "bg-white text-stone-800 shadow-sm font-medium"
+                  ? "bg-[#041E42] text-white shadow-sm font-medium"
                   : "text-stone-500 hover:text-stone-700"
               }`}
             >
@@ -244,7 +244,7 @@ export default function InstructorDashboard() {
             <div className="flex justify-end">
               <button
                 onClick={() => setShowTrainingForm(!showTrainingForm)}
-                className="px-4 py-2 text-sm bg-stone-800 text-white hover:bg-stone-700 rounded-md transition-colors"
+                className="px-4 py-2 text-sm bg-[#041E42] text-white hover:bg-[#03163a] rounded-full transition-colors"
               >
                 {showTrainingForm ? "Cancel" : "+ Add Material"}
               </button>
@@ -273,7 +273,7 @@ export default function InstructorDashboard() {
                       onClick={() => setTrainingForm({ ...trainingForm, type: t })}
                       className={`flex-1 py-2 text-sm rounded-md border transition-colors ${
                         trainingForm.type === t
-                          ? "bg-stone-800 text-white border-stone-800"
+                          ? "bg-[#041E42] text-white border-[#041E42]"
                           : "border-stone-200 text-stone-600 hover:border-stone-400"
                       }`}
                     >
@@ -332,7 +332,7 @@ export default function InstructorDashboard() {
                 <button
                   disabled={trainingSubmitting || !trainingForm.title || (trainingForm.type === "LINK" && !trainingForm.url)}
                   onClick={submitTraining}
-                  className="px-4 py-2 text-sm bg-stone-800 text-white hover:bg-stone-700 rounded-md transition-colors disabled:opacity-50"
+                  className="px-4 py-2 text-sm bg-[#041E42] text-white hover:bg-[#03163a] rounded-full transition-colors disabled:opacity-50"
                 >
                   {trainingSubmitting ? "Saving..." : "Add Material"}
                 </button>
@@ -353,7 +353,7 @@ export default function InstructorDashboard() {
                           <span className="font-medium text-stone-800 text-sm">{m.title}</span>
                           <span className="text-xs px-1.5 py-0.5 rounded bg-stone-100 text-stone-600">{m.category}</span>
                           {m.languageCode && (
-                            <span className="text-xs px-1.5 py-0.5 rounded bg-blue-50 text-blue-700">{m.languageCode}</span>
+                            <span className="text-xs px-1.5 py-0.5 rounded bg-[#EBF3FC] text-[#041E42]">{m.languageCode}</span>
                           )}
                           <span className={`text-xs px-1.5 py-0.5 rounded ${m.type === "FILE" ? "bg-amber-50 text-amber-700" : "bg-emerald-50 text-emerald-700"}`}>
                             {m.type}
@@ -365,7 +365,7 @@ export default function InstructorDashboard() {
                             {m.fileName ?? "Download"}
                           </a>
                         ) : (
-                          <a href={m.url} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:text-blue-800 underline break-all">
+                          <a href={m.url} target="_blank" rel="noopener noreferrer" className="text-xs text-[#4A90D9] hover:text-[#041E42] underline break-all">
                             {m.url}
                           </a>
                         )}
