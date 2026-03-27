@@ -53,7 +53,7 @@ const RATING_OPTIONS = [
   { value: 2, label: "Okay",              active: "bg-orange-100 text-orange-700 border-orange-300", idle: "bg-white text-stone-500 border-stone-200 hover:border-orange-200 hover:text-orange-600" },
   { value: 3, label: "Good",              active: "bg-yellow-100 text-yellow-700 border-yellow-300", idle: "bg-white text-stone-500 border-stone-200 hover:border-yellow-200 hover:text-yellow-600" },
   { value: 4, label: "Excellent",         active: "bg-green-100 text-green-700 border-green-300",  idle: "bg-white text-stone-500 border-stone-200 hover:border-green-200 hover:text-green-600" },
-  { value: 5, label: "I'd literally hire them", active: "bg-emerald-100 text-emerald-700 border-emerald-300", idle: "bg-white text-stone-500 border-stone-200 hover:border-emerald-200 hover:text-emerald-600" },
+  { value: 5, label: "Exceptional", active: "bg-emerald-100 text-emerald-700 border-emerald-300", idle: "bg-white text-stone-500 border-stone-200 hover:border-emerald-200 hover:text-emerald-600" },
 ];
 
 type TrainingMaterial = {
@@ -80,6 +80,103 @@ const LANG_COLORS: Record<string, string> = {
   ZH: "bg-red-50 text-red-700",
   KO: "bg-blue-50 text-blue-700",
 };
+
+// Top 10 most spoken world languages first, then rest alphabetically
+const TOP_WORLD_LANGUAGES = [
+  { code: "EN", name: "English" },
+  { code: "ZH", name: "Mandarin Chinese" },
+  { code: "HI", name: "Hindi" },
+  { code: "ES", name: "Spanish" },
+  { code: "FR", name: "French" },
+  { code: "AR", name: "Arabic" },
+  { code: "BN", name: "Bengali" },
+  { code: "PT", name: "Portuguese" },
+  { code: "RU", name: "Russian" },
+  { code: "UR", name: "Urdu" },
+];
+
+const OTHER_WORLD_LANGUAGES = [
+  { code: "AF", name: "Afrikaans" },
+  { code: "SQ", name: "Albanian" },
+  { code: "AM", name: "Amharic" },
+  { code: "HY", name: "Armenian" },
+  { code: "AZ", name: "Azerbaijani" },
+  { code: "EU", name: "Basque" },
+  { code: "BE", name: "Belarusian" },
+  { code: "BS", name: "Bosnian" },
+  { code: "BG", name: "Bulgarian" },
+  { code: "MY", name: "Burmese" },
+  { code: "CA", name: "Catalan" },
+  { code: "HR", name: "Croatian" },
+  { code: "CS", name: "Czech" },
+  { code: "DA", name: "Danish" },
+  { code: "NL", name: "Dutch" },
+  { code: "ET", name: "Estonian" },
+  { code: "TL", name: "Filipino/Tagalog" },
+  { code: "FI", name: "Finnish" },
+  { code: "GL", name: "Galician" },
+  { code: "KA", name: "Georgian" },
+  { code: "DE", name: "German" },
+  { code: "EL", name: "Greek" },
+  { code: "GU", name: "Gujarati" },
+  { code: "HT", name: "Haitian Creole" },
+  { code: "HA", name: "Hausa" },
+  { code: "HE", name: "Hebrew" },
+  { code: "HU", name: "Hungarian" },
+  { code: "IS", name: "Icelandic" },
+  { code: "IG", name: "Igbo" },
+  { code: "ID", name: "Indonesian" },
+  { code: "GA", name: "Irish" },
+  { code: "IT", name: "Italian" },
+  { code: "JA", name: "Japanese" },
+  { code: "JV", name: "Javanese" },
+  { code: "KN", name: "Kannada" },
+  { code: "KK", name: "Kazakh" },
+  { code: "KM", name: "Khmer" },
+  { code: "KO", name: "Korean" },
+  { code: "KU", name: "Kurdish" },
+  { code: "KY", name: "Kyrgyz" },
+  { code: "LO", name: "Lao" },
+  { code: "LV", name: "Latvian" },
+  { code: "LT", name: "Lithuanian" },
+  { code: "MK", name: "Macedonian" },
+  { code: "MS", name: "Malay" },
+  { code: "ML", name: "Malayalam" },
+  { code: "MT", name: "Maltese" },
+  { code: "MR", name: "Marathi" },
+  { code: "MN", name: "Mongolian" },
+  { code: "NE", name: "Nepali" },
+  { code: "NO", name: "Norwegian" },
+  { code: "OR", name: "Odia" },
+  { code: "PS", name: "Pashto" },
+  { code: "FA", name: "Persian/Farsi" },
+  { code: "PL", name: "Polish" },
+  { code: "PA", name: "Punjabi" },
+  { code: "RO", name: "Romanian" },
+  { code: "SR", name: "Serbian" },
+  { code: "SD", name: "Sindhi" },
+  { code: "SI", name: "Sinhala" },
+  { code: "SK", name: "Slovak" },
+  { code: "SL", name: "Slovenian" },
+  { code: "SO", name: "Somali" },
+  { code: "SW", name: "Swahili" },
+  { code: "SV", name: "Swedish" },
+  { code: "TG", name: "Tajik" },
+  { code: "TA", name: "Tamil" },
+  { code: "TE", name: "Telugu" },
+  { code: "TH", name: "Thai" },
+  { code: "TR", name: "Turkish" },
+  { code: "TK", name: "Turkmen" },
+  { code: "UK", name: "Ukrainian" },
+  { code: "UZ", name: "Uzbek" },
+  { code: "VI", name: "Vietnamese" },
+  { code: "CY", name: "Welsh" },
+  { code: "XH", name: "Xhosa" },
+  { code: "YO", name: "Yoruba" },
+  { code: "ZU", name: "Zulu" },
+];
+
+const ALL_WORLD_LANGUAGES = [...TOP_WORLD_LANGUAGES, ...OTHER_WORLD_LANGUAGES];
 
 function MapsLinks({ address }: { address: string }) {
   const q = encodeURIComponent(address);
@@ -161,6 +258,9 @@ export default function VolunteerDashboard() {
   const [feedbackForms, setFeedbackForms] = useState<Record<string, { rating: number; note: string }>>({});
   const [submittingFeedbackFor, setSubmittingFeedbackFor] = useState<string | null>(null);
 
+  const [langSearch, setLangSearch] = useState("");
+  const [availableLanguages, setAvailableLanguages] = useState<{ code: string; name: string }[]>([]);
+
   // Suggestions state
   const [suggForm, setSuggForm] = useState({ type: "FEATURE", subject: "", message: "" });
   const [suggSubmitting, setSuggSubmitting] = useState(false);
@@ -212,7 +312,13 @@ export default function VolunteerDashboard() {
 
   useEffect(() => {
     const role = session?.user?.role;
-    if (role === "VOLUNTEER" || role === "ADMIN" || role === "SUPER_ADMIN") fetchAll();
+    if (role === "VOLUNTEER" || role === "ADMIN" || role === "SUPER_ADMIN") {
+      fetchAll();
+      fetch("/api/languages")
+        .then((r) => r.json())
+        .then((data) => { if (Array.isArray(data)) setAvailableLanguages(data); })
+        .catch(() => {});
+    }
   }, [session, fetchAll]);
 
   useEffect(() => {
@@ -359,12 +465,12 @@ export default function VolunteerDashboard() {
               <h1 className="text-lg font-semibold text-stone-800 tracking-tight">Georgetown Medical Interpreters</h1>
               <p className="text-xs text-stone-400">Volunteer Dashboard</p>
             </div>
-            <a
-              href="mailto:georgetownmedicalinterpreters@gmail.com"
+            <button
+              onClick={() => setTab("suggestions")}
               className="text-sm px-3 py-1.5 bg-stone-100 hover:bg-stone-200 text-stone-600 rounded-md transition-colors"
             >
               Contact Us
-            </a>
+            </button>
           </div>
           <div className="flex items-center gap-3">
             <span className="text-sm text-stone-500">{session?.user?.email}</span>
@@ -394,7 +500,7 @@ export default function VolunteerDashboard() {
             { key: "signups" as Tab, label: "My Signups", count: mySignups.length },
             { key: "profile" as Tab, label: "Profile", count: 0 },
             { key: "training" as Tab, label: "Training", count: 0 },
-            { key: "suggestions" as Tab, label: "Suggestions", count: 0 },
+            { key: "suggestions" as Tab, label: "Messages", count: 0 },
           ].map((t) => (
             <button
               key={t.key}
@@ -540,7 +646,7 @@ export default function VolunteerDashboard() {
               {/* Filters */}
               <div className="flex flex-wrap items-center gap-2 mb-5">
                 {/* Language */}
-                {["ALL", "ES", "ZH", "KO"].map((lang) => (
+                {["ALL", ...availableLanguages.map((l) => l.code)].map((lang) => (
                   <button
                     key={lang}
                     onClick={() => setLangFilter(lang)}
@@ -550,7 +656,7 @@ export default function VolunteerDashboard() {
                         : "bg-white border border-stone-200 text-stone-500 hover:border-stone-300"
                     }`}
                   >
-                    {lang === "ALL" ? "All Languages" : LANG_LABELS[lang]}
+                    {lang === "ALL" ? "All Languages" : (availableLanguages.find((l) => l.code === lang)?.name ?? LANG_LABELS[lang] ?? lang)}
                   </button>
                 ))}
 
@@ -746,29 +852,102 @@ export default function VolunteerDashboard() {
             {/* Languages */}
             <div className="bg-white rounded-xl border border-stone-200 p-6">
               <h3 className="text-sm font-medium text-stone-700 mb-1">Languages</h3>
-              <p className="text-xs text-stone-400 mb-4">Click to select languages you can interpret. Filled = you speak it, white = you don&apos;t.</p>
-              <div className="flex gap-3 flex-wrap mb-4">
-                {Object.entries(LANG_LABELS).map(([code, label]) => (
-                  <button
-                    key={code}
-                    onClick={() => toggleLanguage(code)}
-                    className={`px-4 py-2 text-sm rounded-md border transition-colors ${
-                      profileForm.languages.includes(code)
-                        ? "border-stone-800 bg-stone-800 text-white"
-                        : "border-stone-200 text-stone-600 hover:border-stone-300"
-                    }`}
-                  >
-                    {label}
-                  </button>
-                ))}
+              <p className="text-xs text-stone-400 mb-1">Select the languages you speak and can interpret.</p>
+              <p className="text-xs text-amber-600 bg-amber-50 border border-amber-100 rounded-md px-3 py-2 mb-4">
+                ⚠️ You must have a medical-level vocabulary to effectively translate in a clinical context. Only select languages you are confident interpreting in a healthcare setting.
+              </p>
+
+              {/* Search box */}
+              <div className="mb-3">
+                <input
+                  type="text"
+                  placeholder="Search languages..."
+                  value={langSearch}
+                  onChange={(e) => setLangSearch(e.target.value)}
+                  className="w-full px-3 py-2 text-sm border border-stone-200 rounded-md focus:outline-none focus:ring-2 focus:ring-stone-300"
+                />
               </div>
+
+              {/* Currently selected languages */}
+              {profileForm.languages.length > 0 && (
+                <div className="mb-3">
+                  <p className="text-xs font-medium text-stone-400 uppercase tracking-wider mb-2">Selected</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {profileForm.languages.map((code) => {
+                      const lang = ALL_WORLD_LANGUAGES.find((l) => l.code === code);
+                      return (
+                        <button
+                          key={code}
+                          onClick={() => toggleLanguage(code)}
+                          className="px-3 py-1 text-xs rounded-full bg-stone-800 text-white hover:bg-stone-600 transition-colors flex items-center gap-1"
+                        >
+                          {lang?.name ?? code}
+                          <span className="text-stone-400">×</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Language list */}
+              {(() => {
+                const query = langSearch.trim().toLowerCase();
+                const filtered = query
+                  ? ALL_WORLD_LANGUAGES.filter((l) => l.name.toLowerCase().includes(query) || l.code.toLowerCase().includes(query))
+                  : ALL_WORLD_LANGUAGES;
+                const top10 = filtered.filter((l) => TOP_WORLD_LANGUAGES.some((t) => t.code === l.code));
+                const others = filtered.filter((l) => !TOP_WORLD_LANGUAGES.some((t) => t.code === l.code));
+                const unselected = [...top10, ...others].filter((l) => !profileForm.languages.includes(l.code));
+
+                return (
+                  <div className="max-h-48 overflow-y-auto border border-stone-100 rounded-md">
+                    {unselected.length === 0 ? (
+                      <p className="text-xs text-stone-400 p-3 text-center">No languages match your search.</p>
+                    ) : (
+                      <>
+                        {!query && top10.filter((l) => !profileForm.languages.includes(l.code)).length > 0 && (
+                          <div className="px-3 pt-2 pb-1">
+                            <p className="text-xs font-medium text-stone-400 uppercase tracking-wider">Most Common</p>
+                          </div>
+                        )}
+                        {!query && top10.filter((l) => !profileForm.languages.includes(l.code)).map((lang) => (
+                          <button
+                            key={lang.code}
+                            onClick={() => toggleLanguage(lang.code)}
+                            className="w-full text-left px-3 py-2 text-sm text-stone-700 hover:bg-stone-50 transition-colors flex items-center justify-between"
+                          >
+                            {lang.name}
+                            <span className="text-xs text-stone-300">+</span>
+                          </button>
+                        ))}
+                        {!query && others.filter((l) => !profileForm.languages.includes(l.code)).length > 0 && (
+                          <div className="px-3 pt-2 pb-1 border-t border-stone-50">
+                            <p className="text-xs font-medium text-stone-400 uppercase tracking-wider">All Languages</p>
+                          </div>
+                        )}
+                        {(query ? unselected : others.filter((l) => !profileForm.languages.includes(l.code))).map((lang) => (
+                          <button
+                            key={lang.code}
+                            onClick={() => toggleLanguage(lang.code)}
+                            className="w-full text-left px-3 py-2 text-sm text-stone-700 hover:bg-stone-50 transition-colors flex items-center justify-between"
+                          >
+                            {lang.name}
+                            <span className="text-xs text-stone-300">+</span>
+                          </button>
+                        ))}
+                      </>
+                    )}
+                  </div>
+                );
+              })()}
 
               <button
                 disabled={actionLoading === "profile"}
                 onClick={saveProfile}
                 className="mt-4 px-4 py-2 text-sm bg-stone-800 text-white hover:bg-stone-700 rounded-md transition-colors disabled:opacity-50"
               >
-                {actionLoading === "profile" ? "Saving..." : "Save Profile"}
+                {actionLoading === "profile" ? "Saving..." : "Save Languages"}
               </button>
             </div>
 
@@ -936,8 +1115,8 @@ export default function VolunteerDashboard() {
       {tab === "suggestions" && (
         <div className="max-w-lg space-y-4">
           <div className="bg-white rounded-xl border border-stone-200 p-6">
-            <h3 className="text-sm font-medium text-stone-700 mb-1">Suggestion Box</h3>
-            <p className="text-xs text-stone-400 mb-5">Have a suggestion for the website? We&apos;d love to hear it.</p>
+            <h3 className="text-sm font-medium text-stone-700 mb-1">Messages</h3>
+            <p className="text-xs text-stone-400 mb-5">Have a suggestion or feedback for the website? We&apos;d love to hear it.</p>
 
             {suggSuccess ? (
               <div className="text-center py-6">

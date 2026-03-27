@@ -48,7 +48,7 @@ const RATING_OPTIONS = [
   { value: 2, label: "Okay",              active: "bg-orange-100 text-orange-700 border-orange-300", idle: "bg-white text-stone-500 border-stone-200 hover:border-orange-200 hover:text-orange-600" },
   { value: 3, label: "Good",              active: "bg-yellow-100 text-yellow-700 border-yellow-300", idle: "bg-white text-stone-500 border-stone-200 hover:border-yellow-200 hover:text-yellow-600" },
   { value: 4, label: "Excellent",         active: "bg-green-100 text-green-700 border-green-300",  idle: "bg-white text-stone-500 border-stone-200 hover:border-green-200 hover:text-green-600" },
-  { value: 5, label: "I'd literally hire them", active: "bg-emerald-100 text-emerald-700 border-emerald-300", idle: "bg-white text-stone-500 border-stone-200 hover:border-emerald-200 hover:text-emerald-600" },
+  { value: 5, label: "Exceptional", active: "bg-emerald-100 text-emerald-700 border-emerald-300", idle: "bg-white text-stone-500 border-stone-200 hover:border-emerald-200 hover:text-emerald-600" },
 ];
 
 const LANG_COLORS: Record<string, string> = {
@@ -138,6 +138,7 @@ export default function ClinicDashboard() {
   });
   const [selectedSlotIds, setSelectedSlotIds] = useState<Set<string>>(new Set());
   const [postError, setPostError] = useState("");
+  const [activeLanguages, setActiveLanguages] = useState<{ code: string; name: string }[]>([]);
   // Feedback state — inline (no modal), keyed by "${slotId}-${volunteerId}"
   const [feedbackGiven, setFeedbackGiven] = useState<Set<string>>(new Set());
   const [feedbackForms, setFeedbackForms] = useState<Record<string, { rating: number; note: string }>>({});
@@ -164,7 +165,13 @@ export default function ClinicDashboard() {
   }, []);
 
   useEffect(() => {
-    if (session?.user?.role === "CLINIC") fetchSlots();
+    if (session?.user?.role === "CLINIC") {
+      fetchSlots();
+      fetch("/api/languages")
+        .then((r) => r.json())
+        .then((data) => { if (Array.isArray(data)) setActiveLanguages(data); })
+        .catch(() => {});
+    }
   }, [session, fetchSlots]);
 
   const saveNotifPrefs = async (updated: ClinicNotifPrefs) => {
@@ -435,8 +442,8 @@ export default function ClinicDashboard() {
                   onChange={(e) => setForm({ ...form, language: e.target.value })}
                   className="w-full px-3 py-2 text-sm border border-stone-200 rounded-md focus:outline-none focus:ring-2 focus:ring-stone-300"
                 >
-                  {Object.entries(LANG_LABELS).map(([k, v]) => (
-                    <option key={k} value={k}>{v}</option>
+                  {(activeLanguages.length > 0 ? activeLanguages : Object.entries(LANG_LABELS).map(([code, name]) => ({ code, name }))).map(({ code, name }) => (
+                    <option key={code} value={code}>{name}</option>
                   ))}
                 </select>
               </div>
@@ -893,8 +900,8 @@ export default function ClinicDashboard() {
                   onChange={(e) => setEditSlot({ ...editSlot, language: e.target.value })}
                   className="w-full px-3 py-2 text-sm border border-stone-200 rounded-md focus:outline-none focus:ring-2 focus:ring-stone-300"
                 >
-                  {Object.entries(LANG_LABELS).map(([k, v]) => (
-                    <option key={k} value={k}>{v}</option>
+                  {(activeLanguages.length > 0 ? activeLanguages : Object.entries(LANG_LABELS).map(([code, name]) => ({ code, name }))).map(({ code, name }) => (
+                    <option key={code} value={code}>{name}</option>
                   ))}
                 </select>
               </div>

@@ -16,15 +16,40 @@ async function getAuthorizedUser(minRole: "instructor" | "admin") {
   return user;
 }
 
+function generateCode(name: string, existing: string[]): string {
+  const base = name.trim().toUpperCase().replace(/[^A-Z]/g, "").slice(0, 3);
+  if (base.length >= 2 && !existing.includes(base)) return base;
+  // Try substrings
+  for (let len = 2; len <= 4; len++) {
+    const candidate = name.toUpperCase().replace(/[^A-Z]/g, "").slice(0, len);
+    if (candidate.length === len && !existing.includes(candidate)) return candidate;
+  }
+  // Fallback: add numeric suffix
+  let i = 2;
+  const base2 = name.toUpperCase().replace(/[^A-Z]/g, "").slice(0, 2);
+  while (existing.includes(`${base2}${i}`)) i++;
+  return `${base2}${i}`;
+}
+
 export async function GET() {
   const user = await getAuthorizedUser("instructor");
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
 
-  const languages = await prisma.languageConfig.findMany({
-    orderBy: { name: "asc" },
-  });
+  const [languages, profiles] = await Promise.all([
+    prisma.languageConfig.findMany({ orderBy: { name: "asc" } }),
+    prisma.volunteerProfile.findMany({ select: { languages: true } }),
+  ]);
 
-  return NextResponse.json(languages);
+  // Count volunteers per language code
+  const counts: Record<string, number> = {};
+  for (const p of profiles) {
+    for (const lang of p.languages) {
+      counts[lang] = (counts[lang] ?? 0) + 1;
+    }
+  }
+
+  const result = languages.map((l) => ({ ...l, volunteerCount: counts[l.code] ?? 0 }));
+  return NextResponse.json(result);
 }
 
 export async function POST(req: NextRequest) {
@@ -32,23 +57,27 @@ export async function POST(req: NextRequest) {
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
 
   const body = await req.json();
-  const { code, name } = body as { code: string; name: string };
+  const { name } = body as { name: string };
 
-  if (!code || !/^[A-Z]{2,4}$/.test(code)) {
-    return NextResponse.json({ error: "Code must be 2–4 uppercase letters (e.g. ES, ZH, KOR)" }, { status: 400 });
-  }
   if (!name || !name.trim()) {
     return NextResponse.json({ error: "Name is required" }, { status: 400 });
   }
 
-  const existing = await prisma.languageConfig.findUnique({ where: { code } });
+  // Check by name (case-insensitive)
+  const existing = await prisma.languageConfig.findFirst({
+    where: { name: { equals: name.trim(), mode: "insensitive" } },
+  });
   if (existing) {
-    return NextResponse.json({ error: "Language code already exists" }, { status: 409 });
+    return NextResponse.json({ error: "A language with that name already exists" }, { status: 409 });
   }
+
+  const allLangs = await prisma.languageConfig.findMany({ select: { code: true } });
+  const existingCodes = allLangs.map((l) => l.code);
+  const code = generateCode(name.trim(), existingCodes);
 
   const lang = await prisma.languageConfig.create({
     data: { code, name: name.trim() },
   });
 
-  return NextResponse.json(lang, { status: 201 });
+  return NextResponse.json({ ...lang, volunteerCount: 0 }, { status: 201 });
 }

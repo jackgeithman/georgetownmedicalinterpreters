@@ -20,7 +20,7 @@ export async function PATCH(
 
   const { id } = await params;
   const body = await req.json();
-  const { isActive } = body as { isActive: boolean };
+  const { isActive, force } = body as { isActive: boolean; force?: boolean };
 
   if (typeof isActive !== "boolean") {
     return NextResponse.json({ error: "isActive must be a boolean" }, { status: 400 });
@@ -29,10 +29,49 @@ export async function PATCH(
   const lang = await prisma.languageConfig.findUnique({ where: { id } });
   if (!lang) return NextResponse.json({ error: "Language not found" }, { status: 404 });
 
+  // If deactivating, check for upcoming clinic slots
+  if (!isActive) {
+    const today = new Date().toISOString().slice(0, 10);
+    const conflictingSlots = await prisma.slot.findMany({
+      where: {
+        language: lang.code,
+        date: { gte: today },
+      },
+      include: {
+        clinic: { select: { name: true, contactEmail: true } },
+        signups: { include: { volunteer: { include: { user: { select: { email: true, name: true } } } } } },
+      },
+    });
+
+    if (conflictingSlots.length > 0 && !force) {
+      return NextResponse.json({
+        conflicts: conflictingSlots.map((s) => ({
+          id: s.id,
+          clinicName: s.clinic.name,
+          date: s.date,
+          language: lang.name,
+        })),
+      }, { status: 409 });
+    }
+
+    if (conflictingSlots.length > 0 && force) {
+      // Delete conflicting slots
+      for (const slot of conflictingSlots) {
+        await prisma.slot.delete({ where: { id: slot.id } });
+      }
+    }
+  }
+
   const updated = await prisma.languageConfig.update({
     where: { id },
     data: { isActive },
   });
 
-  return NextResponse.json(updated);
+  const profiles = await prisma.volunteerProfile.findMany({ select: { languages: true } });
+  const counts: Record<string, number> = {};
+  for (const p of profiles) {
+    for (const l of p.languages) { counts[l] = (counts[l] ?? 0) + 1; }
+  }
+
+  return NextResponse.json({ ...updated, volunteerCount: counts[updated.code] ?? 0 });
 }
