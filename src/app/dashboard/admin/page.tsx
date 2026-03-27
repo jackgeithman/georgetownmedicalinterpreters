@@ -751,65 +751,40 @@ export default function AdminDashboard() {
   const renderSlot = (slot: AdminSlot, isPast: boolean) => {
     const subBlocks = Array.from({ length: slot.endTime - slot.startTime }, (_, i) => slot.startTime + i);
     const canSignUp = adminProfile?.languages.includes(slot.language) ?? false;
-    const openCount = subBlocks.filter((h) => slot.signups.filter((s) => s.subBlockHour === h).length < slot.interpreterCount).length;
 
     return (
-      <div key={slot.id} style={{ background: "var(--card-bg)", borderRadius: "14px", border: "1.5px solid var(--card-border)", marginBottom: "14px", boxShadow: "0 2px 6px rgba(0,0,0,.05)", overflow: "hidden", opacity: isPast ? 0.5 : 1 }}>
-        {/* Card header */}
-        <div style={{ padding: "16px 22px 14px", borderBottom: "1.5px solid var(--card-border)", display: "grid", gridTemplateColumns: "1fr auto", gap: "16px", alignItems: "center" }}>
-          <div>
-            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-              {!isPast && (
-                <input
-                  type="checkbox"
-                  checked={adminSelectedSlotIds.has(slot.id)}
-                  onChange={() => toggleSelectAdminSlot(slot.id)}
-                  style={{ width: "16px", height: "16px", cursor: "pointer", accentColor: "var(--navy)", flexShrink: 0 }}
-                  onClick={(e) => e.stopPropagation()}
-                />
-              )}
-              <span style={{ fontSize: "1.15rem", fontWeight: 700, color: "var(--navy)" }}>{slot.clinic.name}</span>
-            </div>
-            <div style={{ display: "flex", alignItems: "center", gap: "8px", marginTop: "3px" }}>
-              <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${LANG_COLORS[slot.language] ?? "bg-gray-100 text-gray-600"}`}>
-                {LANG_LABELS[slot.language] ?? slot.language}
-              </span>
-            </div>
-            <div style={{ display: "flex", gap: "24px", marginTop: "12px", flexWrap: "wrap" }}>
-              <div style={{ display: "flex", flexDirection: "column", gap: "3px" }}>
-                <span style={{ fontSize: "0.68rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.09em", color: "var(--gray-400)" }}>Date</span>
-                <span style={{ fontSize: "0.95rem", fontWeight: 600, color: "var(--gray-900)" }}>{formatDate(slot.date)}</span>
-              </div>
-              <div style={{ display: "flex", flexDirection: "column", gap: "3px" }}>
-                <span style={{ fontSize: "0.68rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.09em", color: "var(--gray-400)" }}>Session</span>
-                <span style={{ fontSize: "0.95rem", fontWeight: 600, color: "var(--gray-900)" }}>{formatHour(slot.startTime)} – {formatHour(slot.endTime)}</span>
-              </div>
-              {slot.clinic.address && (
-                <div style={{ display: "flex", flexDirection: "column", gap: "3px" }}>
-                  <span style={{ fontSize: "0.68rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.09em", color: "var(--gray-400)" }}>Location</span>
-                  <span style={{ fontSize: "0.95rem", fontWeight: 600, color: "var(--gray-900)" }}>
-                    {slot.clinic.address}
-                    <MapsLinks address={slot.clinic.address} />
-                  </span>
-                </div>
-              )}
-            </div>
+      <div key={slot.id} style={{ background: "var(--card-bg)", borderRadius: "14px", border: "1.5px solid var(--card-border)", marginBottom: "14px", boxShadow: "0 2px 6px rgba(0,0,0,.05)", overflow: "hidden", opacity: isPast ? 0.55 : 1 }}>
+        <div style={{ padding: "16px 22px 14px", borderBottom: "1.5px solid var(--card-border)", display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "12px", flexWrap: "wrap" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+            {!isPast && (
+              <input
+                type="checkbox"
+                checked={adminSelectedSlotIds.has(slot.id)}
+                onChange={() => toggleSelectAdminSlot(slot.id)}
+                style={{ width: "16px", height: "16px", cursor: "pointer", accentColor: "var(--navy)" }}
+                onClick={(e) => e.stopPropagation()}
+              />
+            )}
+            <span className={`text-xs px-2 py-1 rounded-full font-medium ${LANG_COLORS[slot.language]}`}>
+              {LANG_LABELS[slot.language]}
+            </span>
+            <span style={{ fontSize: "0.875rem", fontWeight: 600, color: "var(--gray-900)" }}>{formatDate(slot.date)}</span>
+            <span style={{ fontSize: "0.875rem", color: "var(--gray-600)" }}>{formatHour(slot.startTime)} – {formatHour(slot.endTime)}</span>
+            {isPast && <span style={{ fontSize: "0.72rem", padding: "2px 8px", borderRadius: "99px", background: "var(--gray-200)", color: "var(--gray-600)", fontWeight: 600, textTransform: "uppercase" }}>Past</span>}
           </div>
-          {isPast ? (
-            <span style={{ background: "var(--gray-200)", color: "var(--gray-600)", fontSize: "0.7rem", fontWeight: 600, padding: "4px 10px", borderRadius: "99px", textTransform: "uppercase" }}>Past</span>
-          ) : (
-            <div style={{ background: "var(--green-light)", color: "var(--green)", fontSize: "0.9rem", fontWeight: 700, padding: "9px 18px", borderRadius: "10px", whiteSpace: "nowrap", textAlign: "center", lineHeight: 1.2 }}>
-              {openCount} open
-              <span style={{ display: "block", fontSize: "0.72rem", fontWeight: 500, marginTop: "2px", opacity: 0.8 }}>slots</span>
-            </div>
-          )}
+          <div style={{ textAlign: "right" }}>
+            <p style={{ fontSize: "0.95rem", fontWeight: 700, color: "var(--navy)" }}>{slot.clinic.name}</p>
+            {slot.clinic.address && (
+              <p style={{ fontSize: "0.72rem", color: "var(--gray-400)" }}>
+                {slot.clinic.address}
+                <MapsLinks address={slot.clinic.address} />
+              </p>
+            )}
+          </div>
         </div>
-        {slot.notes && (
-          <div style={{ padding: "8px 22px", fontSize: "0.82rem", color: "var(--gray-600)", fontStyle: "italic", borderBottom: "1px solid var(--card-border)" }}>
-            {slot.notes}
-          </div>
-        )}
-        {subBlocks.map((hour) => {
+        {slot.notes && <p style={{ fontSize: "0.75rem", color: "var(--gray-400)", fontStyle: "italic", padding: "10px 22px 0" }}>{slot.notes}</p>}
+        <div style={{ padding: "10px 22px 14px", display: "flex", flexDirection: "column", gap: "8px" }}>
+          {subBlocks.map((hour) => {
             const hoursSignups = slot.signups.filter((s) => s.subBlockHour === hour);
             const mySignup = adminProfile ? hoursSignups.find((s) => s.volunteer.id === adminProfile.id) : null;
             const filled = hoursSignups.length;
@@ -817,11 +792,12 @@ export default function AdminDashboard() {
             const signupKey = `signup-${slot.id}-${hour}`;
 
             return (
-              <div key={hour} style={{ borderBottom: "1px solid var(--card-border)" }}>
-                <div style={{ display: "flex", alignItems: "center", padding: "13px 22px", gap: "16px" }}>
-                  <div style={{ width: "9px", height: "9px", borderRadius: "50%", background: isPast ? "var(--gray-400)" : "var(--green)", flexShrink: 0 }} />
-                  <span style={{ fontSize: "0.95rem", fontWeight: 600, color: "var(--gray-900)", minWidth: "145px" }}>{formatHour(hour)} – {formatHour(hour + 1)}</span>
-                  <span style={{ fontSize: "0.875rem", fontWeight: 500, color: "var(--gray-600)", flex: 1 }}>{filled} / {slot.interpreterCount} filled</span>
+              <div key={hour} style={{ borderRadius: "9px", background: "rgba(0,0,0,.03)", padding: "10px 14px", display: "flex", flexDirection: "column", gap: "6px" }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                    <span style={{ fontSize: "0.8rem", color: "var(--gray-600)", minWidth: "110px" }}>{formatHour(hour)} – {formatHour(hour + 1)}</span>
+                    <span style={{ fontSize: "0.8rem", color: "var(--gray-400)" }}>{filled}/{slot.interpreterCount} filled</span>
+                  </div>
                   <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                     {!isPast && (
                       <button
@@ -831,30 +807,30 @@ export default function AdminDashboard() {
                           setAssignSelected(null);
                           setAssignError("");
                         }}
-                        style={{ fontSize: "0.75rem", padding: "5px 12px", background: "#EEF2FF", color: "#4338CA", border: "1px solid #C7D2FE", borderRadius: "7px", cursor: "pointer", fontFamily: "'DM Sans', sans-serif", fontWeight: 500 }}
+                        style={{ fontSize: "0.75rem", padding: "4px 10px", background: "#EEF2FF", color: "#4338CA", border: "1px solid #C7D2FE", borderRadius: "6px", cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}
                       >
                         Assign
                       </button>
                     )}
                     {isPast ? (
-                      <span style={{ fontSize: "0.75rem", padding: "5px 12px", background: "var(--gray-200)", color: "var(--gray-400)", borderRadius: "7px" }}>Past</span>
+                      <span style={{ fontSize: "0.75rem", padding: "4px 10px", background: "var(--gray-200)", color: "var(--gray-400)", borderRadius: "6px" }}>Past</span>
                     ) : mySignup ? (
                       <button
                         disabled={actionLoading === mySignup.id}
                         onClick={() => cancelMySignup(mySignup.id)}
-                        style={{ fontSize: "0.75rem", padding: "5px 12px", background: "#DCFCE7", color: "#15803D", border: "1px solid #BBF7D0", borderRadius: "7px", fontWeight: 600, cursor: "pointer", opacity: actionLoading === mySignup.id ? 0.5 : 1, fontFamily: "'DM Sans', sans-serif" }}
+                        style={{ fontSize: "0.75rem", padding: "4px 10px", background: "#DCFCE7", color: "#15803D", border: "1px solid #BBF7D0", borderRadius: "6px", fontWeight: 600, cursor: "pointer", opacity: actionLoading === mySignup.id ? 0.5 : 1, fontFamily: "'DM Sans', sans-serif" }}
                         title="Click to cancel"
                       >
                         {actionLoading === mySignup.id ? "..." : "Signed Up ✓"}
                       </button>
                     ) : isFull ? (
-                      <span style={{ fontSize: "0.75rem", padding: "5px 12px", background: "var(--gray-200)", color: "var(--gray-400)", borderRadius: "7px" }}>Full</span>
+                      <span style={{ fontSize: "0.75rem", padding: "4px 10px", background: "var(--gray-200)", color: "var(--gray-400)", borderRadius: "6px" }}>Full</span>
                     ) : (
                       <button
                         disabled={actionLoading === signupKey || !canSignUp}
                         onClick={() => signUp(slot.id, hour)}
                         title={!canSignUp ? "Add this language to your volunteer profile first" : undefined}
-                        style={{ fontSize: "0.875rem", fontWeight: 600, padding: "9px 22px", background: "var(--blue)", color: "#fff", border: "none", borderRadius: "8px", cursor: "pointer", opacity: (actionLoading === signupKey || !canSignUp) ? 0.4 : 1, fontFamily: "'DM Sans', sans-serif" }}
+                        style={{ fontSize: "0.75rem", padding: "4px 12px", background: "var(--blue)", color: "#fff", border: "none", borderRadius: "99px", cursor: "pointer", opacity: (actionLoading === signupKey || !canSignUp) ? 0.4 : 1, fontFamily: "'DM Sans', sans-serif" }}
                       >
                         {actionLoading === signupKey ? "..." : "Sign Up"}
                       </button>
@@ -864,16 +840,16 @@ export default function AdminDashboard() {
                 {hoursSignups
                   .filter((s) => s.volunteer.id !== adminProfile?.id)
                   .map((s) => (
-                    <div key={s.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "4px 22px 8px 52px" }}>
+                    <div key={s.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", paddingLeft: "4px" }}>
                       <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                        <span style={{ fontSize: "0.78rem", fontWeight: 500, color: "var(--gray-600)" }}>{s.volunteer.user.name ?? s.volunteer.user.email}</span>
+                        <span style={{ fontSize: "0.78rem", color: "var(--gray-600)" }}>{s.volunteer.user.name ?? s.volunteer.user.email}</span>
                         <span style={{ fontSize: "0.78rem", color: "var(--gray-400)" }}>{s.volunteer.user.email}</span>
                       </div>
                       {!isPast && (
                         <button
                           disabled={actionLoading === s.id}
                           onClick={() => removeVolunteer(s.id)}
-                          style={{ fontSize: "0.72rem", padding: "3px 10px", background: "#FEF2F2", color: "#EF4444", border: "1px solid #FECACA", borderRadius: "6px", cursor: "pointer", opacity: actionLoading === s.id ? 0.5 : 1, fontFamily: "'DM Sans', sans-serif" }}
+                          style={{ fontSize: "0.72rem", padding: "2px 8px", background: "#FEF2F2", color: "#EF4444", border: "none", borderRadius: "4px", cursor: "pointer", opacity: actionLoading === s.id ? 0.5 : 1, fontFamily: "'DM Sans', sans-serif" }}
                         >
                           Remove
                         </button>
@@ -883,6 +859,7 @@ export default function AdminDashboard() {
               </div>
             );
           })}
+        </div>
       </div>
     );
   };
@@ -962,7 +939,7 @@ export default function AdminDashboard() {
                 cursor: "pointer",
                 border: "none",
                 background: tab === t.key ? "var(--blue)" : "none",
-                color: tab === t.key ? "#fff" : "var(--gray-900)",
+                color: tab === t.key ? "#fff" : "var(--gray-600)",
                 whiteSpace: "nowrap",
                 fontFamily: "'DM Sans', sans-serif",
               }}
@@ -1212,9 +1189,9 @@ export default function AdminDashboard() {
                             )}
                             {roleChips.map(r => {
                               const chip = ROLE_CHIPS.find(c => c.key === r);
-                              const label = chip?.label ?? (r === "PENDING" ? "Unassigned" : r.charAt(0) + r.slice(1).toLowerCase());
-                              const bg    = chip?.bg    ?? "#F1F5F9";
-                              const color = chip?.color ?? "#475569";
+                              const label  = chip?.label  ?? (r === "PENDING" ? "Unassigned" : r.charAt(0) + r.slice(1).toLowerCase());
+                              const bg     = chip?.bg     ?? "#F1F5F9";
+                              const color  = chip?.color  ?? "#475569";
                               const border = chip?.border ?? "#CBD5E1";
                               const isLoading = roleActionLoading === `remove-${user.id}-${r}`;
                               return (
@@ -1379,7 +1356,7 @@ export default function AdminDashboard() {
 
             {showClinicForm && (
               <div style={{ background: "var(--card-bg)", borderRadius: "14px", border: "1.5px solid var(--card-border)", padding: "24px", marginBottom: "16px" }}>
-                <h3 style={{ fontSize: "0.875rem", fontWeight: 600, color: "var(--gray-900)", marginBottom: "16px" }}>New Clinic</h3>
+                <h3 style={{ fontSize: "0.875rem", fontWeight: 600, color: "var(--gray-600)", marginBottom: "16px" }}>New Clinic</h3>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
                   <input
                     placeholder="Clinic Name"
@@ -1489,7 +1466,7 @@ export default function AdminDashboard() {
             </div>
 
             <div style={{ background: "var(--card-bg)", borderRadius: "14px", border: "1.5px solid var(--card-border)", padding: "24px" }}>
-              <h3 style={{ fontSize: "0.875rem", fontWeight: 600, color: "var(--gray-900)", marginBottom: "4px" }}>Languages</h3>
+              <h3 style={{ fontSize: "0.875rem", fontWeight: 600, color: "var(--gray-600)", marginBottom: "4px" }}>Languages</h3>
               <p style={{ fontSize: "0.75rem", color: "var(--gray-400)", marginBottom: "16px" }}>Click to toggle. Filled = you speak it. Only matching slots will let you sign up.</p>
               <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", marginBottom: "20px" }}>
                 {Object.entries(LANG_LABELS).map(([code, label]) => (
@@ -1523,7 +1500,7 @@ export default function AdminDashboard() {
         {tab === "languages" && (
           <div style={{ maxWidth: "640px", display: "flex", flexDirection: "column", gap: "16px" }}>
             <div style={{ background: "var(--card-bg)", borderRadius: "14px", border: "1.5px solid var(--card-border)", padding: "24px" }}>
-              <h3 style={{ fontSize: "0.875rem", fontWeight: 600, color: "var(--gray-900)", marginBottom: "4px" }}>Add Language</h3>
+              <h3 style={{ fontSize: "0.875rem", fontWeight: 600, color: "var(--gray-600)", marginBottom: "4px" }}>Add Language</h3>
               <p style={{ fontSize: "0.75rem", color: "var(--gray-400)", marginBottom: "16px" }}>Inactive languages are hidden from dropdowns but shown here.</p>
               <div style={{ display: "flex", gap: "10px" }}>
                 <input
@@ -1599,7 +1576,7 @@ export default function AdminDashboard() {
 
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" }}>
                   <div style={{ background: "var(--card-bg)", borderRadius: "14px", border: "1.5px solid var(--card-border)", padding: "20px" }}>
-                    <h3 style={{ fontSize: "0.875rem", fontWeight: 600, color: "var(--gray-900)", marginBottom: "12px" }}>Hours by Language</h3>
+                    <h3 style={{ fontSize: "0.875rem", fontWeight: 600, color: "var(--gray-600)", marginBottom: "12px" }}>Hours by Language</h3>
                     {metrics.hoursByLanguage.length === 0 ? (
                       <p style={{ fontSize: "0.75rem", color: "var(--gray-400)" }}>No data yet.</p>
                     ) : (
@@ -1618,7 +1595,7 @@ export default function AdminDashboard() {
                   </div>
 
                   <div style={{ background: "var(--card-bg)", borderRadius: "14px", border: "1.5px solid var(--card-border)", padding: "20px" }}>
-                    <h3 style={{ fontSize: "0.875rem", fontWeight: 600, color: "var(--gray-900)", marginBottom: "12px" }}>Hours by Clinic</h3>
+                    <h3 style={{ fontSize: "0.875rem", fontWeight: 600, color: "var(--gray-600)", marginBottom: "12px" }}>Hours by Clinic</h3>
                     {metrics.hoursByClinic.length === 0 ? (
                       <p style={{ fontSize: "0.75rem", color: "var(--gray-400)" }}>No data yet.</p>
                     ) : (
@@ -1637,7 +1614,7 @@ export default function AdminDashboard() {
                 <p style={{ fontSize: "0.75rem", color: "var(--gray-400)", textAlign: "center" }}>Graphs coming soon</p>
 
                 <div style={{ background: "var(--card-bg)", borderRadius: "14px", border: "1.5px solid var(--card-border)", padding: "20px" }}>
-                  <h3 style={{ fontSize: "0.875rem", fontWeight: 600, color: "var(--gray-900)", marginBottom: "12px" }}>Feedback Overview</h3>
+                  <h3 style={{ fontSize: "0.875rem", fontWeight: 600, color: "var(--gray-600)", marginBottom: "12px" }}>Feedback Overview</h3>
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "14px", marginBottom: "16px" }}>
                     {[
                       { value: metrics.feedbackCount ?? 0, label: "Total Feedback" },
@@ -1815,7 +1792,7 @@ export default function AdminDashboard() {
         {tab === "access" && session?.user?.role === "SUPER_ADMIN" && (
           <div style={{ maxWidth: "560px", display: "flex", flexDirection: "column", gap: "16px" }}>
             <div style={{ background: "var(--card-bg)", borderRadius: "14px", border: "1.5px solid var(--card-border)", padding: "24px" }}>
-              <h3 style={{ fontSize: "0.875rem", fontWeight: 600, color: "var(--gray-900)", marginBottom: "4px" }}>Add Email Rule</h3>
+              <h3 style={{ fontSize: "0.875rem", fontWeight: 600, color: "var(--gray-600)", marginBottom: "4px" }}>Add Email Rule</h3>
               <p style={{ fontSize: "0.75rem", color: "var(--gray-400)", marginBottom: "16px" }}>
                 <strong>Allow</strong> lets a non-Georgetown email sign in. <strong>Block</strong> prevents any email from signing in.
               </p>
@@ -1919,7 +1896,7 @@ export default function AdminDashboard() {
             )}
 
             <div style={{ background: "var(--card-bg)", borderRadius: "14px", border: "1.5px solid var(--card-border)", padding: "24px" }}>
-              <h3 style={{ fontSize: "0.875rem", fontWeight: 600, color: "var(--gray-900)", marginBottom: "4px" }}>Test Email</h3>
+              <h3 style={{ fontSize: "0.875rem", fontWeight: 600, color: "var(--gray-600)", marginBottom: "4px" }}>Test Email</h3>
               <p style={{ fontSize: "0.75rem", color: "var(--gray-400)", marginBottom: "16px" }}>Send a test email to verify email delivery is working.</p>
               <div style={{ display: "flex", gap: "10px" }}>
                 <input
@@ -2275,7 +2252,7 @@ export default function AdminDashboard() {
       {assignModal && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.35)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 200 }}>
           <div style={{ background: "var(--card-bg)", borderRadius: "16px", padding: "24px", width: "100%", maxWidth: "380px", boxShadow: "0 8px 32px rgba(0,0,0,.18)" }}>
-            <h3 style={{ fontSize: "0.875rem", fontWeight: 600, color: "var(--gray-900)", marginBottom: "12px" }}>
+            <h3 style={{ fontSize: "0.875rem", fontWeight: 600, color: "var(--gray-600)", marginBottom: "12px" }}>
               Assign {assignModal.userName} to a clinic
             </h3>
             <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>

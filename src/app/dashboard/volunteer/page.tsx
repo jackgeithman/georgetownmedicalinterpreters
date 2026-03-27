@@ -443,7 +443,7 @@ export default function VolunteerDashboard() {
   if (status === "loading" || loading) {
     return (
       <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--page-bg)" }}>
-        <p style={{ color: "var(--gray-600)", fontFamily: "'DM Sans', sans-serif" }}>Loading…</p>
+        <p style={{ color: "var(--gray-400)", fontFamily: "'DM Sans', sans-serif" }}>Loading...</p>
       </div>
     );
   }
@@ -524,7 +524,7 @@ export default function VolunteerDashboard() {
                 cursor: "pointer",
                 border: "none",
                 background: tab === t.key ? "var(--blue)" : "none",
-                color: tab === t.key ? "#fff" : "var(--gray-900)",
+                color: tab === t.key ? "#fff" : "var(--gray-600)",
                 whiteSpace: "nowrap",
                 fontFamily: "'DM Sans', sans-serif",
               }}
@@ -750,7 +750,7 @@ export default function VolunteerDashboard() {
               {/* Upcoming */}
               {upcoming.length === 0 && past.length === 0 ? (
                 <div style={{ background: "var(--card-bg)", borderRadius: "14px", border: "1.5px solid var(--card-border)", padding: "48px", textAlign: "center" }}>
-                  <p style={{ color: "var(--gray-600)" }}>No slots match your filters.</p>
+                  <p style={{ color: "var(--gray-400)" }}>No slots match your filters.</p>
                 </div>
               ) : (
                 <div>
@@ -758,7 +758,7 @@ export default function VolunteerDashboard() {
 
                   {past.length > 0 && (
                     <>
-                      <div style={{ display: "flex", alignItems: "center", gap: "12px", margin: "32px 0 16px", fontSize: "0.72rem", textTransform: "uppercase", letterSpacing: "0.1em", fontWeight: 700, color: "var(--gray-900)" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "12px", margin: "32px 0 16px", fontSize: "0.72rem", textTransform: "uppercase", letterSpacing: "0.1em", fontWeight: 700, color: "var(--gray-400)" }}>
                         <span style={{ flex: 1, height: "1px", background: "var(--card-border)", display: "block" }} />
                         Past Slots
                         <span style={{ flex: 1, height: "1px", background: "var(--card-border)", display: "block" }} />
@@ -777,7 +777,7 @@ export default function VolunteerDashboard() {
           <div>
             {mySignups.length === 0 ? (
               <div style={{ background: "var(--card-bg)", borderRadius: "14px", border: "1.5px solid var(--card-border)", padding: "48px", textAlign: "center" }}>
-                <p style={{ color: "var(--gray-600)" }}>No active signups. Browse available slots to sign up.</p>
+                <p style={{ color: "var(--gray-400)" }}>No active signups. Browse available slots to sign up.</p>
               </div>
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
