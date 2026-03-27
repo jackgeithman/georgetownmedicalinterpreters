@@ -181,22 +181,22 @@ const ALL_WORLD_LANGUAGES = [...TOP_WORLD_LANGUAGES, ...OTHER_WORLD_LANGUAGES];
 function MapsLinks({ address }: { address: string }) {
   const q = encodeURIComponent(address);
   return (
-    <span className="inline-flex gap-1.5 ml-1.5 items-center">
+    <span style={{ display: "inline-flex", gap: "6px", marginLeft: "6px", alignItems: "center" }}>
       <a
         href={`https://www.google.com/maps/search/?api=1&query=${q}`}
         target="_blank"
         rel="noopener noreferrer"
-        className="text-xs text-[#4A90D9] hover:text-[#041E42] underline"
+        style={{ fontSize: "0.72rem", color: "var(--blue)", textDecoration: "underline" }}
         title="Google Maps"
       >
         G Maps
       </a>
-      <span className="text-gray-300">·</span>
+      <span style={{ color: "#CBD5E1" }}>·</span>
       <a
         href={`https://maps.apple.com/?q=${q}`}
         target="_blank"
         rel="noopener noreferrer"
-        className="text-xs text-[#4A90D9] hover:text-[#041E42] underline"
+        style={{ fontSize: "0.72rem", color: "var(--blue)", textDecoration: "underline" }}
         title="Apple Maps"
       >
         Apple Maps
@@ -442,8 +442,8 @@ export default function VolunteerDashboard() {
 
   if (status === "loading" || loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <p className="text-gray-400">Loading...</p>
+      <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--page-bg)" }}>
+        <p style={{ color: "var(--gray-400)", fontFamily: "'DM Sans', sans-serif" }}>Loading...</p>
       </div>
     );
   }
@@ -456,45 +456,48 @@ export default function VolunteerDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div style={{ minHeight: "100vh", background: "var(--page-bg)", fontFamily: "'DM Sans', system-ui, sans-serif", color: "var(--gray-900)" }}>
       {/* Header */}
-      <header className="bg-[#041E42]">
-        <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div>
-              <h1 className="text-lg font-semibold text-white tracking-tight">Georgetown Medical Interpreters</h1>
-              <p className="text-xs text-white/60">Volunteer Dashboard</p>
-            </div>
-            <button
-              onClick={() => setTab("suggestions")}
-              className="text-sm px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white rounded-md transition-colors"
-            >
-              Contact Us
-            </button>
+      <header style={{ background: "var(--navy)", height: "64px", position: "sticky", top: 0, zIndex: 100, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 32px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
+          <div style={{ width: "36px", height: "36px", borderRadius: "9px", background: "linear-gradient(135deg,#2563EB,#60A5FA)", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, color: "#fff", fontSize: "1rem", flexShrink: 0 }}>
+            G
           </div>
-          <div className="flex items-center gap-3">
-            <span className="text-sm text-white/70">{session?.user?.email}</span>
-            {isAdmin && (
-              <button
-                onClick={() => router.push("/dashboard/admin")}
-                className="text-sm px-3 py-1.5 bg-violet-400/20 hover:bg-violet-400/30 text-violet-200 rounded-md transition-colors"
-              >
-                Admin Dashboard
-              </button>
-            )}
-            <button
-              onClick={() => signOut({ callbackUrl: "/login" })}
-              className="text-sm px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white rounded-md transition-colors"
-            >
-              Sign Out
-            </button>
+          <div>
+            <div style={{ color: "#fff", fontSize: "0.95rem", fontWeight: 600 }}>Georgetown Medical Interpreters</div>
+            <div style={{ color: "#94A3B8", fontSize: "0.72rem" }}>Volunteer Dashboard</div>
           </div>
+          <button
+            onClick={() => setTab("suggestions")}
+            style={{ background: "rgba(255,255,255,.08)", border: "1px solid rgba(255,255,255,.2)", color: "#fff", fontFamily: "'DM Sans', sans-serif", fontSize: "0.8rem", fontWeight: 500, padding: "7px 16px", borderRadius: "8px", cursor: "pointer" }}
+          >
+            Contact Us
+          </button>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
+          <span style={{ color: "#CBD5E1", fontSize: "0.82rem" }}>{session?.user?.email}</span>
+          {isAdmin && (
+            <button
+              onClick={() => router.push("/dashboard/admin")}
+              style={{ background: "rgba(167,139,250,.15)", border: "1px solid rgba(167,139,250,.3)", color: "#ddd6fe", fontFamily: "'DM Sans', sans-serif", fontSize: "0.8rem", fontWeight: 500, padding: "7px 16px", borderRadius: "8px", cursor: "pointer" }}
+            >
+              Admin Dashboard
+            </button>
+          )}
+          <button
+            onClick={() => signOut({ callbackUrl: "/login" })}
+            style={{ background: "rgba(255,255,255,.08)", border: "1px solid rgba(255,255,255,.2)", color: "#fff", fontFamily: "'DM Sans', sans-serif", fontSize: "0.8rem", fontWeight: 500, padding: "7px 16px", borderRadius: "8px", cursor: "pointer" }}
+          >
+            Sign Out
+          </button>
         </div>
       </header>
 
-      {/* Tabs */}
-      <div className="max-w-6xl mx-auto px-6 pt-6">
-        <div className="flex gap-1 bg-gray-200/50 p-1 rounded-xl w-fit">
+      {/* Main content */}
+      <div style={{ maxWidth: "920px", margin: "0 auto", padding: "36px 24px" }}>
+
+        {/* Tabs */}
+        <div style={{ display: "flex", gap: "4px", marginBottom: "28px", background: "var(--card-bg)", padding: "5px", borderRadius: "12px", width: "fit-content", border: "1px solid var(--card-border)" }}>
           {[
             { key: "browse" as Tab, label: "Browse Slots", count: 0 },
             { key: "signups" as Tab, label: "My Signups", count: mySignups.length },
@@ -513,25 +516,28 @@ export default function VolunteerDashboard() {
                     .catch(() => setTrainingLoaded(true));
                 }
               }}
-              className={`px-4 py-2 text-sm rounded-md transition-colors ${
-                tab === t.key
-                  ? "bg-[#4A90D9] text-white shadow-sm font-medium"
-                  : "text-gray-500 hover:text-gray-700"
-              }`}
+              style={{
+                padding: "9px 20px",
+                borderRadius: "9px",
+                fontSize: "0.9rem",
+                fontWeight: tab === t.key ? 600 : 500,
+                cursor: "pointer",
+                border: "none",
+                background: tab === t.key ? "var(--blue)" : "none",
+                color: tab === t.key ? "#fff" : "var(--gray-600)",
+                whiteSpace: "nowrap",
+                fontFamily: "'DM Sans', sans-serif",
+              }}
             >
               {t.label}
               {t.count > 0 && (
-                <span className="ml-2 text-xs px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700">
+                <span style={{ background: "#DC2626", color: "#fff", fontSize: "0.7rem", fontWeight: 700, padding: "1px 7px", borderRadius: "99px", marginLeft: "5px" }}>
                   {t.count}
                 </span>
               )}
             </button>
           ))}
         </div>
-      </div>
-
-      {/* Content */}
-      <div className="max-w-6xl mx-auto px-6 py-6">
 
         {/* Browse Slots */}
         {tab === "browse" && (() => {
@@ -562,81 +568,93 @@ export default function VolunteerDashboard() {
           const renderSlot = (slot: BrowseSlot, isPast: boolean) => {
             const subBlocks = Array.from({ length: slot.endTime - slot.startTime }, (_, i) => slot.startTime + i);
             return (
-              <div key={slot.id} className={`bg-white rounded-xl border border-gray-200 p-5 ${isPast ? "opacity-50" : ""}`}>
-                <div className="flex items-start justify-between mb-3">
-                  <div className="flex items-center gap-3 flex-wrap">
-                    <span className={`text-xs px-2 py-1 rounded-full font-medium ${LANG_COLORS[slot.language]}`}>
-                      {LANG_LABELS[slot.language]}
-                    </span>
-                    <span className="text-sm font-medium text-black">{formatDate(slot.date)}</span>
-                    <span className="text-sm text-gray-500">
-                      {formatHour(slot.startTime)} – {formatHour(slot.endTime)}
-                    </span>
-                    {isPast && (
-                      <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-400">Past</span>
-                    )}
-                  </div>
-                  <div className="text-right">
-                    <p className="text-sm font-medium text-black">{slot.clinic.name}</p>
-                    {slot.clinic.address && (
-                      <p className="text-xs text-gray-400">
-                        {slot.clinic.address}
-                        <MapsLinks address={slot.clinic.address} />
-                      </p>
-                    )}
-                  </div>
-                </div>
-                {slot.notes && <p className="text-xs text-gray-400 italic mb-3">{slot.notes}</p>}
-                <div className="space-y-2">
-                  {subBlocks.map((hour) => {
-                    const hourSignups = slot.signups.filter((s) => s.subBlockHour === hour);
-                    const filled = hourSignups.length;
-                    const mySignupEntry = profile
-                      ? mySignups.find((s) => s.slot.id === slot.id && s.subBlockHour === hour)
-                      : undefined;
-                    const isMine = !!mySignupEntry;
-                    const isFull = filled >= slot.interpreterCount;
-                    const key = `${slot.id}-${hour}`;
-                    const signedUpNames = hourSignups.map((s) => s.volunteer.user.name ?? "Unknown");
-                    return (
-                      <div key={hour} className="flex items-center justify-between px-3 py-2 rounded-md bg-gray-50">
-                        <div className="flex items-center gap-3">
-                          <span className="text-xs text-gray-600 w-28">
-                            {formatHour(hour)} – {formatHour(hour + 1)}
-                          </span>
-                          <div>
-                            <span className="text-xs text-gray-400">{filled}/{slot.interpreterCount} filled</span>
-                            {signedUpNames.length > 0 && (
-                              <p className="text-xs text-gray-500">{signedUpNames.join(", ")}</p>
-                            )}
-                          </div>
-                        </div>
-                        {isPast ? (
-                          <span className="text-xs px-2 py-1 bg-gray-100 text-gray-400 rounded-md">Past</span>
-                        ) : isMine ? (
-                          <button
-                            disabled={actionLoading === mySignupEntry.id}
-                            onClick={() => cancelSignup(mySignupEntry.id, `${slot.id}-${hour}`)}
-                            className="text-xs px-2 py-1 bg-emerald-50 text-emerald-700 hover:bg-red-50 hover:text-red-600 border border-emerald-200 hover:border-red-200 rounded-md font-medium transition-colors disabled:opacity-50"
-                            title="Click to cancel"
-                          >
-                            {actionLoading === mySignupEntry.id ? "..." : "Signed Up ✓"}
-                          </button>
-                        ) : isFull ? (
-                          <span className="text-xs px-2 py-1 bg-gray-100 text-gray-400 rounded-md">Full</span>
-                        ) : (
-                          <button
-                            disabled={actionLoading === key}
-                            onClick={() => signUp(slot.id, hour)}
-                            className="text-xs px-3 py-1 bg-[#4A90D9] text-white hover:bg-[#357ABD] rounded-full transition-colors disabled:opacity-50"
-                          >
-                            {actionLoading === key ? "..." : "Sign Up"}
-                          </button>
-                        )}
+              <div key={slot.id} style={{ background: "var(--card-bg)", borderRadius: "14px", border: "1.5px solid var(--card-border)", overflow: "hidden", marginBottom: "14px", boxShadow: "0 2px 6px rgba(0,0,0,.05)", opacity: isPast ? 0.5 : 1 }}>
+                {/* Card header */}
+                <div style={{ padding: "16px 22px 14px", borderBottom: "1.5px solid var(--card-border)", display: "grid", gridTemplateColumns: "1fr auto", gap: "16px", alignItems: "center" }}>
+                  <div>
+                    <div style={{ fontSize: "1.15rem", fontWeight: 700, color: "var(--navy)" }}>{slot.clinic.name}</div>
+                    <div style={{ fontSize: "0.875rem", fontWeight: 500, color: "var(--gray-600)", marginTop: "3px" }}>
+                      {LANG_LABELS[slot.language] ?? slot.language}
+                    </div>
+                    <div style={{ display: "flex", gap: "24px", marginTop: "12px", flexWrap: "wrap" }}>
+                      <div style={{ display: "flex", flexDirection: "column", gap: "3px" }}>
+                        <span style={{ fontSize: "0.68rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.09em", color: "var(--gray-400)" }}>Date</span>
+                        <span style={{ fontSize: "0.95rem", fontWeight: 600, color: "var(--gray-900)" }}>{formatDate(slot.date)}</span>
                       </div>
-                    );
-                  })}
+                      <div style={{ display: "flex", flexDirection: "column", gap: "3px" }}>
+                        <span style={{ fontSize: "0.68rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.09em", color: "var(--gray-400)" }}>Session</span>
+                        <span style={{ fontSize: "0.95rem", fontWeight: 600, color: "var(--gray-900)" }}>{formatHour(slot.startTime)} – {formatHour(slot.endTime)}</span>
+                      </div>
+                      {slot.clinic.address && (
+                        <div style={{ display: "flex", flexDirection: "column", gap: "3px" }}>
+                          <span style={{ fontSize: "0.68rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.09em", color: "var(--gray-400)" }}>Location</span>
+                          <span style={{ fontSize: "0.95rem", fontWeight: 600, color: "var(--gray-900)" }}>
+                            {slot.clinic.address}
+                            <MapsLinks address={slot.clinic.address} />
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  {isPast ? (
+                    <span style={{ background: "var(--gray-200)", color: "var(--gray-600)", fontSize: "0.7rem", fontWeight: 600, padding: "4px 10px", borderRadius: "99px", textTransform: "uppercase" }}>Past</span>
+                  ) : (
+                    <div style={{ background: "var(--green-light)", color: "var(--green)", fontSize: "0.9rem", fontWeight: 700, padding: "9px 18px", borderRadius: "10px", whiteSpace: "nowrap", textAlign: "center", lineHeight: 1.2 }}>
+                      {Array.from({ length: slot.endTime - slot.startTime }, (_, i) => slot.startTime + i)
+                        .filter((h) => slot.signups.filter((s) => s.subBlockHour === h).length < slot.interpreterCount).length} open
+                      <span style={{ display: "block", fontSize: "0.72rem", fontWeight: 500, marginTop: "2px", opacity: 0.8 }}>slots</span>
+                    </div>
+                  )}
                 </div>
+                {slot.notes && (
+                  <div style={{ padding: "8px 22px", fontSize: "0.82rem", color: "var(--gray-600)", fontStyle: "italic", borderBottom: "1px solid var(--card-border)" }}>
+                    {slot.notes}
+                  </div>
+                )}
+                {/* Hour rows */}
+                {subBlocks.map((hour) => {
+                  const hourSignups = slot.signups.filter((s) => s.subBlockHour === hour);
+                  const filled = hourSignups.length;
+                  const mySignupEntry = profile
+                    ? mySignups.find((s) => s.slot.id === slot.id && s.subBlockHour === hour)
+                    : undefined;
+                  const isMine = !!mySignupEntry;
+                  const isFull = filled >= slot.interpreterCount;
+                  const key = `${slot.id}-${hour}`;
+                  return (
+                    <div key={hour} style={{ display: "flex", alignItems: "center", padding: "13px 22px", borderBottom: "1px solid var(--card-border)", gap: "16px" }}>
+                      <div style={{ width: "9px", height: "9px", borderRadius: "50%", background: isPast ? "var(--gray-400)" : "var(--green)", flexShrink: 0 }} />
+                      <span style={{ fontSize: "0.95rem", fontWeight: 600, color: "var(--gray-900)", minWidth: "145px" }}>
+                        {formatHour(hour)} – {formatHour(hour + 1)}
+                      </span>
+                      <span style={{ fontSize: "0.875rem", fontWeight: 500, color: "var(--gray-900)", flex: 1 }}>
+                        {filled}/{slot.interpreterCount} filled
+                      </span>
+                      {isPast ? (
+                        <span style={{ fontSize: "0.75rem", padding: "4px 10px", background: "var(--gray-200)", color: "var(--gray-600)", borderRadius: "6px" }}>Past</span>
+                      ) : isMine ? (
+                        <button
+                          disabled={actionLoading === mySignupEntry.id}
+                          onClick={() => cancelSignup(mySignupEntry.id, `${slot.id}-${hour}`)}
+                          style={{ fontSize: "0.75rem", padding: "6px 14px", background: "#ecfdf5", color: "#047857", border: "1px solid #a7f3d0", borderRadius: "8px", fontFamily: "'DM Sans', sans-serif", fontWeight: 600, cursor: "pointer", opacity: actionLoading === mySignupEntry.id ? 0.5 : 1 }}
+                          title="Click to cancel"
+                        >
+                          {actionLoading === mySignupEntry.id ? "..." : "Signed Up ✓"}
+                        </button>
+                      ) : isFull ? (
+                        <span style={{ fontSize: "0.75rem", padding: "4px 10px", background: "var(--gray-200)", color: "var(--gray-600)", borderRadius: "6px" }}>Full</span>
+                      ) : (
+                        <button
+                          disabled={actionLoading === key}
+                          onClick={() => signUp(slot.id, hour)}
+                          style={{ background: "var(--blue)", color: "#fff", border: "none", borderRadius: "8px", padding: "9px 22px", fontFamily: "'DM Sans', sans-serif", fontSize: "0.875rem", fontWeight: 600, cursor: "pointer", opacity: actionLoading === key ? 0.5 : 1, whiteSpace: "nowrap" }}
+                        >
+                          {actionLoading === key ? "..." : "Sign Up"}
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             );
           };
@@ -644,74 +662,86 @@ export default function VolunteerDashboard() {
           return (
             <div>
               {/* Filters */}
-              <div className="flex flex-wrap items-center gap-2 mb-5">
+              <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "10px", marginBottom: "28px" }}>
                 {/* Language */}
                 {["ALL", ...availableLanguages.map((l) => l.code)].map((lang) => (
                   <button
                     key={lang}
                     onClick={() => setLangFilter(lang)}
-                    className={`px-3 py-1.5 text-xs rounded-md transition-colors ${
-                      langFilter === lang
-                        ? "bg-[#4A90D9] text-white"
-                        : "bg-white border border-gray-200 text-gray-500 hover:border-gray-300"
-                    }`}
+                    style={{
+                      padding: "9px 14px",
+                      borderRadius: "9px",
+                      fontSize: "0.875rem",
+                      fontWeight: 500,
+                      border: langFilter === lang ? "1.5px solid var(--blue)" : "1.5px solid var(--card-border)",
+                      background: langFilter === lang ? "var(--blue)" : "var(--card-bg)",
+                      color: langFilter === lang ? "#fff" : "var(--gray-900)",
+                      fontFamily: "'DM Sans', sans-serif",
+                      cursor: "pointer",
+                    }}
                   >
                     {lang === "ALL" ? "All Languages" : (availableLanguages.find((l) => l.code === lang)?.name ?? LANG_LABELS[lang] ?? lang)}
                   </button>
                 ))}
 
-                <div className="w-px bg-gray-200 mx-1 self-stretch" />
+                <div style={{ width: "1px", background: "var(--card-border)", alignSelf: "stretch", margin: "0 4px" }} />
 
                 {/* Clinic */}
                 <select
                   value={clinicFilter}
                   onChange={(e) => setClinicFilter(e.target.value)}
-                  className="px-2 py-1.5 text-xs border border-gray-200 rounded-md bg-white text-gray-600 focus:outline-none"
+                  style={{ padding: "9px 14px", borderRadius: "9px", fontSize: "0.875rem", fontWeight: 500, border: "1.5px solid var(--card-border)", background: "var(--card-bg)", color: "var(--gray-900)", fontFamily: "'DM Sans', sans-serif", cursor: "pointer", outline: "none" }}
                 >
                   <option value="ALL">All Clinics</option>
                   {uniqueClinics.map((c) => <option key={c} value={c}>{c}</option>)}
                 </select>
 
-                <div className="w-px bg-gray-200 mx-1 self-stretch" />
+                <div style={{ width: "1px", background: "var(--card-border)", alignSelf: "stretch", margin: "0 4px" }} />
 
                 {/* Date range */}
-                <div className="flex items-center gap-1.5">
-                  <span className="text-xs text-gray-400">From</span>
+                <div style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "0.875rem", fontWeight: 500, color: "var(--gray-900)" }}>
+                  From
                   <input
                     type="date"
                     value={dateFrom}
                     onChange={(e) => setDateFrom(e.target.value)}
-                    className="px-2 py-1.5 text-xs border border-gray-200 rounded-md bg-white text-gray-600 focus:outline-none"
+                    style={{ padding: "9px 12px", border: "1.5px solid var(--card-border)", borderRadius: "9px", fontSize: "0.875rem", fontFamily: "'DM Sans', sans-serif", color: "var(--gray-900)", outline: "none", background: "var(--card-bg)" }}
                   />
                 </div>
-                <div className="flex items-center gap-1.5">
-                  <span className="text-xs text-gray-400">To</span>
+                <div style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "0.875rem", fontWeight: 500, color: "var(--gray-900)" }}>
+                  To
                   <input
                     type="date"
                     value={dateTo}
                     onChange={(e) => setDateTo(e.target.value)}
-                    className="px-2 py-1.5 text-xs border border-gray-200 rounded-md bg-white text-gray-600 focus:outline-none"
+                    style={{ padding: "9px 12px", border: "1.5px solid var(--card-border)", borderRadius: "9px", fontSize: "0.875rem", fontFamily: "'DM Sans', sans-serif", color: "var(--gray-900)", outline: "none", background: "var(--card-bg)" }}
                   />
                 </div>
                 {(dateFrom || dateTo) && (
                   <button
                     onClick={() => { setDateFrom(""); setDateTo(""); }}
-                    className="text-xs text-gray-400 hover:text-gray-600"
+                    style={{ fontSize: "0.8rem", color: "var(--gray-400)", background: "none", border: "none", cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}
                   >
                     Clear
                   </button>
                 )}
 
-                <div className="w-px bg-gray-200 mx-1 self-stretch" />
+                <div style={{ width: "1px", background: "var(--card-border)", alignSelf: "stretch", margin: "0 4px" }} />
 
                 {/* Availability */}
                 <button
                   onClick={() => setAvailableOnly(!availableOnly)}
-                  className={`px-3 py-1.5 text-xs rounded-md transition-colors ${
-                    availableOnly
-                      ? "bg-emerald-700 text-white"
-                      : "bg-white border border-gray-200 text-gray-500 hover:border-gray-300"
-                  }`}
+                  style={{
+                    padding: "9px 14px",
+                    borderRadius: "9px",
+                    fontSize: "0.875rem",
+                    fontWeight: 500,
+                    border: availableOnly ? "1.5px solid var(--green)" : "1.5px solid var(--card-border)",
+                    background: availableOnly ? "var(--green)" : "var(--card-bg)",
+                    color: availableOnly ? "#fff" : "var(--gray-900)",
+                    fontFamily: "'DM Sans', sans-serif",
+                    cursor: "pointer",
+                  }}
                 >
                   Available Only
                 </button>
@@ -719,16 +749,20 @@ export default function VolunteerDashboard() {
 
               {/* Upcoming */}
               {upcoming.length === 0 && past.length === 0 ? (
-                <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
-                  <p className="text-gray-400">No slots match your filters.</p>
+                <div style={{ background: "var(--card-bg)", borderRadius: "14px", border: "1.5px solid var(--card-border)", padding: "48px", textAlign: "center" }}>
+                  <p style={{ color: "var(--gray-400)" }}>No slots match your filters.</p>
                 </div>
               ) : (
-                <div className="space-y-4">
+                <div>
                   {upcoming.map((slot) => renderSlot(slot, false))}
 
                   {past.length > 0 && (
                     <>
-                      <p className="text-xs font-medium text-gray-400 uppercase tracking-wider pt-2">Past Slots</p>
+                      <div style={{ display: "flex", alignItems: "center", gap: "12px", margin: "32px 0 16px", fontSize: "0.72rem", textTransform: "uppercase", letterSpacing: "0.1em", fontWeight: 700, color: "var(--gray-400)" }}>
+                        <span style={{ flex: 1, height: "1px", background: "var(--card-border)", display: "block" }} />
+                        Past Slots
+                        <span style={{ flex: 1, height: "1px", background: "var(--card-border)", display: "block" }} />
+                      </div>
                       {past.map((slot) => renderSlot(slot, true))}
                     </>
                   )}
@@ -742,65 +776,79 @@ export default function VolunteerDashboard() {
         {tab === "signups" && (
           <div>
             {mySignups.length === 0 ? (
-              <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
-                <p className="text-gray-400">No active signups. Browse available slots to sign up.</p>
+              <div style={{ background: "var(--card-bg)", borderRadius: "14px", border: "1.5px solid var(--card-border)", padding: "48px", textAlign: "center" }}>
+                <p style={{ color: "var(--gray-400)" }}>No active signups. Browse available slots to sign up.</p>
               </div>
             ) : (
-              <div className="space-y-4">
+              <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
                 {Object.entries(signupsBySlot).map(([slotId, sigs]) => {
                   const slot = sigs[0].slot;
                   return (
-                    <div key={slotId} className="bg-white rounded-xl border border-gray-200 p-5">
-                      <div className="flex items-center gap-3 mb-4 flex-wrap">
-                        <span className={`text-xs px-2 py-1 rounded-full font-medium ${LANG_COLORS[slot.language]}`}>
-                          {LANG_LABELS[slot.language]}
-                        </span>
-                        <span className="text-sm font-medium text-black">{formatDate(slot.date)}</span>
-                        <span className="text-sm text-gray-500">
-                          {formatHour(slot.startTime)} – {formatHour(slot.endTime)}
-                        </span>
-                        <span className="text-sm text-gray-600">{slot.clinic.name}</span>
-                        {slot.clinic.address && (
-                          <span className="text-xs text-gray-400">
-                            {slot.clinic.address}
-                            <MapsLinks address={slot.clinic.address} />
-                          </span>
-                        )}
-                      </div>
-                      <div className="space-y-2">
-                        {sigs
-                          .sort((a, b) => a.subBlockHour - b.subBlockHour)
-                          .map((sig) => (
-                            <div
-                              key={sig.id}
-                              className="flex items-center justify-between px-3 py-2 rounded-md bg-gray-50"
-                            >
-                              <span className="text-xs text-gray-600">
-                                {formatHour(sig.subBlockHour)} – {formatHour(sig.subBlockHour + 1)}
+                    <div key={slotId} style={{ background: "var(--card-bg)", borderRadius: "14px", border: "1.5px solid var(--card-border)", overflow: "hidden", boxShadow: "0 2px 6px rgba(0,0,0,.05)" }}>
+                      {/* Card header */}
+                      <div style={{ padding: "16px 22px 14px", borderBottom: "1.5px solid var(--card-border)" }}>
+                        <div style={{ fontSize: "1.15rem", fontWeight: 700, color: "var(--navy)" }}>{slot.clinic.name}</div>
+                        <div style={{ fontSize: "0.875rem", fontWeight: 500, color: "var(--gray-600)", marginTop: "3px" }}>
+                          {LANG_LABELS[slot.language] ?? slot.language}
+                        </div>
+                        <div style={{ display: "flex", gap: "24px", marginTop: "12px", flexWrap: "wrap" }}>
+                          <div style={{ display: "flex", flexDirection: "column", gap: "3px" }}>
+                            <span style={{ fontSize: "0.68rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.09em", color: "var(--gray-400)" }}>Date</span>
+                            <span style={{ fontSize: "0.95rem", fontWeight: 600, color: "var(--gray-900)" }}>{formatDate(slot.date)}</span>
+                          </div>
+                          <div style={{ display: "flex", flexDirection: "column", gap: "3px" }}>
+                            <span style={{ fontSize: "0.68rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.09em", color: "var(--gray-400)" }}>Session</span>
+                            <span style={{ fontSize: "0.95rem", fontWeight: 600, color: "var(--gray-900)" }}>{formatHour(slot.startTime)} – {formatHour(slot.endTime)}</span>
+                          </div>
+                          {slot.clinic.address && (
+                            <div style={{ display: "flex", flexDirection: "column", gap: "3px" }}>
+                              <span style={{ fontSize: "0.68rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.09em", color: "var(--gray-400)" }}>Location</span>
+                              <span style={{ fontSize: "0.95rem", fontWeight: 600, color: "var(--gray-900)" }}>
+                                {slot.clinic.address}
+                                <MapsLinks address={slot.clinic.address} />
                               </span>
-                              <button
-                                disabled={actionLoading === sig.id}
-                                onClick={() => cancelSignup(sig.id, `${sig.slot.id}-${sig.subBlockHour}`)}
-                                className="text-xs px-2 py-1 bg-red-50 text-red-600 hover:bg-red-100 rounded transition-colors disabled:opacity-50"
-                              >
-                                Cancel
-                              </button>
                             </div>
-                          ))}
+                          )}
+                        </div>
                       </div>
+                      {/* Hour rows */}
+                      {sigs
+                        .sort((a, b) => a.subBlockHour - b.subBlockHour)
+                        .map((sig) => (
+                          <div
+                            key={sig.id}
+                            style={{ display: "flex", alignItems: "center", padding: "13px 22px", borderBottom: "1px solid var(--card-border)", gap: "16px" }}
+                          >
+                            <div style={{ width: "9px", height: "9px", borderRadius: "50%", background: "var(--green)", flexShrink: 0 }} />
+                            <span style={{ fontSize: "0.95rem", fontWeight: 600, color: "var(--gray-900)", flex: 1 }}>
+                              {formatHour(sig.subBlockHour)} – {formatHour(sig.subBlockHour + 1)}
+                            </span>
+                            <button
+                              disabled={actionLoading === sig.id}
+                              onClick={() => cancelSignup(sig.id, `${sig.slot.id}-${sig.subBlockHour}`)}
+                              style={{ fontSize: "0.75rem", padding: "6px 14px", background: "#fef2f2", color: "#dc2626", border: "1px solid #fecaca", borderRadius: "8px", fontFamily: "'DM Sans', sans-serif", cursor: "pointer", opacity: actionLoading === sig.id ? 0.5 : 1 }}
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        ))}
                       {/* Inline feedback for past slots */}
                       {(() => {
                         const end = new Date(slot.date.slice(0, 10) + "T" + String(slot.endTime).padStart(2, "0") + ":00:00");
                         if (end >= new Date()) return null;
                         const signupId = sigs[0].id;
                         if (feedbackGiven.has(slot.id)) {
-                          return <p className="mt-3 pt-3 border-t border-gray-100 text-xs text-emerald-600">✓ Feedback submitted</p>;
+                          return (
+                            <div style={{ padding: "12px 22px", borderTop: "1px solid var(--card-border)", fontSize: "0.75rem", color: "var(--green)" }}>
+                              ✓ Feedback submitted
+                            </div>
+                          );
                         }
                         const form = feedbackForms[slot.id] ?? { rating: 0, note: "" };
                         return (
-                          <div className="mt-3 pt-3 border-t border-gray-100">
-                            <p className="text-xs text-gray-500 mb-2 font-medium">How was your shift at {slot.clinic.name}?</p>
-                            <div className="flex flex-wrap gap-1.5 mb-2">
+                          <div style={{ padding: "12px 22px", borderTop: "1px solid var(--card-border)" }}>
+                            <p style={{ fontSize: "0.75rem", color: "var(--gray-600)", marginBottom: "8px", fontWeight: 500 }}>How was your shift at {slot.clinic.name}?</p>
+                            <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", marginBottom: "8px" }}>
                               {RATING_OPTIONS.map((opt) => (
                                 <button
                                   key={opt.value}
@@ -812,18 +860,18 @@ export default function VolunteerDashboard() {
                               ))}
                             </div>
                             {form.rating > 0 && (
-                              <div className="flex gap-2 items-start mt-2">
+                              <div style={{ display: "flex", gap: "8px", alignItems: "flex-start", marginTop: "8px" }}>
                                 <textarea
                                   placeholder="Any comments? (optional)"
                                   value={form.note}
                                   onChange={(e) => setFeedbackForms((prev) => ({ ...prev, [slot.id]: { ...form, note: e.target.value } }))}
                                   rows={2}
-                                  className="flex-1 px-2.5 py-1.5 text-xs border border-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-300 resize-none"
+                                  style={{ flex: 1, padding: "6px 10px", fontSize: "0.75rem", border: "1.5px solid var(--card-border)", borderRadius: "8px", fontFamily: "'DM Sans', sans-serif", background: "var(--card-bg)", outline: "none", resize: "none" }}
                                 />
                                 <button
                                   disabled={submittingFeedbackFor === slot.id}
                                   onClick={() => submitInlineFeedback(slot.id, signupId)}
-                                  className="px-3 py-1.5 text-xs bg-[#4A90D9] text-white rounded-full hover:bg-[#357ABD] transition-colors disabled:opacity-50 whitespace-nowrap"
+                                  style={{ padding: "6px 16px", fontSize: "0.75rem", background: "var(--blue)", color: "#fff", border: "none", borderRadius: "8px", fontFamily: "'DM Sans', sans-serif", cursor: "pointer", opacity: submittingFeedbackFor === slot.id ? 0.5 : 1, whiteSpace: "nowrap" }}
                                 >
                                   {submittingFeedbackFor === slot.id ? "..." : "Submit"}
                                 </button>
@@ -842,47 +890,47 @@ export default function VolunteerDashboard() {
 
         {/* Profile */}
         {tab === "profile" && profile && (
-          <div className="space-y-4">
+          <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
             {/* Stats */}
-            <div className="bg-white rounded-xl border border-gray-200 p-5 text-center w-48">
-              <p className="text-2xl font-semibold text-black">{profile.hoursVolunteered}</p>
-              <p className="text-xs text-gray-400 mt-1">Hours Volunteered</p>
+            <div style={{ background: "var(--card-bg)", borderRadius: "14px", border: "1.5px solid var(--card-border)", padding: "20px", textAlign: "center", width: "192px", boxShadow: "0 2px 6px rgba(0,0,0,.05)" }}>
+              <p style={{ fontSize: "1.5rem", fontWeight: 600, color: "var(--gray-900)" }}>{profile.hoursVolunteered}</p>
+              <p style={{ fontSize: "0.72rem", color: "var(--gray-400)", marginTop: "4px" }}>Hours Volunteered</p>
             </div>
 
             {/* Languages */}
-            <div className="bg-white rounded-xl border border-gray-200 p-6">
-              <h3 className="text-sm font-medium text-gray-700 mb-1">Languages</h3>
-              <p className="text-xs text-gray-400 mb-1">Select the languages you speak and can interpret.</p>
-              <p className="text-xs text-amber-600 bg-amber-50 border border-amber-100 rounded-md px-3 py-2 mb-4">
+            <div style={{ background: "var(--card-bg)", borderRadius: "14px", border: "1.5px solid var(--card-border)", padding: "24px", boxShadow: "0 2px 6px rgba(0,0,0,.05)" }}>
+              <h3 style={{ fontSize: "0.9rem", fontWeight: 600, color: "var(--gray-900)", marginBottom: "4px" }}>Languages</h3>
+              <p style={{ fontSize: "0.75rem", color: "var(--gray-400)", marginBottom: "4px" }}>Select the languages you speak and can interpret.</p>
+              <p style={{ fontSize: "0.75rem", color: "#92400e", background: "#fffbeb", border: "1px solid #fde68a", borderRadius: "8px", padding: "8px 12px", marginBottom: "16px" }}>
                 ⚠️ You must have a medical-level vocabulary to effectively translate in a clinical context. Only select languages you are confident interpreting in a healthcare setting.
               </p>
 
               {/* Search box */}
-              <div className="mb-3">
+              <div style={{ marginBottom: "12px" }}>
                 <input
                   type="text"
                   placeholder="Search languages..."
                   value={langSearch}
                   onChange={(e) => setLangSearch(e.target.value)}
-                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-300"
+                  style={{ width: "100%", padding: "8px 12px", fontSize: "0.875rem", border: "1.5px solid var(--card-border)", borderRadius: "9px", fontFamily: "'DM Sans', sans-serif", background: "var(--card-bg)", color: "var(--gray-900)", outline: "none", boxSizing: "border-box" }}
                 />
               </div>
 
               {/* Currently selected languages */}
               {profileForm.languages.length > 0 && (
-                <div className="mb-3">
-                  <p className="text-xs font-medium text-gray-400 uppercase tracking-wider mb-2">Selected</p>
-                  <div className="flex flex-wrap gap-1.5">
+                <div style={{ marginBottom: "12px" }}>
+                  <p style={{ fontSize: "0.72rem", fontWeight: 700, color: "var(--gray-400)", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "8px" }}>Selected</p>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
                     {profileForm.languages.map((code) => {
                       const lang = ALL_WORLD_LANGUAGES.find((l) => l.code === code);
                       return (
                         <button
                           key={code}
                           onClick={() => toggleLanguage(code)}
-                          className="px-3 py-1 text-xs rounded-full bg-[#4A90D9] text-white hover:bg-[#357ABD] transition-colors flex items-center gap-1"
+                          style={{ padding: "4px 12px", fontSize: "0.75rem", borderRadius: "99px", background: "var(--blue)", color: "#fff", border: "none", fontFamily: "'DM Sans', sans-serif", cursor: "pointer", display: "flex", alignItems: "center", gap: "4px" }}
                         >
                           {lang?.name ?? code}
-                          <span className="text-gray-400">×</span>
+                          <span style={{ color: "rgba(255,255,255,.7)" }}>×</span>
                         </button>
                       );
                     })}
@@ -901,39 +949,39 @@ export default function VolunteerDashboard() {
                 const unselected = [...top10, ...others].filter((l) => !profileForm.languages.includes(l.code));
 
                 return (
-                  <div className="max-h-48 overflow-y-auto border border-gray-100 rounded-md">
+                  <div style={{ maxHeight: "192px", overflowY: "auto", border: "1.5px solid var(--card-border)", borderRadius: "9px" }}>
                     {unselected.length === 0 ? (
-                      <p className="text-xs text-gray-400 p-3 text-center">No languages match your search.</p>
+                      <p style={{ fontSize: "0.75rem", color: "var(--gray-400)", padding: "12px", textAlign: "center" }}>No languages match your search.</p>
                     ) : (
                       <>
                         {!query && top10.filter((l) => !profileForm.languages.includes(l.code)).length > 0 && (
-                          <div className="px-3 pt-2 pb-1">
-                            <p className="text-xs font-medium text-gray-400 uppercase tracking-wider">Most Common</p>
+                          <div style={{ padding: "8px 12px 4px" }}>
+                            <p style={{ fontSize: "0.72rem", fontWeight: 700, color: "var(--gray-400)", textTransform: "uppercase", letterSpacing: "0.1em" }}>Most Common</p>
                           </div>
                         )}
                         {!query && top10.filter((l) => !profileForm.languages.includes(l.code)).map((lang) => (
                           <button
                             key={lang.code}
                             onClick={() => toggleLanguage(lang.code)}
-                            className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors flex items-center justify-between"
+                            style={{ width: "100%", textAlign: "left", padding: "8px 12px", fontSize: "0.875rem", color: "var(--gray-900)", background: "none", border: "none", fontFamily: "'DM Sans', sans-serif", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between" }}
                           >
                             {lang.name}
-                            <span className="text-xs text-gray-300">+</span>
+                            <span style={{ fontSize: "0.72rem", color: "var(--gray-400)" }}>+</span>
                           </button>
                         ))}
                         {!query && others.filter((l) => !profileForm.languages.includes(l.code)).length > 0 && (
-                          <div className="px-3 pt-2 pb-1 border-t border-gray-50">
-                            <p className="text-xs font-medium text-gray-400 uppercase tracking-wider">All Languages</p>
+                          <div style={{ padding: "8px 12px 4px", borderTop: "1px solid var(--card-border)" }}>
+                            <p style={{ fontSize: "0.72rem", fontWeight: 700, color: "var(--gray-400)", textTransform: "uppercase", letterSpacing: "0.1em" }}>All Languages</p>
                           </div>
                         )}
                         {(query ? unselected : others.filter((l) => !profileForm.languages.includes(l.code))).map((lang) => (
                           <button
                             key={lang.code}
                             onClick={() => toggleLanguage(lang.code)}
-                            className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors flex items-center justify-between"
+                            style={{ width: "100%", textAlign: "left", padding: "8px 12px", fontSize: "0.875rem", color: "var(--gray-900)", background: "none", border: "none", fontFamily: "'DM Sans', sans-serif", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between" }}
                           >
                             {lang.name}
-                            <span className="text-xs text-gray-300">+</span>
+                            <span style={{ fontSize: "0.72rem", color: "var(--gray-400)" }}>+</span>
                           </button>
                         ))}
                       </>
@@ -945,70 +993,66 @@ export default function VolunteerDashboard() {
               <button
                 disabled={actionLoading === "profile"}
                 onClick={saveProfile}
-                className="mt-4 px-4 py-2 text-sm bg-[#4A90D9] text-white hover:bg-[#357ABD] rounded-full transition-colors disabled:opacity-50"
+                style={{ marginTop: "16px", padding: "9px 20px", fontSize: "0.875rem", background: "var(--blue)", color: "#fff", border: "none", borderRadius: "9px", fontFamily: "'DM Sans', sans-serif", fontWeight: 600, cursor: "pointer", opacity: actionLoading === "profile" ? 0.5 : 1 }}
               >
                 {actionLoading === "profile" ? "Saving..." : "Save Languages"}
               </button>
             </div>
 
             {/* Notification Preferences */}
-            <div className="bg-white rounded-xl border border-gray-200 p-6">
-              <div className="flex items-center justify-between mb-1">
-                <h3 className="text-sm font-medium text-gray-700">Email Notifications</h3>
-                {notifSaved && <span className="text-xs text-emerald-600">Saved ✓</span>}
+            <div style={{ background: "var(--card-bg)", borderRadius: "14px", border: "1.5px solid var(--card-border)", padding: "24px", boxShadow: "0 2px 6px rgba(0,0,0,.05)" }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "4px" }}>
+                <h3 style={{ fontSize: "0.9rem", fontWeight: 600, color: "var(--gray-900)" }}>Email Notifications</h3>
+                {notifSaved && <span style={{ fontSize: "0.75rem", color: "var(--green)" }}>Saved ✓</span>}
               </div>
-              <p className="text-xs text-gray-400 mb-5">Toggles save instantly. We&apos;ll never send you more than you want.</p>
+              <p style={{ fontSize: "0.75rem", color: "var(--gray-400)", marginBottom: "20px" }}>Toggles save instantly. We&apos;ll never send you more than you want.</p>
 
-              <div className="space-y-1">
+              <div>
                 {/* Recommended */}
-                <p className="text-xs font-medium text-gray-400 uppercase tracking-wider mb-2">Recommended</p>
+                <p style={{ fontSize: "0.72rem", fontWeight: 700, color: "var(--gray-400)", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "8px" }}>Recommended</p>
 
                 {([
                   { key: "signupReceipt" as const, label: "Signup confirmation", desc: "Sent after you sign up (2 min delay so quick toggles don't flood your inbox)" },
                   { key: "cancellationReceipt" as const, label: "Cancellation receipt", desc: "Confirms when you cancel a shift" },
                   { key: "reminder24h" as const, label: "24-hour reminder", desc: "Email the day before your shift" },
                 ] as const).map(({ key, label, desc }) => (
-                  <label key={key} className="flex items-start gap-3 py-2.5 cursor-pointer group">
+                  <label key={key} style={{ display: "flex", alignItems: "flex-start", gap: "12px", padding: "10px 0", cursor: "pointer" }}>
                     <button
                       role="switch"
                       aria-checked={notifPrefs[key]}
                       onClick={() => toggleNotif(key)}
-                      className={`mt-0.5 relative inline-flex h-5 w-9 flex-shrink-0 rounded-full border-2 border-transparent transition-colors focus:outline-none ${
-                        notifPrefs[key] ? "bg-[#4A90D9]" : "bg-gray-200"
-                      }`}
+                      style={{ marginTop: "2px", position: "relative", display: "inline-flex", height: "20px", width: "36px", flexShrink: 0, borderRadius: "99px", border: "2px solid transparent", background: notifPrefs[key] ? "var(--blue)" : "var(--gray-200)", cursor: "pointer", outline: "none" }}
                     >
-                      <span className={`inline-block h-4 w-4 rounded-full bg-white shadow transition-transform ${notifPrefs[key] ? "translate-x-4" : "translate-x-0"}`} />
+                      <span style={{ display: "inline-block", height: "16px", width: "16px", borderRadius: "50%", background: "#fff", boxShadow: "0 1px 3px rgba(0,0,0,.2)", transform: notifPrefs[key] ? "translateX(16px)" : "translateX(0)", transition: "transform .15s" }} />
                     </button>
                     <div>
-                      <p className="text-sm text-gray-700">{label}</p>
-                      <p className="text-xs text-gray-400">{desc}</p>
+                      <p style={{ fontSize: "0.875rem", color: "var(--gray-900)" }}>{label}</p>
+                      <p style={{ fontSize: "0.75rem", color: "var(--gray-400)" }}>{desc}</p>
                     </div>
                   </label>
                 ))}
 
-                <div className="pt-3 border-t border-gray-100 mt-2">
-                  <p className="text-xs font-medium text-gray-400 uppercase tracking-wider mb-2">Optional</p>
-                  <label className="flex items-start gap-3 py-2.5 cursor-pointer">
+                <div style={{ paddingTop: "12px", borderTop: "1px solid var(--card-border)", marginTop: "8px" }}>
+                  <p style={{ fontSize: "0.72rem", fontWeight: 700, color: "var(--gray-400)", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "8px" }}>Optional</p>
+                  <label style={{ display: "flex", alignItems: "flex-start", gap: "12px", padding: "10px 0", cursor: "pointer" }}>
                     <button
                       role="switch"
                       aria-checked={notifPrefs.unfilledSlotAlert}
                       onClick={() => toggleNotif("unfilledSlotAlert")}
-                      className={`mt-0.5 relative inline-flex h-5 w-9 flex-shrink-0 rounded-full border-2 border-transparent transition-colors focus:outline-none ${
-                        notifPrefs.unfilledSlotAlert ? "bg-[#4A90D9]" : "bg-gray-200"
-                      }`}
+                      style={{ marginTop: "2px", position: "relative", display: "inline-flex", height: "20px", width: "36px", flexShrink: 0, borderRadius: "99px", border: "2px solid transparent", background: notifPrefs.unfilledSlotAlert ? "var(--blue)" : "var(--gray-200)", cursor: "pointer", outline: "none" }}
                     >
-                      <span className={`inline-block h-4 w-4 rounded-full bg-white shadow transition-transform ${notifPrefs.unfilledSlotAlert ? "translate-x-4" : "translate-x-0"}`} />
+                      <span style={{ display: "inline-block", height: "16px", width: "16px", borderRadius: "50%", background: "#fff", boxShadow: "0 1px 3px rgba(0,0,0,.2)", transform: notifPrefs.unfilledSlotAlert ? "translateX(16px)" : "translateX(0)", transition: "transform .15s" }} />
                     </button>
                     <div>
-                      <p className="text-sm text-gray-700">Urgent: unfilled slot alerts</p>
-                      <p className="text-xs text-gray-400">Notified immediately when a qualifying slot within 24 hrs has a last-minute opening due to a cancellation</p>
+                      <p style={{ fontSize: "0.875rem", color: "var(--gray-900)" }}>Urgent: unfilled slot alerts</p>
+                      <p style={{ fontSize: "0.75rem", color: "var(--gray-400)" }}>Notified immediately when a qualifying slot within 24 hrs has a last-minute opening due to a cancellation</p>
                     </div>
                   </label>
                 </div>
 
-                <div className="pt-3 border-t border-gray-100 mt-2">
-                  <p className="text-xs font-medium text-gray-400 uppercase tracking-wider mb-2">Always On</p>
-                  <div className="space-y-1 text-xs text-gray-400 pl-1">
+                <div style={{ paddingTop: "12px", borderTop: "1px solid var(--card-border)", marginTop: "8px" }}>
+                  <p style={{ fontSize: "0.72rem", fontWeight: 700, color: "var(--gray-400)", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "8px" }}>Always On</p>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "4px", fontSize: "0.75rem", color: "var(--gray-400)", paddingLeft: "4px" }}>
                     <p>• Removed from a shift by an admin</p>
                     <p>• Slot cancelled by a clinic</p>
                     <p>• Slot edited and your signup was dropped</p>
@@ -1018,10 +1062,10 @@ export default function VolunteerDashboard() {
             </div>
 
             {/* Easter egg */}
-            <div className="mt-2 text-right">
+            <div style={{ marginTop: "8px", textAlign: "right" }}>
               <button
                 onClick={() => setEasterOpen(!easterOpen)}
-                className="text-xs text-gray-200 hover:text-gray-400 transition-colors select-none"
+                style={{ fontSize: "0.75rem", color: "#e2e8f0", background: "none", border: "none", cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}
                 title="✨"
               >
                 ✦
@@ -1029,10 +1073,9 @@ export default function VolunteerDashboard() {
             </div>
             {easterOpen && (
               <div
-                className="rounded-xl p-6 text-center transition-all duration-500"
-                style={{ backgroundColor: easterBg === "transparent" ? "#f5f5f4" : easterBg }}
+                style={{ borderRadius: "14px", padding: "24px", textAlign: "center", transition: "background .5s", backgroundColor: easterBg === "transparent" ? "#f5f5f4" : easterBg }}
               >
-                <p className="text-xs text-gray-500 mb-3">
+                <p style={{ fontSize: "0.75rem", color: "var(--gray-600)", marginBottom: "12px" }}>
                   {easterCount === 0 ? "You found it 🎉" : easterCount < 5 ? "Keep going..." : easterCount < 10 ? "Ooh pretty 🌈" : easterCount < 20 ? "Still going? Respect." : "You absolute legend 🏆"}
                 </p>
                 <button
@@ -1042,11 +1085,10 @@ export default function VolunteerDashboard() {
                     setEasterBg(newColor);
                     setEasterCount((n) => n + 1);
                   }}
-                  className="w-20 h-20 rounded-full border-4 border-white shadow-lg transition-all duration-300 hover:scale-110 active:scale-95"
-                  style={{ backgroundColor: easterBg === "transparent" ? "#e7e5e4" : easterBg }}
+                  style={{ width: "80px", height: "80px", borderRadius: "50%", border: "4px solid #fff", boxShadow: "0 4px 14px rgba(0,0,0,.12)", cursor: "pointer", backgroundColor: easterBg === "transparent" ? "#e7e5e4" : easterBg, transition: "background .3s" }}
                   title="Click me!"
                 />
-                <p className="text-xs text-gray-400 mt-3">clicks: {easterCount}</p>
+                <p style={{ fontSize: "0.75rem", color: "var(--gray-400)", marginTop: "12px" }}>clicks: {easterCount}</p>
               </div>
             )}
           </div>
@@ -1054,47 +1096,47 @@ export default function VolunteerDashboard() {
 
         {/* Training */}
         {tab === "training" && (
-          <div className="space-y-4">
+          <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
             {!trainingLoaded ? (
-              <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
-                <p className="text-gray-400">Loading training materials...</p>
+              <div style={{ background: "var(--card-bg)", borderRadius: "14px", border: "1.5px solid var(--card-border)", padding: "48px", textAlign: "center" }}>
+                <p style={{ color: "var(--gray-400)" }}>Loading training materials...</p>
               </div>
             ) : trainingMaterials.length === 0 ? (
-              <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
-                <p className="text-gray-400">No training materials available yet.</p>
+              <div style={{ background: "var(--card-bg)", borderRadius: "14px", border: "1.5px solid var(--card-border)", padding: "48px", textAlign: "center" }}>
+                <p style={{ color: "var(--gray-400)" }}>No training materials available yet.</p>
               </div>
             ) : (() => {
               const categories = Array.from(new Set(trainingMaterials.map((m) => m.category))).sort();
               return (
-                <div className="space-y-6">
+                <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
                   {categories.map((cat) => (
                     <div key={cat}>
-                      <h3 className="text-xs font-medium text-gray-400 uppercase tracking-wider mb-3">{cat}</h3>
-                      <div className="space-y-3">
+                      <h3 style={{ fontSize: "0.72rem", fontWeight: 700, color: "var(--gray-400)", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "12px" }}>{cat}</h3>
+                      <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
                         {trainingMaterials.filter((m) => m.category === cat).map((m) => (
-                          <div key={m.id} className="bg-white rounded-xl border border-gray-200 p-5">
-                            <div className="flex items-start justify-between gap-3">
-                              <div className="min-w-0 flex-1">
-                                <div className="flex items-center gap-2 flex-wrap mb-1">
-                                  <span className="font-medium text-black text-sm">{m.title}</span>
+                          <div key={m.id} style={{ background: "var(--card-bg)", borderRadius: "14px", border: "1.5px solid var(--card-border)", padding: "20px", boxShadow: "0 2px 6px rgba(0,0,0,.05)" }}>
+                            <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "12px" }}>
+                              <div style={{ minWidth: 0, flex: 1 }}>
+                                <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap", marginBottom: "4px" }}>
+                                  <span style={{ fontWeight: 600, color: "var(--gray-900)", fontSize: "0.875rem" }}>{m.title}</span>
                                   {m.languageCode && (
-                                    <span className="text-xs px-1.5 py-0.5 rounded bg-[#EBF3FC] text-[#041E42]">{m.languageCode}</span>
+                                    <span style={{ fontSize: "0.72rem", padding: "2px 6px", borderRadius: "4px", background: "var(--blue-light)", color: "var(--navy)" }}>{m.languageCode}</span>
                                   )}
-                                  <span className={`text-xs px-1.5 py-0.5 rounded ${m.type === "FILE" ? "bg-amber-50 text-amber-700" : "bg-emerald-50 text-emerald-700"}`}>
+                                  <span style={{ fontSize: "0.72rem", padding: "2px 6px", borderRadius: "4px", background: m.type === "FILE" ? "#fffbeb" : "var(--green-light)", color: m.type === "FILE" ? "#92400e" : "var(--green)" }}>
                                     {m.type}
                                   </span>
                                 </div>
-                                {m.description && <p className="text-xs text-gray-500 mb-2">{m.description}</p>}
+                                {m.description && <p style={{ fontSize: "0.75rem", color: "var(--gray-600)", marginBottom: "8px" }}>{m.description}</p>}
                                 {m.type === "FILE" ? (
-                                  <a href={m.url} target="_blank" rel="noopener noreferrer" className="text-xs text-gray-600 hover:text-black underline">
+                                  <a href={m.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: "0.75rem", color: "var(--gray-600)", textDecoration: "underline" }}>
                                     {m.fileName ?? "Download"}
                                   </a>
                                 ) : (
-                                  <a href={m.url} target="_blank" rel="noopener noreferrer" className="text-xs text-[#4A90D9] hover:text-[#041E42] underline break-all">
+                                  <a href={m.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: "0.75rem", color: "var(--blue)", textDecoration: "underline", wordBreak: "break-all" }}>
                                     {m.url}
                                   </a>
                                 )}
-                                <p className="text-xs text-gray-400 mt-2">
+                                <p style={{ fontSize: "0.72rem", color: "var(--gray-400)", marginTop: "8px" }}>
                                   by {m.uploadedBy.name ?? m.uploadedBy.email} · {new Date(m.createdAt).toLocaleDateString()}
                                 </p>
                               </div>
@@ -1109,99 +1151,99 @@ export default function VolunteerDashboard() {
             })()}
           </div>
         )}
-      </div>
 
-      {/* Suggestions */}
-      {tab === "suggestions" && (
-        <div className="max-w-lg space-y-4">
-          <div className="bg-white rounded-xl border border-gray-200 p-6">
-            <h3 className="text-sm font-medium text-gray-700 mb-1">Messages</h3>
-            <p className="text-xs text-gray-400 mb-5">Have a suggestion or feedback for the website? We&apos;d love to hear it.</p>
+        {/* Suggestions */}
+        {tab === "suggestions" && (
+          <div style={{ maxWidth: "512px", display: "flex", flexDirection: "column", gap: "16px" }}>
+            <div style={{ background: "var(--card-bg)", borderRadius: "14px", border: "1.5px solid var(--card-border)", padding: "24px", boxShadow: "0 2px 6px rgba(0,0,0,.05)" }}>
+              <h3 style={{ fontSize: "0.9rem", fontWeight: 600, color: "var(--gray-900)", marginBottom: "4px" }}>Messages</h3>
+              <p style={{ fontSize: "0.75rem", color: "var(--gray-400)", marginBottom: "20px" }}>Have a suggestion or feedback for the website? We&apos;d love to hear it.</p>
 
-            {suggSuccess ? (
-              <div className="text-center py-6">
-                <p className="text-emerald-600 font-medium text-sm">Thanks! Your suggestion has been submitted.</p>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                <div>
-                  <label className="block text-xs text-gray-500 mb-1">Type</label>
-                  <select
-                    value={suggForm.type}
-                    onChange={(e) => setSuggForm({ ...suggForm, type: e.target.value })}
-                    className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-300 bg-white"
+              {suggSuccess ? (
+                <div style={{ textAlign: "center", padding: "24px 0" }}>
+                  <p style={{ color: "var(--green)", fontWeight: 500, fontSize: "0.875rem" }}>Thanks! Your suggestion has been submitted.</p>
+                </div>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                  <div>
+                    <label style={{ display: "block", fontSize: "0.75rem", color: "var(--gray-600)", marginBottom: "4px" }}>Type</label>
+                    <select
+                      value={suggForm.type}
+                      onChange={(e) => setSuggForm({ ...suggForm, type: e.target.value })}
+                      style={{ width: "100%", padding: "9px 12px", fontSize: "0.875rem", border: "1.5px solid var(--card-border)", borderRadius: "9px", fontFamily: "'DM Sans', sans-serif", background: "var(--card-bg)", color: "var(--gray-900)", outline: "none", boxSizing: "border-box" }}
+                    >
+                      <option value="FEATURE">Feature Request</option>
+                      <option value="BUG">Bug Report</option>
+                      <option value="GENERAL">General Feedback</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label style={{ display: "block", fontSize: "0.75rem", color: "var(--gray-600)", marginBottom: "4px" }}>Subject</label>
+                    <input
+                      type="text"
+                      placeholder="Brief subject..."
+                      value={suggForm.subject}
+                      onChange={(e) => setSuggForm({ ...suggForm, subject: e.target.value })}
+                      style={{ width: "100%", padding: "9px 12px", fontSize: "0.875rem", border: "1.5px solid var(--card-border)", borderRadius: "9px", fontFamily: "'DM Sans', sans-serif", background: "var(--card-bg)", color: "var(--gray-900)", outline: "none", boxSizing: "border-box" }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: "block", fontSize: "0.75rem", color: "var(--gray-600)", marginBottom: "4px" }}>Message</label>
+                    <textarea
+                      placeholder="Describe your suggestion in detail..."
+                      value={suggForm.message}
+                      onChange={(e) => setSuggForm({ ...suggForm, message: e.target.value })}
+                      rows={4}
+                      style={{ width: "100%", padding: "9px 12px", fontSize: "0.875rem", border: "1.5px solid var(--card-border)", borderRadius: "9px", fontFamily: "'DM Sans', sans-serif", background: "var(--card-bg)", color: "var(--gray-900)", outline: "none", resize: "none", boxSizing: "border-box" }}
+                    />
+                  </div>
+                  {suggError && <p style={{ fontSize: "0.75rem", color: "#dc2626" }}>{suggError}</p>}
+                  <button
+                    disabled={suggSubmitting || !suggForm.subject.trim() || !suggForm.message.trim()}
+                    onClick={submitSuggestion}
+                    style={{ padding: "9px 20px", fontSize: "0.875rem", background: "var(--blue)", color: "#fff", border: "none", borderRadius: "9px", fontFamily: "'DM Sans', sans-serif", fontWeight: 600, cursor: "pointer", opacity: suggSubmitting || !suggForm.subject.trim() || !suggForm.message.trim() ? 0.5 : 1 }}
                   >
-                    <option value="FEATURE">Feature Request</option>
-                    <option value="BUG">Bug Report</option>
-                    <option value="GENERAL">General Feedback</option>
-                  </select>
+                    {suggSubmitting ? "Submitting..." : "Submit Suggestion"}
+                  </button>
                 </div>
-                <div>
-                  <label className="block text-xs text-gray-500 mb-1">Subject</label>
-                  <input
-                    type="text"
-                    placeholder="Brief subject..."
-                    value={suggForm.subject}
-                    onChange={(e) => setSuggForm({ ...suggForm, subject: e.target.value })}
-                    className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-300"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs text-gray-500 mb-1">Message</label>
-                  <textarea
-                    placeholder="Describe your suggestion in detail..."
-                    value={suggForm.message}
-                    onChange={(e) => setSuggForm({ ...suggForm, message: e.target.value })}
-                    rows={4}
-                    className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-300 resize-none"
-                  />
-                </div>
-                {suggError && <p className="text-xs text-red-500">{suggError}</p>}
-                <button
-                  disabled={suggSubmitting || !suggForm.subject.trim() || !suggForm.message.trim()}
-                  onClick={submitSuggestion}
-                  className="px-4 py-2 text-sm bg-[#4A90D9] text-white hover:bg-[#357ABD] rounded-full transition-colors disabled:opacity-50"
-                >
-                  {suggSubmitting ? "Submitting..." : "Submit Suggestion"}
-                </button>
-              </div>
-            )}
+              )}
+            </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
       {/* Anti-spam modal */}
       {spamModal && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-sm p-6 text-center">
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.4)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 50, padding: "16px" }}>
+          <div style={{ background: "#fff", borderRadius: "14px", boxShadow: "0 20px 60px rgba(0,0,0,.15)", width: "100%", maxWidth: "384px", padding: "24px", textAlign: "center" }}>
             {spamModal.isBlocked ? (
               <>
-                <div className="text-4xl mb-3">🎨</div>
-                <h3 className="text-sm font-semibold text-black mb-2">Looks like you enjoy clicking!</h3>
-                <p className="text-xs text-gray-500 mb-4">You&apos;ve cancelled this shift too many times. Each cancellation within 24 hours sends an urgent alert to the clinic. We made something for you to click instead.</p>
+                <div style={{ fontSize: "2.5rem", marginBottom: "12px" }}>🎨</div>
+                <h3 style={{ fontSize: "0.875rem", fontWeight: 600, color: "var(--gray-900)", marginBottom: "8px" }}>Looks like you enjoy clicking!</h3>
+                <p style={{ fontSize: "0.75rem", color: "var(--gray-600)", marginBottom: "16px" }}>You&apos;ve cancelled this shift too many times. Each cancellation within 24 hours sends an urgent alert to the clinic. We made something for you to click instead.</p>
                 <button
                   onClick={() => { setSpamModal(null); setTab("profile"); setEasterOpen(true); }}
-                  className="w-full px-4 py-2 text-sm bg-[#4A90D9] text-white rounded-full hover:bg-[#357ABD] transition-colors mb-2"
+                  style={{ width: "100%", padding: "9px 20px", fontSize: "0.875rem", background: "var(--blue)", color: "#fff", border: "none", borderRadius: "9px", fontFamily: "'DM Sans', sans-serif", fontWeight: 600, cursor: "pointer", marginBottom: "8px" }}
                 >
                   Take me there →
                 </button>
-                <button onClick={() => setSpamModal(null)} className="text-xs text-gray-400 hover:text-gray-600">Dismiss</button>
+                <button onClick={() => setSpamModal(null)} style={{ fontSize: "0.75rem", color: "var(--gray-400)", background: "none", border: "none", cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>Dismiss</button>
               </>
             ) : (
               <>
-                <div className="text-3xl mb-3">⚠️</div>
-                <h3 className="text-sm font-semibold text-black mb-2">Heads up</h3>
-                <p className="text-xs text-gray-500 mb-4">Cancelling a shift within 24 hours sends an urgent email alert to the clinic. Please be considerate of their time. Are you sure you want to cancel?</p>
-                <div className="flex gap-2">
+                <div style={{ fontSize: "2rem", marginBottom: "12px" }}>⚠️</div>
+                <h3 style={{ fontSize: "0.875rem", fontWeight: 600, color: "var(--gray-900)", marginBottom: "8px" }}>Heads up</h3>
+                <p style={{ fontSize: "0.75rem", color: "var(--gray-600)", marginBottom: "16px" }}>Cancelling a shift within 24 hours sends an urgent email alert to the clinic. Please be considerate of their time. Are you sure you want to cancel?</p>
+                <div style={{ display: "flex", gap: "8px" }}>
                   <button
                     onClick={() => setSpamModal(null)}
-                    className="flex-1 px-4 py-2 text-sm border border-gray-200 text-gray-600 rounded-lg hover:bg-gray-50"
+                    style={{ flex: 1, padding: "9px 20px", fontSize: "0.875rem", border: "1.5px solid var(--card-border)", color: "var(--gray-600)", borderRadius: "9px", background: "var(--card-bg)", fontFamily: "'DM Sans', sans-serif", cursor: "pointer" }}
                   >
                     Keep Signup
                   </button>
                   <button
                     onClick={spamModal.onProceed ?? (() => setSpamModal(null))}
-                    className="flex-1 px-4 py-2 text-sm bg-[#4A90D9] text-white rounded-full hover:bg-[#357ABD]"
+                    style={{ flex: 1, padding: "9px 20px", fontSize: "0.875rem", background: "var(--blue)", color: "#fff", border: "none", borderRadius: "9px", fontFamily: "'DM Sans', sans-serif", fontWeight: 600, cursor: "pointer" }}
                   >
                     Yes, Cancel
                   </button>

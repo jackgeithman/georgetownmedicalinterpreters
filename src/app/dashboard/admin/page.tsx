@@ -103,26 +103,10 @@ const LANG_COLORS: Record<string, string> = {
 function MapsLinks({ address }: { address: string }) {
   const q = encodeURIComponent(address);
   return (
-    <span className="inline-flex gap-1.5 ml-1.5 items-center">
-      <a
-        href={`https://www.google.com/maps/search/?api=1&query=${q}`}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="text-xs text-[#4A90D9] hover:text-[#041E42] underline"
-        title="Google Maps"
-      >
-        G Maps
-      </a>
-      <span className="text-gray-300">·</span>
-      <a
-        href={`https://maps.apple.com/?q=${q}`}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="text-xs text-[#4A90D9] hover:text-[#041E42] underline"
-        title="Apple Maps"
-      >
-        Apple Maps
-      </a>
+    <span style={{ display: "inline-flex", gap: "6px", marginLeft: "6px", alignItems: "center" }}>
+      <a href={`https://www.google.com/maps/search/?api=1&query=${q}`} target="_blank" rel="noopener noreferrer" style={{ fontSize: "0.72rem", color: "var(--blue)", textDecoration: "underline" }} title="Google Maps">G Maps</a>
+      <span style={{ color: "#CBD5E1" }}>·</span>
+      <a href={`https://maps.apple.com/?q=${q}`} target="_blank" rel="noopener noreferrer" style={{ fontSize: "0.72rem", color: "var(--blue)", textDecoration: "underline" }} title="Apple Maps">Apple Maps</a>
     </span>
   );
 }
@@ -634,8 +618,8 @@ export default function AdminDashboard() {
 
   if (status === "loading" || loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <p className="text-gray-400">Loading...</p>
+      <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--page-bg)" }}>
+        <p style={{ color: "var(--gray-400)" }}>Loading...</p>
       </div>
     );
   }
@@ -682,37 +666,37 @@ export default function AdminDashboard() {
     const canSignUp = adminProfile?.languages.includes(slot.language) ?? false;
 
     return (
-      <div key={slot.id} className={`bg-white rounded-xl border border-gray-200 p-5 ${isPast ? "opacity-50" : ""}`}>
-        <div className="flex items-start justify-between mb-3">
-          <div className="flex items-center gap-3 flex-wrap">
+      <div key={slot.id} style={{ background: "var(--card-bg)", borderRadius: "14px", border: "1.5px solid var(--card-border)", marginBottom: "14px", boxShadow: "0 2px 6px rgba(0,0,0,.05)", overflow: "hidden", opacity: isPast ? 0.55 : 1 }}>
+        <div style={{ padding: "16px 22px 14px", borderBottom: "1.5px solid var(--card-border)", display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "12px", flexWrap: "wrap" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
             {!isPast && (
               <input
                 type="checkbox"
                 checked={adminSelectedSlotIds.has(slot.id)}
                 onChange={() => toggleSelectAdminSlot(slot.id)}
-                className="w-4 h-4 accent-gray-700 cursor-pointer"
+                style={{ width: "16px", height: "16px", cursor: "pointer", accentColor: "var(--navy)" }}
                 onClick={(e) => e.stopPropagation()}
               />
             )}
             <span className={`text-xs px-2 py-1 rounded-full font-medium ${LANG_COLORS[slot.language]}`}>
               {LANG_LABELS[slot.language]}
             </span>
-            <span className="text-sm font-medium text-black">{formatDate(slot.date)}</span>
-            <span className="text-sm text-gray-500">{formatHour(slot.startTime)} – {formatHour(slot.endTime)}</span>
-            {isPast && <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-400">Past</span>}
+            <span style={{ fontSize: "0.875rem", fontWeight: 600, color: "var(--gray-900)" }}>{formatDate(slot.date)}</span>
+            <span style={{ fontSize: "0.875rem", color: "var(--gray-600)" }}>{formatHour(slot.startTime)} – {formatHour(slot.endTime)}</span>
+            {isPast && <span style={{ fontSize: "0.72rem", padding: "2px 8px", borderRadius: "99px", background: "var(--gray-200)", color: "var(--gray-600)", fontWeight: 600, textTransform: "uppercase" }}>Past</span>}
           </div>
-          <div className="text-right">
-            <p className="text-sm font-medium text-black">{slot.clinic.name}</p>
+          <div style={{ textAlign: "right" }}>
+            <p style={{ fontSize: "0.95rem", fontWeight: 700, color: "var(--navy)" }}>{slot.clinic.name}</p>
             {slot.clinic.address && (
-              <p className="text-xs text-gray-400">
+              <p style={{ fontSize: "0.72rem", color: "var(--gray-400)" }}>
                 {slot.clinic.address}
                 <MapsLinks address={slot.clinic.address} />
               </p>
             )}
           </div>
         </div>
-        {slot.notes && <p className="text-xs text-gray-400 italic mb-3">{slot.notes}</p>}
-        <div className="space-y-2">
+        {slot.notes && <p style={{ fontSize: "0.75rem", color: "var(--gray-400)", fontStyle: "italic", padding: "10px 22px 0" }}>{slot.notes}</p>}
+        <div style={{ padding: "10px 22px 14px", display: "flex", flexDirection: "column", gap: "8px" }}>
           {subBlocks.map((hour) => {
             const hoursSignups = slot.signups.filter((s) => s.subBlockHour === hour);
             const mySignup = adminProfile ? hoursSignups.find((s) => s.volunteer.id === adminProfile.id) : null;
@@ -721,13 +705,13 @@ export default function AdminDashboard() {
             const signupKey = `signup-${slot.id}-${hour}`;
 
             return (
-              <div key={hour} className="rounded-md bg-gray-50 px-3 py-2 space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <span className="text-xs text-gray-600 w-28">{formatHour(hour)} – {formatHour(hour + 1)}</span>
-                    <span className="text-xs text-gray-400">{filled}/{slot.interpreterCount} filled</span>
+              <div key={hour} style={{ borderRadius: "9px", background: "rgba(0,0,0,.03)", padding: "10px 14px", display: "flex", flexDirection: "column", gap: "6px" }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                    <span style={{ fontSize: "0.8rem", color: "var(--gray-600)", minWidth: "110px" }}>{formatHour(hour)} – {formatHour(hour + 1)}</span>
+                    <span style={{ fontSize: "0.8rem", color: "var(--gray-400)" }}>{filled}/{slot.interpreterCount} filled</span>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                     {!isPast && (
                       <button
                         onClick={() => {
@@ -736,50 +720,49 @@ export default function AdminDashboard() {
                           setAssignSelected(null);
                           setAssignError("");
                         }}
-                        className="text-xs px-2 py-1 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200 rounded-md transition-colors"
+                        style={{ fontSize: "0.75rem", padding: "4px 10px", background: "#EEF2FF", color: "#4338CA", border: "1px solid #C7D2FE", borderRadius: "6px", cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}
                       >
                         Assign
                       </button>
                     )}
                     {isPast ? (
-                      <span className="text-xs px-2 py-1 bg-gray-100 text-gray-400 rounded-md">Past</span>
+                      <span style={{ fontSize: "0.75rem", padding: "4px 10px", background: "var(--gray-200)", color: "var(--gray-400)", borderRadius: "6px" }}>Past</span>
                     ) : mySignup ? (
                       <button
                         disabled={actionLoading === mySignup.id}
                         onClick={() => cancelMySignup(mySignup.id)}
-                        className="text-xs px-2 py-1 bg-emerald-50 text-emerald-700 hover:bg-red-50 hover:text-red-600 border border-emerald-200 hover:border-red-200 rounded-md font-medium transition-colors disabled:opacity-50"
+                        style={{ fontSize: "0.75rem", padding: "4px 10px", background: "#DCFCE7", color: "#15803D", border: "1px solid #BBF7D0", borderRadius: "6px", fontWeight: 600, cursor: "pointer", opacity: actionLoading === mySignup.id ? 0.5 : 1, fontFamily: "'DM Sans', sans-serif" }}
                         title="Click to cancel"
                       >
                         {actionLoading === mySignup.id ? "..." : "Signed Up ✓"}
                       </button>
                     ) : isFull ? (
-                      <span className="text-xs px-2 py-1 bg-gray-100 text-gray-400 rounded-md">Full</span>
+                      <span style={{ fontSize: "0.75rem", padding: "4px 10px", background: "var(--gray-200)", color: "var(--gray-400)", borderRadius: "6px" }}>Full</span>
                     ) : (
                       <button
                         disabled={actionLoading === signupKey || !canSignUp}
                         onClick={() => signUp(slot.id, hour)}
                         title={!canSignUp ? "Add this language to your volunteer profile first" : undefined}
-                        className="text-xs px-3 py-1 bg-[#4A90D9] text-white hover:bg-[#357ABD] rounded-full transition-colors disabled:opacity-40"
+                        style={{ fontSize: "0.75rem", padding: "4px 12px", background: "var(--blue)", color: "#fff", border: "none", borderRadius: "99px", cursor: "pointer", opacity: (actionLoading === signupKey || !canSignUp) ? 0.4 : 1, fontFamily: "'DM Sans', sans-serif" }}
                       >
                         {actionLoading === signupKey ? "..." : "Sign Up"}
                       </button>
                     )}
                   </div>
                 </div>
-                {/* Other volunteers signed up this hour */}
                 {hoursSignups
                   .filter((s) => s.volunteer.id !== adminProfile?.id)
                   .map((s) => (
-                    <div key={s.id} className="flex items-center justify-between pl-1">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs text-gray-500">{s.volunteer.user.name ?? s.volunteer.user.email}</span>
-                        <span className="text-xs text-gray-300">{s.volunteer.user.email}</span>
+                    <div key={s.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", paddingLeft: "4px" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                        <span style={{ fontSize: "0.78rem", color: "var(--gray-600)" }}>{s.volunteer.user.name ?? s.volunteer.user.email}</span>
+                        <span style={{ fontSize: "0.78rem", color: "var(--gray-400)" }}>{s.volunteer.user.email}</span>
                       </div>
                       {!isPast && (
                         <button
                           disabled={actionLoading === s.id}
                           onClick={() => removeVolunteer(s.id)}
-                          className="text-xs px-2 py-0.5 bg-red-50 text-red-500 hover:bg-red-100 rounded transition-colors disabled:opacity-50"
+                          style={{ fontSize: "0.72rem", padding: "2px 8px", background: "#FEF2F2", color: "#EF4444", border: "none", borderRadius: "4px", cursor: "pointer", opacity: actionLoading === s.id ? 0.5 : 1, fontFamily: "'DM Sans', sans-serif" }}
                         >
                           Remove
                         </button>
@@ -795,52 +778,53 @@ export default function AdminDashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div style={{ minHeight: "100vh", background: "var(--page-bg)", fontFamily: "'DM Sans', system-ui, sans-serif", color: "var(--gray-900)" }}>
       {/* Header */}
-      <header className="bg-[#041E42]">
-        <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div>
-              <h1 className="text-lg font-semibold text-white tracking-tight">Georgetown Medical Interpreters</h1>
-              <p className="text-xs text-white/60">Admin Dashboard</p>
-            </div>
-            <button
-              onClick={() => setTab("suggestions")}
-              className="text-sm px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white rounded-md transition-colors"
-            >
-              Contact Us
-            </button>
+      <header style={{ background: "var(--navy)", height: "64px", position: "sticky", top: 0, zIndex: 100, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 32px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
+          <div style={{ width: "36px", height: "36px", borderRadius: "9px", background: "linear-gradient(135deg,#2563EB,#60A5FA)", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, color: "#fff", fontSize: "1rem", flexShrink: 0 }}>
+            G
           </div>
-          <div className="flex items-center gap-3">
-            <span className="text-sm text-white/70">{session?.user?.email}</span>
-            {session?.user?.role === "SUPER_ADMIN" && (
-              <span className="text-xs px-2 py-0.5 rounded-full bg-violet-400/20 text-violet-200 font-medium">
-                Super Admin
-              </span>
-            )}
-            <button
-              onClick={() => router.push("/dashboard/volunteer")}
-              className="text-sm px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white rounded-md transition-colors flex items-center gap-1.5"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-              </svg>
-              Volunteer View
-            </button>
-            <button
-              onClick={() => signOut({ callbackUrl: "/login" })}
-              className="text-sm px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white rounded-md transition-colors"
-            >
-              Sign Out
-            </button>
+          <div>
+            <div style={{ color: "#fff", fontSize: "0.95rem", fontWeight: 600 }}>Georgetown Medical Interpreters</div>
+            <div style={{ color: "#94A3B8", fontSize: "0.72rem" }}>Admin Dashboard</div>
           </div>
+          <button
+            onClick={() => setTab("suggestions")}
+            style={{ background: "rgba(255,255,255,.08)", border: "1px solid rgba(255,255,255,.2)", color: "#fff", fontFamily: "'DM Sans', sans-serif", fontSize: "0.8rem", fontWeight: 500, padding: "7px 16px", borderRadius: "8px", cursor: "pointer" }}
+          >
+            Contact Us
+          </button>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
+          <span style={{ color: "#CBD5E1", fontSize: "0.82rem" }}>{session?.user?.email}</span>
+          {session?.user?.role === "SUPER_ADMIN" && (
+            <span style={{ fontSize: "0.72rem", padding: "2px 10px", borderRadius: "99px", background: "rgba(167,139,250,.2)", color: "#ddd6fe", fontWeight: 600 }}>
+              Super Admin
+            </span>
+          )}
+          <button
+            onClick={() => router.push("/dashboard/volunteer")}
+            style={{ background: "rgba(255,255,255,.08)", border: "1px solid rgba(255,255,255,.2)", color: "#fff", fontFamily: "'DM Sans', sans-serif", fontSize: "0.8rem", fontWeight: 500, padding: "7px 16px", borderRadius: "8px", cursor: "pointer", display: "flex", alignItems: "center", gap: "6px" }}
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" style={{ width: "14px", height: "14px" }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+            </svg>
+            Volunteer View
+          </button>
+          <button
+            onClick={() => signOut({ callbackUrl: "/login" })}
+            style={{ background: "rgba(255,255,255,.08)", border: "1px solid rgba(255,255,255,.2)", color: "#fff", fontFamily: "'DM Sans', sans-serif", fontSize: "0.8rem", fontWeight: 500, padding: "7px 16px", borderRadius: "8px", cursor: "pointer" }}
+          >
+            Sign Out
+          </button>
         </div>
       </header>
 
       {/* Tabs */}
-      <div className="max-w-6xl mx-auto px-6 pt-6">
-        <div className="flex gap-1 bg-gray-200/50 p-1 rounded-xl w-fit">
+      <div style={{ maxWidth: "1100px", margin: "0 auto", padding: "28px 32px 0" }}>
+        <div style={{ display: "flex", gap: "4px", marginBottom: "28px", background: "var(--card-bg)", padding: "5px", borderRadius: "12px", width: "fit-content", border: "1px solid var(--card-border)", flexWrap: "wrap" }}>
           {[
             { key: "slots" as Tab, label: "Browse Slots", count: 0 },
             { key: "users" as Tab, label: "All Users", count: users.length, pendingCount: pendingUsers.length },
@@ -860,19 +844,26 @@ export default function AdminDashboard() {
             <button
               key={t.key}
               onClick={() => setTab(t.key)}
-              className={`px-4 py-2 text-sm rounded-md transition-colors ${
-                tab === t.key
-                  ? "bg-[#4A90D9] text-white shadow-sm font-medium"
-                  : "text-gray-500 hover:text-gray-700"
-              }`}
+              style={{
+                padding: "9px 20px",
+                borderRadius: "9px",
+                fontSize: "0.9rem",
+                fontWeight: tab === t.key ? 600 : 500,
+                cursor: "pointer",
+                border: "none",
+                background: tab === t.key ? "var(--blue)" : "none",
+                color: tab === t.key ? "#fff" : "var(--gray-600)",
+                whiteSpace: "nowrap",
+                fontFamily: "'DM Sans', sans-serif",
+              }}
             >
               {t.label}
               {("pendingCount" in t) && (t as { pendingCount: number }).pendingCount > 0 ? (
-                <span className="ml-2 text-xs px-1.5 py-0.5 rounded-full bg-red-100 text-red-700">
+                <span style={{ background: "#DC2626", color: "#fff", fontSize: "0.7rem", fontWeight: 700, padding: "1px 7px", borderRadius: "99px", marginLeft: "5px" }}>
                   {(t as { pendingCount: number }).pendingCount}
                 </span>
               ) : t.count > 0 ? (
-                <span className="ml-2 text-xs px-1.5 py-0.5 rounded-full bg-gray-100 text-gray-500">
+                <span style={{ background: "var(--gray-200)", color: "var(--gray-600)", fontSize: "0.7rem", fontWeight: 600, padding: "1px 7px", borderRadius: "99px", marginLeft: "5px" }}>
                   {t.count}
                 </span>
               ) : null}
@@ -882,34 +873,34 @@ export default function AdminDashboard() {
       </div>
 
       {/* Content */}
-      <div className="max-w-6xl mx-auto px-6 py-6">
+      <div style={{ maxWidth: "1100px", margin: "0 auto", padding: "0 32px 36px" }}>
 
         {/* Browse Slots */}
         {tab === "slots" && (
           <div>
             {adminSelectedSlotIds.size > 0 && (
-              <div className="flex items-center gap-3 mb-4 px-4 py-3 bg-red-50 border border-red-200 rounded-lg">
-                <span className="text-sm text-red-700 font-medium">{adminSelectedSlotIds.size} slot{adminSelectedSlotIds.size !== 1 ? "s" : ""} selected</span>
+              <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "16px", padding: "12px 16px", background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: "10px" }}>
+                <span style={{ fontSize: "0.875rem", color: "#B91C1C", fontWeight: 600 }}>{adminSelectedSlotIds.size} slot{adminSelectedSlotIds.size !== 1 ? "s" : ""} selected</span>
                 <button
                   onClick={openAdminDeleteModal}
-                  className="px-3 py-1.5 text-xs bg-red-600 text-white hover:bg-red-700 rounded-md transition-colors"
+                  style={{ padding: "6px 14px", fontSize: "0.75rem", background: "#DC2626", color: "#fff", border: "none", borderRadius: "6px", cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}
                 >
                   Delete Selected
                 </button>
                 <button
                   onClick={() => setAdminSelectedSlotIds(new Set())}
-                  className="text-xs text-red-500 hover:text-red-700"
+                  style={{ fontSize: "0.75rem", color: "#EF4444", background: "none", border: "none", cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}
                 >
                   Clear selection
                 </button>
               </div>
             )}
             {!adminProfile?.languages.length && (
-              <div className="mb-4 px-4 py-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-700">
+              <div style={{ marginBottom: "16px", padding: "12px 16px", background: "#FFFBEB", border: "1px solid #FDE68A", borderRadius: "10px", fontSize: "0.875rem", color: "#92400E" }}>
                 To sign up for slots, add your languages in{" "}
                 <button
                   onClick={() => setTab("profile")}
-                  className="underline font-medium"
+                  style={{ textDecoration: "underline", fontWeight: 600, background: "none", border: "none", cursor: "pointer", color: "#92400E", fontFamily: "'DM Sans', sans-serif" }}
                 >
                   My Profile
                 </button>
@@ -918,89 +909,77 @@ export default function AdminDashboard() {
             )}
 
             {/* Filters */}
-            <div className="flex flex-wrap items-center gap-2 mb-5">
-              {/* Language */}
+            <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "8px", marginBottom: "20px" }}>
               {["ALL", "ES", "ZH", "KO"].map((lang) => (
                 <button
                   key={lang}
                   onClick={() => setLangFilter(lang)}
-                  className={`px-3 py-1.5 text-xs rounded-md transition-colors ${
-                    langFilter === lang
-                      ? "bg-[#4A90D9] text-white"
-                      : "bg-white border border-gray-200 text-gray-500 hover:border-gray-300"
-                  }`}
+                  style={{ padding: "6px 14px", fontSize: "0.78rem", borderRadius: "8px", cursor: "pointer", fontFamily: "'DM Sans', sans-serif", background: langFilter === lang ? "var(--blue)" : "var(--card-bg)", color: langFilter === lang ? "#fff" : "var(--gray-600)", border: langFilter === lang ? "none" : "1.5px solid var(--card-border)" }}
                 >
                   {lang === "ALL" ? "All Languages" : LANG_LABELS[lang]}
                 </button>
               ))}
 
-              <div className="w-px bg-gray-200 mx-1 self-stretch" />
+              <div style={{ width: "1px", background: "var(--gray-200)", alignSelf: "stretch", margin: "0 4px" }} />
 
-              {/* Clinic */}
               <select
                 value={clinicFilter}
                 onChange={(e) => setClinicFilter(e.target.value)}
-                className="px-2 py-1.5 text-xs border border-gray-200 rounded-md bg-white text-gray-600 focus:outline-none"
+                style={{ padding: "6px 12px", fontSize: "0.78rem", border: "1.5px solid var(--card-border)", borderRadius: "8px", background: "var(--card-bg)", color: "var(--gray-600)", outline: "none", fontFamily: "'DM Sans', sans-serif", cursor: "pointer" }}
               >
                 <option value="ALL">All Clinics</option>
                 {uniqueClinics.map((c) => <option key={c} value={c}>{c}</option>)}
               </select>
 
-              <div className="w-px bg-gray-200 mx-1 self-stretch" />
+              <div style={{ width: "1px", background: "var(--gray-200)", alignSelf: "stretch", margin: "0 4px" }} />
 
-              {/* Date range */}
-              <div className="flex items-center gap-1.5">
-                <span className="text-xs text-gray-400">From</span>
+              <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                <span style={{ fontSize: "0.75rem", color: "var(--gray-400)" }}>From</span>
                 <input
                   type="date"
                   value={dateFrom}
                   onChange={(e) => setDateFrom(e.target.value)}
-                  className="px-2 py-1.5 text-xs border border-gray-200 rounded-md bg-white text-gray-600 focus:outline-none"
+                  style={{ padding: "6px 10px", fontSize: "0.78rem", border: "1.5px solid var(--card-border)", borderRadius: "8px", background: "var(--card-bg)", color: "var(--gray-900)", outline: "none", fontFamily: "'DM Sans', sans-serif" }}
                 />
               </div>
-              <div className="flex items-center gap-1.5">
-                <span className="text-xs text-gray-400">To</span>
+              <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                <span style={{ fontSize: "0.75rem", color: "var(--gray-400)" }}>To</span>
                 <input
                   type="date"
                   value={dateTo}
                   onChange={(e) => setDateTo(e.target.value)}
-                  className="px-2 py-1.5 text-xs border border-gray-200 rounded-md bg-white text-gray-600 focus:outline-none"
+                  style={{ padding: "6px 10px", fontSize: "0.78rem", border: "1.5px solid var(--card-border)", borderRadius: "8px", background: "var(--card-bg)", color: "var(--gray-900)", outline: "none", fontFamily: "'DM Sans', sans-serif" }}
                 />
               </div>
               {(dateFrom || dateTo) && (
                 <button
                   onClick={() => { setDateFrom(""); setDateTo(""); }}
-                  className="text-xs text-gray-400 hover:text-gray-600"
+                  style={{ fontSize: "0.75rem", color: "var(--gray-400)", background: "none", border: "none", cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}
                 >
                   Clear
                 </button>
               )}
 
-              <div className="w-px bg-gray-200 mx-1 self-stretch" />
+              <div style={{ width: "1px", background: "var(--gray-200)", alignSelf: "stretch", margin: "0 4px" }} />
 
-              {/* Available only */}
               <button
                 onClick={() => setAvailableOnly(!availableOnly)}
-                className={`px-3 py-1.5 text-xs rounded-md transition-colors ${
-                  availableOnly
-                    ? "bg-emerald-700 text-white"
-                    : "bg-white border border-gray-200 text-gray-500 hover:border-gray-300"
-                }`}
+                style={{ padding: "6px 14px", fontSize: "0.78rem", borderRadius: "8px", cursor: "pointer", fontFamily: "'DM Sans', sans-serif", background: availableOnly ? "#15803D" : "var(--card-bg)", color: availableOnly ? "#fff" : "var(--gray-600)", border: availableOnly ? "none" : "1.5px solid var(--card-border)" }}
               >
                 Available Only
               </button>
             </div>
 
             {upcomingSlots.length === 0 && pastSlots.length === 0 ? (
-              <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
-                <p className="text-gray-400">No slots match your filters.</p>
+              <div style={{ background: "var(--card-bg)", borderRadius: "14px", border: "1.5px solid var(--card-border)", padding: "48px", textAlign: "center" }}>
+                <p style={{ color: "var(--gray-400)" }}>No slots match your filters.</p>
               </div>
             ) : (
-              <div className="space-y-4">
+              <div>
                 {upcomingSlots.map((slot) => renderSlot(slot, false))}
                 {pastSlots.length > 0 && (
                   <>
-                    <p className="text-xs font-medium text-gray-400 uppercase tracking-wider pt-2">Past Slots</p>
+                    <p style={{ fontSize: "0.78rem", fontWeight: 700, color: "var(--gray-400)", textTransform: "uppercase", letterSpacing: "0.1em", paddingTop: "8px", marginBottom: "8px" }}>Past Slots</p>
                     {pastSlots.map((slot) => renderSlot(slot, true))}
                   </>
                 )}
@@ -1011,15 +990,15 @@ export default function AdminDashboard() {
 
         {/* All Users */}
         {tab === "users" && (
-          <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-            <table className="w-full">
+          <div style={{ background: "var(--card-bg)", borderRadius: "14px", border: "1.5px solid var(--card-border)", overflow: "hidden" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead>
-                <tr className="border-b border-gray-100">
-                  <th className="text-left text-xs font-medium text-gray-400 uppercase tracking-wider px-5 py-3">Name</th>
-                  <th className="text-left text-xs font-medium text-gray-400 uppercase tracking-wider px-5 py-3">Email</th>
-                  <th className="text-left text-xs font-medium text-gray-400 uppercase tracking-wider px-5 py-3">Role</th>
-                  <th className="text-left text-xs font-medium text-gray-400 uppercase tracking-wider px-5 py-3">Volunteer Stats</th>
-                  <th className="text-right text-xs font-medium text-gray-400 uppercase tracking-wider px-5 py-3">Actions</th>
+                <tr style={{ borderBottom: "1.5px solid var(--card-border)" }}>
+                  <th style={{ textAlign: "left", fontSize: "0.68rem", fontWeight: 700, color: "var(--gray-400)", textTransform: "uppercase", letterSpacing: "0.09em", padding: "12px 20px" }}>Name</th>
+                  <th style={{ textAlign: "left", fontSize: "0.68rem", fontWeight: 700, color: "var(--gray-400)", textTransform: "uppercase", letterSpacing: "0.09em", padding: "12px 20px" }}>Email</th>
+                  <th style={{ textAlign: "left", fontSize: "0.68rem", fontWeight: 700, color: "var(--gray-400)", textTransform: "uppercase", letterSpacing: "0.09em", padding: "12px 20px" }}>Role</th>
+                  <th style={{ textAlign: "left", fontSize: "0.68rem", fontWeight: 700, color: "var(--gray-400)", textTransform: "uppercase", letterSpacing: "0.09em", padding: "12px 20px" }}>Volunteer Stats</th>
+                  <th style={{ textAlign: "right", fontSize: "0.68rem", fontWeight: 700, color: "var(--gray-400)", textTransform: "uppercase", letterSpacing: "0.09em", padding: "12px 20px" }}>Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -1031,109 +1010,93 @@ export default function AdminDashboard() {
                   });
                   return sortedUsers;
                 })().map((user) => (
-                  <tr key={user.id} className={`border-b border-gray-50 last:border-0 ${user.status === "PENDING_APPROVAL" ? "bg-amber-50/30" : ""}`}>
-                    <td className="px-5 py-3.5 text-sm text-black">{user.name}</td>
-                    <td className="px-5 py-3.5 text-sm text-gray-500">{user.email}</td>
-                    <td className="px-5 py-3.5">
-                      <div className="flex flex-wrap gap-1">
-                        {/* Primary role chip */}
-                        <span className={`text-xs px-2 py-0.5 rounded font-medium ${
-                          user.role === "SUPER_ADMIN" ? "bg-violet-100 text-violet-800 border border-violet-200" :
-                          user.role === "ADMIN" ? "bg-violet-50 text-violet-700 border border-violet-100" :
-                          user.role === "INSTRUCTOR" ? "bg-indigo-50 text-indigo-700 border border-indigo-100" :
-                          user.role === "CLINIC" ? "bg-[#EBF3FC] text-[#041E42] border border-[#4A90D9]/20" :
-                          user.role === "VOLUNTEER" ? "bg-emerald-50 text-emerald-700 border border-emerald-100" :
-                          "bg-gray-100 text-gray-500 border border-gray-200"
-                        }`}>
-                          {user.role === "SUPER_ADMIN" ? "Super Admin" :
-                           user.role.charAt(0) + user.role.slice(1).toLowerCase()}
+                  <tr key={user.id} style={{ borderBottom: "1px solid var(--card-border)", background: user.status === "PENDING_APPROVAL" ? "rgba(251,191,36,.06)" : "transparent" }}>
+                    <td style={{ padding: "14px 20px", fontSize: "0.875rem", color: "var(--gray-900)", fontWeight: 500 }}>{user.name}</td>
+                    <td style={{ padding: "14px 20px", fontSize: "0.875rem", color: "var(--gray-600)" }}>{user.email}</td>
+                    <td style={{ padding: "14px 20px" }}>
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: "4px" }}>
+                        <span style={{ fontSize: "0.72rem", padding: "2px 8px", borderRadius: "4px", fontWeight: 600,
+                          background: user.role === "SUPER_ADMIN" ? "#EDE9FE" : user.role === "ADMIN" ? "#F5F3FF" : user.role === "INSTRUCTOR" ? "#EEF2FF" : user.role === "CLINIC" ? "#EBF3FC" : user.role === "VOLUNTEER" ? "#DCFCE7" : "var(--gray-200)",
+                          color: user.role === "SUPER_ADMIN" ? "#5B21B6" : user.role === "ADMIN" ? "#6D28D9" : user.role === "INSTRUCTOR" ? "#4338CA" : user.role === "CLINIC" ? "#0D1F3C" : user.role === "VOLUNTEER" ? "#15803D" : "var(--gray-600)",
+                          border: user.role === "SUPER_ADMIN" ? "1px solid #DDD6FE" : user.role === "ADMIN" ? "1px solid #EDE9FE" : user.role === "INSTRUCTOR" ? "1px solid #C7D2FE" : user.role === "CLINIC" ? "1px solid #BFDBFE" : user.role === "VOLUNTEER" ? "1px solid #BBF7D0" : "1px solid var(--card-border)"
+                        }}>
+                          {user.role === "SUPER_ADMIN" ? "Super Admin" : user.role.charAt(0) + user.role.slice(1).toLowerCase()}
                         </span>
-
-                        {/* Volunteer chip for admins/instructors */}
                         {(user.role === "ADMIN" || user.role === "SUPER_ADMIN" || user.role === "INSTRUCTOR") && user.volunteer && (
-                          <span className="text-xs px-2 py-0.5 rounded font-medium bg-emerald-50 text-emerald-700 border border-emerald-100">
+                          <span style={{ fontSize: "0.72rem", padding: "2px 8px", borderRadius: "4px", fontWeight: 600, background: "#DCFCE7", color: "#15803D", border: "1px solid #BBF7D0" }}>
                             Volunteer
                           </span>
                         )}
-
-                        {/* Clearance chip — click to toggle */}
                         {user.volunteer && (
                           <button
                             disabled={actionLoading === `clearance-${user.id}`}
                             onClick={() => setClearance(user.id, !user.volunteer!.isCleared)}
                             title={user.volunteer.isCleared ? "Click to revoke clearance" : "Click to mark as cleared"}
-                            className={`text-xs px-2 py-0.5 rounded font-medium transition-opacity disabled:opacity-50 hover:opacity-70 ${
-                              user.volunteer.isCleared
-                                ? "bg-teal-50 text-teal-700 border border-teal-100"
-                                : "bg-amber-50 text-amber-600 border border-amber-100"
-                            }`}
+                            style={{ fontSize: "0.72rem", padding: "2px 8px", borderRadius: "4px", fontWeight: 600, cursor: "pointer", opacity: actionLoading === `clearance-${user.id}` ? 0.5 : 1, background: user.volunteer.isCleared ? "#F0FDFA" : "#FFFBEB", color: user.volunteer.isCleared ? "#0F766E" : "#D97706", border: user.volunteer.isCleared ? "1px solid #99F6E4" : "1px solid #FDE68A", fontFamily: "'DM Sans', sans-serif" }}
                           >
                             {actionLoading === `clearance-${user.id}` ? "…" : user.volunteer.isCleared ? "Cleared" : "Uncleared"}
                           </button>
                         )}
-
-                        {/* Status chip — only show if not ACTIVE */}
                         {user.status === "SUSPENDED" && (
-                          <span className="text-xs px-2 py-0.5 rounded font-medium bg-red-50 text-red-600 border border-red-100">
+                          <span style={{ fontSize: "0.72rem", padding: "2px 8px", borderRadius: "4px", fontWeight: 600, background: "#FEF2F2", color: "#DC2626", border: "1px solid #FECACA" }}>
                             Suspended
                           </span>
                         )}
                         {user.status === "PENDING_APPROVAL" && (
-                          <span className="text-xs px-2 py-0.5 rounded font-medium bg-amber-50 text-amber-700 border border-amber-100">
+                          <span style={{ fontSize: "0.72rem", padding: "2px 8px", borderRadius: "4px", fontWeight: 600, background: "#FFFBEB", color: "#B45309", border: "1px solid #FDE68A" }}>
                             Pending
                           </span>
                         )}
                       </div>
-                      {/* Clearance log line below chips */}
                       {user.volunteer?.clearanceLogs?.[0] && (
-                        <p className="text-xs text-gray-400 mt-1">
+                        <p style={{ fontSize: "0.72rem", color: "var(--gray-400)", marginTop: "4px" }}>
                           by {user.volunteer.clearanceLogs[0].clearedBy.name ?? user.volunteer.clearanceLogs[0].clearedBy.email}{" "}
                           · {new Date(user.volunteer.clearanceLogs[0].createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
                         </p>
                       )}
                     </td>
-                    <td className="px-5 py-3.5">
+                    <td style={{ padding: "14px 20px" }}>
                       {user.volunteer ? (
-                        <div className="flex gap-3 text-xs text-gray-500">
+                        <div style={{ display: "flex", gap: "12px", fontSize: "0.78rem", color: "var(--gray-600)" }}>
                           <span title="Hours volunteered">⏱ {user.volunteer.hoursVolunteered}h</span>
-                          <span title="No-shows" className={user.volunteer.noShows > 0 ? "text-red-500" : ""}>
+                          <span title="No-shows" style={{ color: user.volunteer.noShows > 0 ? "#EF4444" : undefined }}>
                             NS {user.volunteer.noShows}
                           </span>
-                          <span title="Cancellations within 24 hours" className={user.volunteer.cancellationsWithin24h > 0 ? "text-amber-600" : ""}>
+                          <span title="Cancellations within 24 hours" style={{ color: user.volunteer.cancellationsWithin24h > 0 ? "#D97706" : undefined }}>
                             24h {user.volunteer.cancellationsWithin24h}
                           </span>
-                          <span title="Cancellations within 2 hours" className={user.volunteer.cancellationsWithin2h > 0 ? "text-red-500" : ""}>
+                          <span title="Cancellations within 2 hours" style={{ color: user.volunteer.cancellationsWithin2h > 0 ? "#EF4444" : undefined }}>
                             2h {user.volunteer.cancellationsWithin2h}
                           </span>
                         </div>
                       ) : (
-                        <span className="text-xs text-gray-300">—</span>
+                        <span style={{ fontSize: "0.78rem", color: "var(--gray-400)" }}>—</span>
                       )}
                     </td>
-                    <td className="px-5 py-3.5 text-right">
-                      <div className="flex flex-col gap-1.5 items-end">
+                    <td style={{ padding: "14px 20px", textAlign: "right" }}>
+                      <div style={{ display: "flex", flexDirection: "column", gap: "6px", alignItems: "flex-end" }}>
                         {user.status === "PENDING_APPROVAL" ? (
-                          <div className="flex gap-1">
+                          <div style={{ display: "flex", gap: "4px" }}>
                             <button
                               disabled={actionLoading === user.id}
                               onClick={() => updateUser(user.id, { status: "ACTIVE", role: "VOLUNTEER" })}
-                              className="px-3 py-1.5 text-xs bg-emerald-50 text-emerald-700 hover:bg-emerald-100 rounded-md transition-colors disabled:opacity-50"
+                              style={{ padding: "6px 12px", fontSize: "0.75rem", background: "#DCFCE7", color: "#15803D", border: "none", borderRadius: "6px", cursor: "pointer", opacity: actionLoading === user.id ? 0.5 : 1, fontFamily: "'DM Sans', sans-serif" }}
                             >
                               Approve
                             </button>
                             <button
                               disabled={actionLoading === user.id}
                               onClick={() => updateUser(user.id, { status: "SUSPENDED" })}
-                              className="px-3 py-1.5 text-xs bg-red-50 text-red-600 hover:bg-red-100 rounded-md transition-colors disabled:opacity-50"
+                              style={{ padding: "6px 12px", fontSize: "0.75rem", background: "#FEF2F2", color: "#DC2626", border: "none", borderRadius: "6px", cursor: "pointer", opacity: actionLoading === user.id ? 0.5 : 1, fontFamily: "'DM Sans', sans-serif" }}
                             >
                               Reject
                             </button>
                           </div>
                         ) : (
                           user.role !== "SUPER_ADMIN" && (user.role !== "ADMIN" || session?.user?.role === "SUPER_ADMIN") && (
-                            <div className="flex gap-1">
+                            <div style={{ display: "flex", gap: "4px", alignItems: "center" }}>
                               <select
-                                className="text-xs border border-gray-200 rounded px-2 py-1 text-gray-600"
+                                style={{ fontSize: "0.75rem", border: "1.5px solid var(--card-border)", borderRadius: "6px", padding: "4px 8px", color: "var(--gray-600)", background: "var(--card-bg)", outline: "none", fontFamily: "'DM Sans', sans-serif", cursor: "pointer" }}
                                 value={user.role}
                                 onChange={(e) => updateUser(user.id, { role: e.target.value })}
                               >
@@ -1146,7 +1109,7 @@ export default function AdminDashboard() {
                               {user.role === "CLINIC" && (
                                 <button
                                   onClick={() => setAssignModal({ userId: user.id, userName: user.name })}
-                                  className="text-xs px-2 py-1 bg-[#EBF3FC] text-[#041E42] hover:bg-[#4A90D9]/20 rounded transition-colors"
+                                  style={{ fontSize: "0.75rem", padding: "4px 10px", background: "#EBF3FC", color: "#0D1F3C", border: "none", borderRadius: "6px", cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}
                                 >
                                   Assign Clinic
                                 </button>
@@ -1154,14 +1117,14 @@ export default function AdminDashboard() {
                               {user.status === "ACTIVE" ? (
                                 <button
                                   onClick={() => updateUser(user.id, { status: "SUSPENDED" })}
-                                  className="text-xs px-2 py-1 bg-red-50 text-red-600 hover:bg-red-100 rounded transition-colors"
+                                  style={{ fontSize: "0.75rem", padding: "4px 10px", background: "#FEF2F2", color: "#DC2626", border: "none", borderRadius: "6px", cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}
                                 >
                                   Suspend
                                 </button>
                               ) : (
                                 <button
                                   onClick={() => updateUser(user.id, { status: "ACTIVE" })}
-                                  className="text-xs px-2 py-1 bg-green-50 text-green-700 hover:bg-green-100 rounded transition-colors"
+                                  style={{ fontSize: "0.75rem", padding: "4px 10px", background: "#DCFCE7", color: "#15803D", border: "none", borderRadius: "6px", cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}
                                 >
                                   Activate
                                 </button>
@@ -1181,53 +1144,53 @@ export default function AdminDashboard() {
         {/* Clinics */}
         {tab === "clinics" && (
           <div>
-            <div className="flex justify-end mb-4">
+            <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "16px" }}>
               <button
                 onClick={() => setShowClinicForm(!showClinicForm)}
-                className="px-4 py-2 text-sm bg-[#4A90D9] text-white hover:bg-[#357ABD] rounded-full transition-colors"
+                style={{ padding: "9px 22px", fontSize: "0.875rem", background: "var(--blue)", color: "#fff", border: "none", borderRadius: "99px", cursor: "pointer", fontWeight: 600, fontFamily: "'DM Sans', sans-serif" }}
               >
                 {showClinicForm ? "Cancel" : "+ Add Clinic"}
               </button>
             </div>
 
             {showClinicForm && (
-              <div className="bg-white rounded-xl border border-gray-200 p-6 mb-4">
-                <h3 className="text-sm font-medium text-gray-700 mb-4">New Clinic</h3>
-                <div className="grid grid-cols-2 gap-4">
+              <div style={{ background: "var(--card-bg)", borderRadius: "14px", border: "1.5px solid var(--card-border)", padding: "24px", marginBottom: "16px" }}>
+                <h3 style={{ fontSize: "0.875rem", fontWeight: 600, color: "var(--gray-600)", marginBottom: "16px" }}>New Clinic</h3>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
                   <input
                     placeholder="Clinic Name"
                     value={clinicForm.name}
                     onChange={(e) => setClinicForm({ ...clinicForm, name: e.target.value })}
-                    className="px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-300"
+                    style={{ padding: "9px 12px", fontSize: "0.875rem", border: "1.5px solid var(--card-border)", borderRadius: "9px", background: "var(--card-bg)", color: "var(--gray-900)", outline: "none", fontFamily: "'DM Sans', sans-serif" }}
                   />
                   <input
                     placeholder="Address"
                     value={clinicForm.address}
                     onChange={(e) => setClinicForm({ ...clinicForm, address: e.target.value })}
-                    className="px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-300"
+                    style={{ padding: "9px 12px", fontSize: "0.875rem", border: "1.5px solid var(--card-border)", borderRadius: "9px", background: "var(--card-bg)", color: "var(--gray-900)", outline: "none", fontFamily: "'DM Sans', sans-serif" }}
                   />
                   <input
                     placeholder="Contact Name"
                     value={clinicForm.contactName}
                     onChange={(e) => setClinicForm({ ...clinicForm, contactName: e.target.value })}
-                    className="px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-300"
+                    style={{ padding: "9px 12px", fontSize: "0.875rem", border: "1.5px solid var(--card-border)", borderRadius: "9px", background: "var(--card-bg)", color: "var(--gray-900)", outline: "none", fontFamily: "'DM Sans', sans-serif" }}
                   />
                   <input
                     placeholder="Contact Email"
                     value={clinicForm.contactEmail}
                     onChange={(e) => setClinicForm({ ...clinicForm, contactEmail: e.target.value })}
-                    className="px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-300"
+                    style={{ padding: "9px 12px", fontSize: "0.875rem", border: "1.5px solid var(--card-border)", borderRadius: "9px", background: "var(--card-bg)", color: "var(--gray-900)", outline: "none", fontFamily: "'DM Sans', sans-serif" }}
                   />
                 </div>
                 {clinicFormError && (
-                  <p className="mt-3 text-sm text-red-600 bg-red-50 border border-red-100 rounded-md px-3 py-2">
+                  <p style={{ marginTop: "12px", fontSize: "0.875rem", color: "#DC2626", background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: "8px", padding: "8px 12px" }}>
                     {clinicFormError}
                   </p>
                 )}
                 <button
                   disabled={actionLoading === "clinic-form" || !clinicForm.name || !clinicForm.contactEmail}
                   onClick={createClinic}
-                  className="mt-4 px-4 py-2 text-sm bg-[#4A90D9] text-white hover:bg-[#357ABD] rounded-full transition-colors disabled:opacity-50"
+                  style={{ marginTop: "16px", padding: "9px 22px", fontSize: "0.875rem", background: "var(--blue)", color: "#fff", border: "none", borderRadius: "99px", cursor: "pointer", fontWeight: 600, opacity: (actionLoading === "clinic-form" || !clinicForm.name || !clinicForm.contactEmail) ? 0.5 : 1, fontFamily: "'DM Sans', sans-serif" }}
                 >
                   {actionLoading === "clinic-form" ? "Creating..." : "Create Clinic"}
                 </button>
@@ -1235,50 +1198,50 @@ export default function AdminDashboard() {
             )}
 
             {clinics.length === 0 && !showClinicForm ? (
-              <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
-                <p className="text-gray-400">No clinics yet</p>
+              <div style={{ background: "var(--card-bg)", borderRadius: "14px", border: "1.5px solid var(--card-border)", padding: "48px", textAlign: "center" }}>
+                <p style={{ color: "var(--gray-400)" }}>No clinics yet</p>
               </div>
             ) : (
-              <div className="space-y-3">
+              <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
                 {clinics.map((clinic) => (
-                  <div key={clinic.id} className="bg-white rounded-xl border border-gray-200 p-5">
-                    <div className="flex items-start justify-between">
+                  <div key={clinic.id} style={{ background: "var(--card-bg)", borderRadius: "14px", border: "1.5px solid var(--card-border)", padding: "20px", boxShadow: "0 2px 6px rgba(0,0,0,.05)" }}>
+                    <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between" }}>
                       <div>
-                        <h3 className="font-medium text-black">{clinic.name}</h3>
-                        <p className="text-sm text-gray-500 mt-0.5">
+                        <h3 style={{ fontWeight: 700, fontSize: "1.05rem", color: "var(--navy)" }}>{clinic.name}</h3>
+                        <p style={{ fontSize: "0.875rem", color: "var(--gray-600)", marginTop: "2px" }}>
                           {clinic.address}
                           {clinic.address && <MapsLinks address={clinic.address} />}
                         </p>
-                        <p className="text-xs text-gray-400 mt-1">{clinic.contactName} · {clinic.contactEmail}</p>
-                        <div className="mt-3 flex items-center gap-3 flex-wrap">
-                          <div className="flex items-center gap-1.5 bg-gray-50 border border-gray-200 rounded-md px-2 py-1">
-                            <span className="text-xs text-gray-400">PIN</span>
-                            <span className="text-xs font-mono font-semibold text-gray-400 tracking-widest">••••••</span>
+                        <p style={{ fontSize: "0.75rem", color: "var(--gray-400)", marginTop: "4px" }}>{clinic.contactName} · {clinic.contactEmail}</p>
+                        <div style={{ marginTop: "12px", display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: "6px", background: "rgba(0,0,0,.04)", border: "1.5px solid var(--card-border)", borderRadius: "8px", padding: "4px 10px" }}>
+                            <span style={{ fontSize: "0.72rem", color: "var(--gray-400)" }}>PIN</span>
+                            <span style={{ fontSize: "0.72rem", fontFamily: "monospace", fontWeight: 700, color: "var(--gray-400)", letterSpacing: "0.2em" }}>••••••</span>
                           </div>
                           <button
                             onClick={() => {
                               const url = `${window.location.origin}/clinic-login/${clinic.loginToken}`;
                               navigator.clipboard.writeText(url);
                             }}
-                            className="text-xs px-2 py-1 bg-gray-50 border border-gray-200 hover:bg-gray-100 text-gray-600 rounded-md transition-colors"
+                            style={{ fontSize: "0.75rem", padding: "4px 12px", background: "var(--card-bg)", border: "1.5px solid var(--card-border)", color: "var(--gray-600)", borderRadius: "8px", cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}
                           >
                             Copy Login URL
                           </button>
                           <button
                             disabled={actionLoading === `pin-${clinic.id}`}
                             onClick={() => regeneratePin(clinic.id, clinic.name)}
-                            className="text-xs px-2 py-1 bg-amber-50 border border-amber-200 hover:bg-amber-100 text-amber-700 rounded-md transition-colors disabled:opacity-50"
+                            style={{ fontSize: "0.75rem", padding: "4px 12px", background: "#FFFBEB", border: "1px solid #FDE68A", color: "#B45309", borderRadius: "8px", cursor: "pointer", opacity: actionLoading === `pin-${clinic.id}` ? 0.5 : 1, fontFamily: "'DM Sans', sans-serif" }}
                           >
                             Regenerate PIN
                           </button>
                         </div>
                       </div>
-                      <div className="flex items-center gap-3">
-                        <span className="text-xs text-gray-400">{clinic._count?.slots || 0} slots</span>
+                      <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                        <span style={{ fontSize: "0.75rem", color: "var(--gray-400)" }}>{clinic._count?.slots || 0} slots</span>
                         <button
                           disabled={actionLoading === `delete-clinic-${clinic.id}`}
                           onClick={() => deleteClinic(clinic.id, clinic.name)}
-                          className="text-xs px-2 py-1 bg-red-50 border border-red-100 hover:bg-red-100 text-red-600 rounded-md transition-colors disabled:opacity-50"
+                          style={{ fontSize: "0.75rem", padding: "4px 12px", background: "#FEF2F2", border: "1px solid #FECACA", color: "#DC2626", borderRadius: "8px", cursor: "pointer", opacity: actionLoading === `delete-clinic-${clinic.id}` ? 0.5 : 1, fontFamily: "'DM Sans', sans-serif" }}
                         >
                           Delete
                         </button>
@@ -1293,45 +1256,39 @@ export default function AdminDashboard() {
 
         {/* My Profile */}
         {tab === "profile" && (
-          <div className="max-w-lg space-y-5">
-            {/* Hours stat */}
-            <div className="bg-white rounded-xl border border-gray-200 p-5 flex items-center gap-4">
-              <div className="text-center">
-                <p className="text-3xl font-semibold text-black">{adminProfile?.hoursVolunteered ?? 0}</p>
-                <p className="text-xs text-gray-400 mt-1">Hours Volunteered</p>
+          <div style={{ maxWidth: "560px", display: "flex", flexDirection: "column", gap: "16px" }}>
+            <div style={{ background: "var(--card-bg)", borderRadius: "14px", border: "1.5px solid var(--card-border)", padding: "20px", display: "flex", alignItems: "center", gap: "16px" }}>
+              <div style={{ textAlign: "center" }}>
+                <p style={{ fontSize: "2rem", fontWeight: 700, color: "var(--gray-900)" }}>{adminProfile?.hoursVolunteered ?? 0}</p>
+                <p style={{ fontSize: "0.75rem", color: "var(--gray-400)", marginTop: "4px" }}>Hours Volunteered</p>
               </div>
             </div>
 
-            {/* Language selection */}
-            <div className="bg-white rounded-xl border border-gray-200 p-6">
-              <h3 className="text-sm font-medium text-gray-700 mb-1">Languages</h3>
-              <p className="text-xs text-gray-400 mb-4">Click to toggle. Filled black = you speak it, white = you don&apos;t. Only matching slots will let you sign up.</p>
-              <div className="flex gap-3 flex-wrap mb-6">
+            <div style={{ background: "var(--card-bg)", borderRadius: "14px", border: "1.5px solid var(--card-border)", padding: "24px" }}>
+              <h3 style={{ fontSize: "0.875rem", fontWeight: 600, color: "var(--gray-600)", marginBottom: "4px" }}>Languages</h3>
+              <p style={{ fontSize: "0.75rem", color: "var(--gray-400)", marginBottom: "16px" }}>Click to toggle. Filled = you speak it. Only matching slots will let you sign up.</p>
+              <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", marginBottom: "20px" }}>
                 {Object.entries(LANG_LABELS).map(([code, label]) => (
                   <button
                     key={code}
                     onClick={() => toggleLanguage(code)}
-                    className={`px-4 py-2 text-sm rounded-md border transition-colors ${
-                      profileForm.languages.includes(code)
-                        ? "border-[#4A90D9] bg-[#4A90D9] text-white"
-                        : "border-gray-200 text-gray-600 hover:border-gray-400"
-                    }`}
+                    style={{ padding: "9px 20px", fontSize: "0.875rem", borderRadius: "9px", cursor: "pointer", fontFamily: "'DM Sans', sans-serif", background: profileForm.languages.includes(code) ? "var(--blue)" : "none", color: profileForm.languages.includes(code) ? "#fff" : "var(--gray-600)", border: profileForm.languages.includes(code) ? "1.5px solid var(--blue)" : "1.5px solid var(--card-border)" }}
                   >
                     {label}
                   </button>
                 ))}
               </div>
 
-              <div className="flex items-center gap-3">
+              <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
                 <button
                   disabled={actionLoading === "profile"}
                   onClick={saveProfile}
-                  className="px-4 py-2 text-sm bg-[#4A90D9] text-white hover:bg-[#357ABD] rounded-full transition-colors disabled:opacity-50"
+                  style={{ padding: "9px 22px", fontSize: "0.875rem", background: "var(--blue)", color: "#fff", border: "none", borderRadius: "99px", cursor: "pointer", fontWeight: 600, opacity: actionLoading === "profile" ? 0.5 : 1, fontFamily: "'DM Sans', sans-serif" }}
                 >
                   {actionLoading === "profile" ? "Saving..." : "Save Profile"}
                 </button>
                 {profileSaved && (
-                  <span className="text-sm text-emerald-600">Saved!</span>
+                  <span style={{ fontSize: "0.875rem", color: "#16A34A" }}>Saved!</span>
                 )}
               </div>
             </div>
@@ -1340,53 +1297,49 @@ export default function AdminDashboard() {
 
         {/* Languages */}
         {tab === "languages" && (
-          <div className="max-w-2xl space-y-5">
-            <div className="bg-white rounded-xl border border-gray-200 p-6">
-              <h3 className="text-sm font-medium text-gray-700 mb-1">Add Language</h3>
-              <p className="text-xs text-gray-400 mb-4">Inactive languages are hidden from dropdowns but shown here.</p>
-              <div className="flex gap-3">
+          <div style={{ maxWidth: "640px", display: "flex", flexDirection: "column", gap: "16px" }}>
+            <div style={{ background: "var(--card-bg)", borderRadius: "14px", border: "1.5px solid var(--card-border)", padding: "24px" }}>
+              <h3 style={{ fontSize: "0.875rem", fontWeight: 600, color: "var(--gray-600)", marginBottom: "4px" }}>Add Language</h3>
+              <p style={{ fontSize: "0.75rem", color: "var(--gray-400)", marginBottom: "16px" }}>Inactive languages are hidden from dropdowns but shown here.</p>
+              <div style={{ display: "flex", gap: "10px" }}>
                 <input
                   placeholder="Name (e.g. French)"
                   value={langForm.name}
                   onChange={(e) => setLangForm({ ...langForm, name: e.target.value })}
-                  className="flex-1 px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-300"
+                  style={{ flex: 1, padding: "9px 12px", fontSize: "0.875rem", border: "1.5px solid var(--card-border)", borderRadius: "9px", background: "var(--card-bg)", color: "var(--gray-900)", outline: "none", fontFamily: "'DM Sans', sans-serif" }}
                 />
                 <button
                   disabled={!langForm.name}
                   onClick={createLanguage}
-                  className="px-4 py-2 text-sm bg-[#4A90D9] text-white hover:bg-[#357ABD] rounded-full transition-colors disabled:opacity-50"
+                  style={{ padding: "9px 22px", fontSize: "0.875rem", background: "var(--blue)", color: "#fff", border: "none", borderRadius: "99px", cursor: "pointer", fontWeight: 600, opacity: !langForm.name ? 0.5 : 1, fontFamily: "'DM Sans', sans-serif" }}
                 >
                   Add
                 </button>
               </div>
               {langFormError && (
-                <p className="mt-2 text-sm text-red-600 bg-red-50 border border-red-100 rounded-md px-3 py-2">{langFormError}</p>
+                <p style={{ marginTop: "8px", fontSize: "0.875rem", color: "#DC2626", background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: "8px", padding: "8px 12px" }}>{langFormError}</p>
               )}
             </div>
 
             {languages.length === 0 ? (
-              <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
-                <p className="text-gray-400">No languages configured yet.</p>
+              <div style={{ background: "var(--card-bg)", borderRadius: "14px", border: "1.5px solid var(--card-border)", padding: "48px", textAlign: "center" }}>
+                <p style={{ color: "var(--gray-400)" }}>No languages configured yet.</p>
               </div>
             ) : (
-              <div className="bg-white rounded-xl border border-gray-200 divide-y divide-gray-100">
-                {languages.map((lang) => (
-                  <div key={lang.id} className="flex items-center justify-between px-5 py-3 gap-3">
-                    <div className="flex items-center gap-3">
-                      <span className="text-sm text-black">{lang.name}</span>
-                      <span className="text-xs text-gray-400">{lang.volunteerCount ?? 0} volunteer{(lang.volunteerCount ?? 0) !== 1 ? "s" : ""}</span>
+              <div style={{ background: "var(--card-bg)", borderRadius: "14px", border: "1.5px solid var(--card-border)", overflow: "hidden" }}>
+                {languages.map((lang, idx) => (
+                  <div key={lang.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 20px", gap: "12px", borderBottom: idx < languages.length - 1 ? "1px solid var(--card-border)" : "none" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                      <span style={{ fontSize: "0.875rem", color: "var(--gray-900)", fontWeight: 500 }}>{lang.name}</span>
+                      <span style={{ fontSize: "0.75rem", color: "var(--gray-400)" }}>{lang.volunteerCount ?? 0} volunteer{(lang.volunteerCount ?? 0) !== 1 ? "s" : ""}</span>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <span className={`text-xs px-2 py-0.5 rounded-full ${lang.isActive ? "bg-emerald-50 text-emerald-700" : "bg-gray-100 text-gray-400"}`}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                      <span style={{ fontSize: "0.75rem", padding: "2px 10px", borderRadius: "99px", background: lang.isActive ? "#DCFCE7" : "var(--gray-200)", color: lang.isActive ? "#15803D" : "var(--gray-400)" }}>
                         {lang.isActive ? "Active" : "Inactive"}
                       </span>
                       <button
                         onClick={() => toggleLanguageActive(lang.id, !lang.isActive, lang.name)}
-                        className={`text-xs px-2 py-1 rounded-md transition-colors ${
-                          lang.isActive
-                            ? "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                            : "bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
-                        }`}
+                        style={{ fontSize: "0.75rem", padding: "4px 12px", borderRadius: "8px", cursor: "pointer", fontFamily: "'DM Sans', sans-serif", background: lang.isActive ? "var(--gray-200)" : "#DCFCE7", color: lang.isActive ? "var(--gray-600)" : "#15803D", border: "none" }}
                       >
                         {lang.isActive ? "Deactivate" : "Activate"}
                       </button>
@@ -1400,58 +1353,56 @@ export default function AdminDashboard() {
 
         {/* Metrics */}
         {tab === "metrics" && (
-          <div className="space-y-6">
+          <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
             {!metrics ? (
-              <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
-                <p className="text-gray-400">Loading metrics...</p>
+              <div style={{ background: "var(--card-bg)", borderRadius: "14px", border: "1.5px solid var(--card-border)", padding: "48px", textAlign: "center" }}>
+                <p style={{ color: "var(--gray-400)" }}>Loading metrics...</p>
               </div>
             ) : (
               <>
-                <div className="grid grid-cols-3 gap-4">
-                  <div className="bg-white rounded-xl border border-gray-200 p-5 text-center">
-                    <p className="text-3xl font-semibold text-black">{metrics.totalHours}</p>
-                    <p className="text-xs text-gray-400 mt-1">Total Hours</p>
-                  </div>
-                  <div className="bg-white rounded-xl border border-gray-200 p-5 text-center">
-                    <p className="text-3xl font-semibold text-black">{metrics.volunteerCount}</p>
-                    <p className="text-xs text-gray-400 mt-1">Active Volunteers</p>
-                  </div>
-                  <div className="bg-white rounded-xl border border-gray-200 p-5 text-center">
-                    <p className="text-3xl font-semibold text-black">{metrics.activeSlotCount}</p>
-                    <p className="text-xs text-gray-400 mt-1">Active Slots</p>
-                  </div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "14px" }}>
+                  {[
+                    { value: metrics.totalHours, label: "Total Hours" },
+                    { value: metrics.volunteerCount, label: "Active Volunteers" },
+                    { value: metrics.activeSlotCount, label: "Active Slots" },
+                  ].map((stat) => (
+                    <div key={stat.label} style={{ background: "var(--card-bg)", borderRadius: "14px", border: "1.5px solid var(--card-border)", padding: "20px", textAlign: "center" }}>
+                      <p style={{ fontSize: "2rem", fontWeight: 700, color: "var(--gray-900)" }}>{stat.value}</p>
+                      <p style={{ fontSize: "0.75rem", color: "var(--gray-400)", marginTop: "4px" }}>{stat.label}</p>
+                    </div>
+                  ))}
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="bg-white rounded-xl border border-gray-200 p-5">
-                    <h3 className="text-sm font-medium text-gray-700 mb-3">Hours by Language</h3>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" }}>
+                  <div style={{ background: "var(--card-bg)", borderRadius: "14px", border: "1.5px solid var(--card-border)", padding: "20px" }}>
+                    <h3 style={{ fontSize: "0.875rem", fontWeight: 600, color: "var(--gray-600)", marginBottom: "12px" }}>Hours by Language</h3>
                     {metrics.hoursByLanguage.length === 0 ? (
-                      <p className="text-xs text-gray-400">No data yet.</p>
+                      <p style={{ fontSize: "0.75rem", color: "var(--gray-400)" }}>No data yet.</p>
                     ) : (
-                      <div className="space-y-2">
+                      <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
                         {metrics.hoursByLanguage.map((item) => (
-                          <div key={item.code} className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                              <span className="text-xs font-mono font-semibold px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded">{item.code}</span>
-                              <span className="text-sm text-gray-700">{item.name}</span>
+                          <div key={item.code} style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                              <span style={{ fontSize: "0.72rem", fontFamily: "monospace", fontWeight: 700, padding: "2px 6px", background: "var(--gray-200)", color: "var(--gray-600)", borderRadius: "4px" }}>{item.code}</span>
+                              <span style={{ fontSize: "0.875rem", color: "var(--gray-600)" }}>{item.name}</span>
                             </div>
-                            <span className="text-sm font-medium text-black">{item.hours}h</span>
+                            <span style={{ fontSize: "0.875rem", fontWeight: 600, color: "var(--gray-900)" }}>{item.hours}h</span>
                           </div>
                         ))}
                       </div>
                     )}
                   </div>
 
-                  <div className="bg-white rounded-xl border border-gray-200 p-5">
-                    <h3 className="text-sm font-medium text-gray-700 mb-3">Hours by Clinic</h3>
+                  <div style={{ background: "var(--card-bg)", borderRadius: "14px", border: "1.5px solid var(--card-border)", padding: "20px" }}>
+                    <h3 style={{ fontSize: "0.875rem", fontWeight: 600, color: "var(--gray-600)", marginBottom: "12px" }}>Hours by Clinic</h3>
                     {metrics.hoursByClinic.length === 0 ? (
-                      <p className="text-xs text-gray-400">No data yet.</p>
+                      <p style={{ fontSize: "0.75rem", color: "var(--gray-400)" }}>No data yet.</p>
                     ) : (
-                      <div className="space-y-2">
+                      <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
                         {metrics.hoursByClinic.map((item) => (
-                          <div key={item.clinicId} className="flex items-center justify-between">
-                            <span className="text-sm text-gray-700">{item.clinicName}</span>
-                            <span className="text-sm font-medium text-black">{item.hours}h</span>
+                          <div key={item.clinicId} style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                            <span style={{ fontSize: "0.875rem", color: "var(--gray-600)" }}>{item.clinicName}</span>
+                            <span style={{ fontSize: "0.875rem", fontWeight: 600, color: "var(--gray-900)" }}>{item.hours}h</span>
                           </div>
                         ))}
                       </div>
@@ -1459,49 +1410,42 @@ export default function AdminDashboard() {
                   </div>
                 </div>
 
-                <p className="text-xs text-gray-400 text-center">Graphs coming soon</p>
+                <p style={{ fontSize: "0.75rem", color: "var(--gray-400)", textAlign: "center" }}>Graphs coming soon</p>
 
-                {/* Feedback Overview */}
-                <div className="bg-white rounded-xl border border-gray-200 p-5">
-                  <h3 className="text-sm font-medium text-gray-700 mb-3">Feedback Overview</h3>
-                  <div className="grid grid-cols-3 gap-4 mb-4">
-                    <div className="text-center">
-                      <p className="text-2xl font-semibold text-black">{metrics.feedbackCount ?? 0}</p>
-                      <p className="text-xs text-gray-400 mt-1">Total Feedback</p>
-                    </div>
-                    <div className="text-center">
-                      <p className="text-2xl font-semibold text-black">
-                        {metrics.avgVolunteerRating != null ? `${metrics.avgVolunteerRating}★` : "—"}
-                      </p>
-                      <p className="text-xs text-gray-400 mt-1">Avg Volunteer Rating</p>
-                    </div>
-                    <div className="text-center">
-                      <p className="text-2xl font-semibold text-black">
-                        {metrics.avgClinicRating != null ? `${metrics.avgClinicRating}★` : "—"}
-                      </p>
-                      <p className="text-xs text-gray-400 mt-1">Avg Clinic Rating</p>
-                    </div>
+                <div style={{ background: "var(--card-bg)", borderRadius: "14px", border: "1.5px solid var(--card-border)", padding: "20px" }}>
+                  <h3 style={{ fontSize: "0.875rem", fontWeight: 600, color: "var(--gray-600)", marginBottom: "12px" }}>Feedback Overview</h3>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "14px", marginBottom: "16px" }}>
+                    {[
+                      { value: metrics.feedbackCount ?? 0, label: "Total Feedback" },
+                      { value: metrics.avgVolunteerRating != null ? `${metrics.avgVolunteerRating}★` : "—", label: "Avg Volunteer Rating" },
+                      { value: metrics.avgClinicRating != null ? `${metrics.avgClinicRating}★` : "—", label: "Avg Clinic Rating" },
+                    ].map((stat) => (
+                      <div key={stat.label} style={{ textAlign: "center" }}>
+                        <p style={{ fontSize: "1.5rem", fontWeight: 700, color: "var(--gray-900)" }}>{stat.value}</p>
+                        <p style={{ fontSize: "0.75rem", color: "var(--gray-400)", marginTop: "4px" }}>{stat.label}</p>
+                      </div>
+                    ))}
                   </div>
                   {allFeedback.length > 0 && (
-                    <div className="space-y-2">
-                      <p className="text-xs font-medium text-gray-400 uppercase tracking-wider mb-2">Recent Feedback</p>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                      <p style={{ fontSize: "0.68rem", fontWeight: 700, color: "var(--gray-400)", textTransform: "uppercase", letterSpacing: "0.09em", marginBottom: "4px" }}>Recent Feedback</p>
                       {allFeedback.slice(0, 10).map((fb) => (
-                        <div key={fb.id} className="border border-gray-100 rounded-xl px-4 py-3">
-                          <div className="flex items-center justify-between mb-1">
-                            <div className="flex items-center gap-2">
-                              <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${fb.authorRole === "CLINIC" ? "bg-[#EBF3FC] text-[#041E42]" : "bg-emerald-50 text-emerald-700"}`}>
+                        <div key={fb.id} style={{ border: "1.5px solid var(--card-border)", borderRadius: "10px", padding: "12px 16px" }}>
+                          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "4px" }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                              <span style={{ fontSize: "0.72rem", padding: "2px 8px", borderRadius: "99px", fontWeight: 600, background: fb.authorRole === "CLINIC" ? "#EBF3FC" : "#DCFCE7", color: fb.authorRole === "CLINIC" ? "#0D1F3C" : "#15803D" }}>
                                 {fb.authorRole}
                               </span>
                               {fb.rating != null && (
-                                <span className="text-xs text-amber-500">
+                                <span style={{ fontSize: "0.75rem", color: "#F59E0B" }}>
                                   {"★".repeat(fb.rating)}{"☆".repeat(5 - fb.rating)}
                                 </span>
                               )}
                             </div>
-                            <span className="text-xs text-gray-400">{new Date(fb.createdAt).toLocaleDateString()}</span>
+                            <span style={{ fontSize: "0.72rem", color: "var(--gray-400)" }}>{new Date(fb.createdAt).toLocaleDateString()}</span>
                           </div>
-                          <p className="text-xs text-gray-600 mb-1">{fb.note}</p>
-                          <p className="text-xs text-gray-400">
+                          <p style={{ fontSize: "0.78rem", color: "var(--gray-600)", marginBottom: "4px" }}>{fb.note}</p>
+                          <p style={{ fontSize: "0.72rem", color: "var(--gray-400)" }}>
                             {fb.signup.slot.clinic.name} · {fb.signup.volunteer.user.name ?? fb.signup.volunteer.user.email}
                           </p>
                         </div>
@@ -1509,7 +1453,7 @@ export default function AdminDashboard() {
                     </div>
                   )}
                   {allFeedback.length === 0 && (
-                    <p className="text-xs text-gray-400 text-center py-4">No feedback yet.</p>
+                    <p style={{ fontSize: "0.75rem", color: "var(--gray-400)", textAlign: "center", padding: "16px 0" }}>No feedback yet.</p>
                   )}
                 </div>
               </>
@@ -1519,46 +1463,45 @@ export default function AdminDashboard() {
 
         {/* Training */}
         {tab === "training" && (
-          <div className="space-y-5">
-            <div className="flex justify-end">
+          <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+            <div style={{ display: "flex", justifyContent: "flex-end" }}>
               <button
                 onClick={() => setShowTrainingForm(!showTrainingForm)}
-                className="px-4 py-2 text-sm bg-[#4A90D9] text-white hover:bg-[#357ABD] rounded-full transition-colors"
+                style={{ padding: "9px 22px", fontSize: "0.875rem", background: "var(--blue)", color: "#fff", border: "none", borderRadius: "99px", cursor: "pointer", fontWeight: 600, fontFamily: "'DM Sans', sans-serif" }}
               >
                 {showTrainingForm ? "Cancel" : "+ Add Material"}
               </button>
             </div>
 
             {showTrainingForm && (
-              <div className="bg-white rounded-xl border border-gray-200 p-6 space-y-4">
-                <h3 className="text-sm font-medium text-gray-700">New Training Material</h3>
+              <div style={{ background: "var(--card-bg)", borderRadius: "14px", border: "1.5px solid var(--card-border)", padding: "24px", display: "flex", flexDirection: "column", gap: "14px" }}>
+                <h3 style={{ fontSize: "0.875rem", fontWeight: 600, color: "var(--gray-600)" }}>New Training Material</h3>
                 <input
                   placeholder="Title"
                   value={trainingForm.title}
                   onChange={(e) => setTrainingForm({ ...trainingForm, title: e.target.value })}
-                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-300"
+                  style={{ width: "100%", padding: "9px 12px", fontSize: "0.875rem", border: "1.5px solid var(--card-border)", borderRadius: "9px", background: "var(--card-bg)", color: "var(--gray-900)", outline: "none", fontFamily: "'DM Sans', sans-serif", boxSizing: "border-box" }}
                 />
                 <textarea
                   placeholder="Description (optional)"
                   value={trainingForm.description}
                   onChange={(e) => setTrainingForm({ ...trainingForm, description: e.target.value })}
                   rows={2}
-                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-300 resize-none"
+                  style={{ width: "100%", padding: "9px 12px", fontSize: "0.875rem", border: "1.5px solid var(--card-border)", borderRadius: "9px", background: "var(--card-bg)", color: "var(--gray-900)", outline: "none", fontFamily: "'DM Sans', sans-serif", resize: "none", boxSizing: "border-box" }}
                 />
-                {/* Link only — file upload requires Supabase Storage setup */}
                 <input
                   placeholder="URL (https://docs.google.com/... or any link)"
                   value={trainingForm.url}
                   onChange={(e) => setTrainingForm({ ...trainingForm, url: e.target.value, type: "LINK" })}
-                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-300"
+                  style={{ width: "100%", padding: "9px 12px", fontSize: "0.875rem", border: "1.5px solid var(--card-border)", borderRadius: "9px", background: "var(--card-bg)", color: "var(--gray-900)", outline: "none", fontFamily: "'DM Sans', sans-serif", boxSizing: "border-box" }}
                 />
-                <div className="grid grid-cols-2 gap-3">
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
                   <div>
-                    <label className="text-xs text-gray-500 mb-1 block">Language</label>
+                    <label style={{ fontSize: "0.75rem", color: "var(--gray-600)", marginBottom: "4px", display: "block" }}>Language</label>
                     <select
                       value={trainingForm.languageCode}
                       onChange={(e) => setTrainingForm({ ...trainingForm, languageCode: e.target.value })}
-                      className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none bg-white"
+                      style={{ width: "100%", padding: "9px 12px", fontSize: "0.875rem", border: "1.5px solid var(--card-border)", borderRadius: "9px", background: "var(--card-bg)", color: "var(--gray-900)", outline: "none", fontFamily: "'DM Sans', sans-serif" }}
                     >
                       <option value="">All Languages</option>
                       {languages.filter((l) => l.isActive).map((l) => (
@@ -1567,13 +1510,13 @@ export default function AdminDashboard() {
                     </select>
                   </div>
                   <div>
-                    <label className="text-xs text-gray-500 mb-1 block">Category</label>
+                    <label style={{ fontSize: "0.75rem", color: "var(--gray-600)", marginBottom: "4px", display: "block" }}>Category</label>
                     <input
                       placeholder="General"
                       value={trainingForm.category}
                       list="training-categories"
                       onChange={(e) => setTrainingForm({ ...trainingForm, category: e.target.value })}
-                      className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-300"
+                      style={{ width: "100%", padding: "9px 12px", fontSize: "0.875rem", border: "1.5px solid var(--card-border)", borderRadius: "9px", background: "var(--card-bg)", color: "var(--gray-900)", outline: "none", fontFamily: "'DM Sans', sans-serif", boxSizing: "border-box" }}
                     />
                     <datalist id="training-categories">
                       {["General", "Medical Terminology", "Ethics", "Language-Specific", "Administrative"].map((c) => (
@@ -1583,12 +1526,12 @@ export default function AdminDashboard() {
                   </div>
                 </div>
                 {trainingFormError && (
-                  <p className="text-sm text-red-600 bg-red-50 border border-red-100 rounded-md px-3 py-2">{trainingFormError}</p>
+                  <p style={{ fontSize: "0.875rem", color: "#DC2626", background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: "8px", padding: "8px 12px" }}>{trainingFormError}</p>
                 )}
                 <button
                   disabled={trainingSubmitting || !trainingForm.title || (trainingForm.type === "LINK" && !trainingForm.url)}
                   onClick={submitTraining}
-                  className="px-4 py-2 text-sm bg-[#4A90D9] text-white hover:bg-[#357ABD] rounded-full transition-colors disabled:opacity-50"
+                  style={{ padding: "9px 22px", fontSize: "0.875rem", background: "var(--blue)", color: "#fff", border: "none", borderRadius: "99px", cursor: "pointer", fontWeight: 600, opacity: (trainingSubmitting || !trainingForm.title || (trainingForm.type === "LINK" && !trainingForm.url)) ? 0.5 : 1, fontFamily: "'DM Sans', sans-serif", alignSelf: "flex-start" }}
                 >
                   {trainingSubmitting ? "Saving..." : "Add Material"}
                 </button>
@@ -1596,42 +1539,42 @@ export default function AdminDashboard() {
             )}
 
             {trainingMaterials.length === 0 ? (
-              <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
-                <p className="text-gray-400">No training materials yet.</p>
+              <div style={{ background: "var(--card-bg)", borderRadius: "14px", border: "1.5px solid var(--card-border)", padding: "48px", textAlign: "center" }}>
+                <p style={{ color: "var(--gray-400)" }}>No training materials yet.</p>
               </div>
             ) : (
-              <div className="space-y-3">
+              <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
                 {trainingMaterials.map((m) => (
-                  <div key={m.id} className="bg-white rounded-xl border border-gray-200 p-5">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2 flex-wrap mb-1">
-                          <span className="font-medium text-black text-sm">{m.title}</span>
-                          <span className="text-xs px-1.5 py-0.5 rounded bg-gray-100 text-gray-600">{m.category}</span>
+                  <div key={m.id} style={{ background: "var(--card-bg)", borderRadius: "14px", border: "1.5px solid var(--card-border)", padding: "20px" }}>
+                    <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "12px" }}>
+                      <div style={{ minWidth: 0, flex: 1 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap", marginBottom: "4px" }}>
+                          <span style={{ fontWeight: 600, color: "var(--gray-900)", fontSize: "0.875rem" }}>{m.title}</span>
+                          <span style={{ fontSize: "0.72rem", padding: "2px 6px", borderRadius: "4px", background: "var(--gray-200)", color: "var(--gray-600)" }}>{m.category}</span>
                           {m.languageCode && (
-                            <span className="text-xs px-1.5 py-0.5 rounded bg-[#EBF3FC] text-[#041E42]">{m.languageCode}</span>
+                            <span style={{ fontSize: "0.72rem", padding: "2px 6px", borderRadius: "4px", background: "#EBF3FC", color: "#0D1F3C" }}>{m.languageCode}</span>
                           )}
-                          <span className={`text-xs px-1.5 py-0.5 rounded ${m.type === "FILE" ? "bg-amber-50 text-amber-700" : "bg-emerald-50 text-emerald-700"}`}>
+                          <span style={{ fontSize: "0.72rem", padding: "2px 6px", borderRadius: "4px", background: m.type === "FILE" ? "#FFFBEB" : "#DCFCE7", color: m.type === "FILE" ? "#B45309" : "#15803D" }}>
                             {m.type}
                           </span>
                         </div>
-                        {m.description && <p className="text-xs text-gray-500 mb-2">{m.description}</p>}
+                        {m.description && <p style={{ fontSize: "0.78rem", color: "var(--gray-600)", marginBottom: "6px" }}>{m.description}</p>}
                         {m.type === "FILE" ? (
-                          <a href={m.url} target="_blank" rel="noopener noreferrer" className="text-xs text-gray-600 hover:text-black underline">
+                          <a href={m.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: "0.78rem", color: "var(--gray-600)", textDecoration: "underline" }}>
                             {m.fileName ?? "Download"}
                           </a>
                         ) : (
-                          <a href={m.url} target="_blank" rel="noopener noreferrer" className="text-xs text-[#4A90D9] hover:text-[#041E42] underline break-all">
+                          <a href={m.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: "0.78rem", color: "var(--blue)", textDecoration: "underline", wordBreak: "break-all" }}>
                             {m.url}
                           </a>
                         )}
-                        <p className="text-xs text-gray-400 mt-2">
+                        <p style={{ fontSize: "0.72rem", color: "var(--gray-400)", marginTop: "8px" }}>
                           by {m.uploadedBy.name ?? m.uploadedBy.email} · {new Date(m.createdAt).toLocaleDateString()}
                         </p>
                       </div>
                       <button
                         onClick={() => deleteTraining(m.id)}
-                        className="shrink-0 text-xs px-2 py-1 bg-red-50 text-red-500 hover:bg-red-100 rounded transition-colors"
+                        style={{ flexShrink: 0, fontSize: "0.75rem", padding: "4px 12px", background: "#FEF2F2", color: "#EF4444", border: "none", borderRadius: "8px", cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}
                         title="Delete"
                       >
                         Delete
@@ -1646,32 +1589,26 @@ export default function AdminDashboard() {
 
         {/* Access Control — SUPER_ADMIN only */}
         {tab === "access" && session?.user?.role === "SUPER_ADMIN" && (
-          <div className="max-w-lg space-y-5">
-            <div className="bg-white rounded-xl border border-gray-200 p-6">
-              <h3 className="text-sm font-medium text-gray-700 mb-1">Add Email Rule</h3>
-              <p className="text-xs text-gray-400 mb-4">
-                <strong>Allow</strong> lets a non-Georgetown email sign in. <strong>Block</strong> prevents any email from signing in, including Georgetown addresses.
+          <div style={{ maxWidth: "560px", display: "flex", flexDirection: "column", gap: "16px" }}>
+            <div style={{ background: "var(--card-bg)", borderRadius: "14px", border: "1.5px solid var(--card-border)", padding: "24px" }}>
+              <h3 style={{ fontSize: "0.875rem", fontWeight: 600, color: "var(--gray-600)", marginBottom: "4px" }}>Add Email Rule</h3>
+              <p style={{ fontSize: "0.75rem", color: "var(--gray-400)", marginBottom: "16px" }}>
+                <strong>Allow</strong> lets a non-Georgetown email sign in. <strong>Block</strong> prevents any email from signing in.
               </p>
-              <div className="space-y-3">
+              <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
                 <input
                   type="email"
                   placeholder="user@example.com"
                   value={ruleEmail}
                   onChange={(e) => setRuleEmail(e.target.value)}
-                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-300"
+                  style={{ width: "100%", padding: "9px 12px", fontSize: "0.875rem", border: "1.5px solid var(--card-border)", borderRadius: "9px", background: "var(--card-bg)", color: "var(--gray-900)", outline: "none", fontFamily: "'DM Sans', sans-serif", boxSizing: "border-box" }}
                 />
-                <div className="flex gap-3">
+                <div style={{ display: "flex", gap: "10px" }}>
                   {(["ALLOW", "BLOCK"] as const).map((t) => (
                     <button
                       key={t}
                       onClick={() => setRuleType(t)}
-                      className={`flex-1 py-2 text-sm rounded-md border transition-colors ${
-                        ruleType === t
-                          ? t === "ALLOW"
-                            ? "bg-emerald-700 text-white border-emerald-700"
-                            : "bg-red-600 text-white border-red-600"
-                          : "border-gray-200 text-gray-600 hover:border-gray-400"
-                      }`}
+                      style={{ flex: 1, padding: "9px", fontSize: "0.875rem", borderRadius: "9px", cursor: "pointer", fontFamily: "'DM Sans', sans-serif", fontWeight: 600, border: "1.5px solid", background: ruleType === t ? (t === "ALLOW" ? "#15803D" : "#DC2626") : "none", color: ruleType === t ? "#fff" : "var(--gray-600)", borderColor: ruleType === t ? (t === "ALLOW" ? "#15803D" : "#DC2626") : "var(--card-border)" }}
                     >
                       {t === "ALLOW" ? "Allow" : "Block"}
                     </button>
@@ -1682,12 +1619,12 @@ export default function AdminDashboard() {
                   placeholder="Note (optional)"
                   value={ruleNote}
                   onChange={(e) => setRuleNote(e.target.value)}
-                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-300"
+                  style={{ width: "100%", padding: "9px 12px", fontSize: "0.875rem", border: "1.5px solid var(--card-border)", borderRadius: "9px", background: "var(--card-bg)", color: "var(--gray-900)", outline: "none", fontFamily: "'DM Sans', sans-serif", boxSizing: "border-box" }}
                 />
                 <button
                   disabled={!ruleEmail.trim() || actionLoading === "email-rule"}
                   onClick={addEmailRule}
-                  className="w-full py-2 text-sm bg-[#4A90D9] text-white hover:bg-[#357ABD] rounded-full transition-colors disabled:opacity-50"
+                  style={{ width: "100%", padding: "9px", fontSize: "0.875rem", background: "var(--blue)", color: "#fff", border: "none", borderRadius: "99px", cursor: "pointer", fontWeight: 600, opacity: (!ruleEmail.trim() || actionLoading === "email-rule") ? 0.5 : 1, fontFamily: "'DM Sans', sans-serif" }}
                 >
                   {actionLoading === "email-rule" ? "Saving..." : "Add Rule"}
                 </button>
@@ -1695,22 +1632,20 @@ export default function AdminDashboard() {
             </div>
 
             {emailRules.length > 0 && (
-              <div className="bg-white rounded-xl border border-gray-200 divide-y divide-gray-100">
-                {emailRules.map((rule) => (
-                  <div key={rule.id} className="flex items-center justify-between px-5 py-3 gap-3">
-                    <div className="flex items-center gap-3 min-w-0">
-                      <span className={`shrink-0 text-xs px-2 py-0.5 rounded-full font-medium ${
-                        rule.type === "ALLOW" ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-600"
-                      }`}>
+              <div style={{ background: "var(--card-bg)", borderRadius: "14px", border: "1.5px solid var(--card-border)", overflow: "hidden" }}>
+                {emailRules.map((rule, idx) => (
+                  <div key={rule.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 20px", gap: "12px", borderBottom: idx < emailRules.length - 1 ? "1px solid var(--card-border)" : "none" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "12px", minWidth: 0 }}>
+                      <span style={{ flexShrink: 0, fontSize: "0.72rem", padding: "2px 8px", borderRadius: "99px", fontWeight: 600, background: rule.type === "ALLOW" ? "#DCFCE7" : "#FEF2F2", color: rule.type === "ALLOW" ? "#15803D" : "#DC2626" }}>
                         {rule.type}
                       </span>
-                      <span className="text-sm text-black truncate">{rule.email}</span>
-                      {rule.note && <span className="text-xs text-gray-400 truncate">{rule.note}</span>}
+                      <span style={{ fontSize: "0.875rem", color: "var(--gray-900)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{rule.email}</span>
+                      {rule.note && <span style={{ fontSize: "0.75rem", color: "var(--gray-400)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{rule.note}</span>}
                     </div>
                     <button
                       disabled={actionLoading === `rule-${rule.id}`}
                       onClick={() => removeEmailRule(rule.id)}
-                      className="shrink-0 text-xs px-2 py-1 bg-gray-100 hover:bg-gray-200 text-gray-500 rounded transition-colors disabled:opacity-50"
+                      style={{ flexShrink: 0, fontSize: "0.75rem", padding: "4px 12px", background: "var(--gray-200)", color: "var(--gray-600)", border: "none", borderRadius: "8px", cursor: "pointer", opacity: actionLoading === `rule-${rule.id}` ? 0.5 : 1, fontFamily: "'DM Sans', sans-serif" }}
                     >
                       Remove
                     </button>
@@ -1720,8 +1655,8 @@ export default function AdminDashboard() {
             )}
 
             {emailRules.length === 0 && (
-              <div className="bg-white rounded-xl border border-gray-200 p-8 text-center">
-                <p className="text-gray-400 text-sm">No rules yet. All Georgetown emails can sign in by default.</p>
+              <div style={{ background: "var(--card-bg)", borderRadius: "14px", border: "1.5px solid var(--card-border)", padding: "32px", textAlign: "center" }}>
+                <p style={{ color: "var(--gray-400)", fontSize: "0.875rem" }}>No rules yet. All Georgetown emails can sign in by default.</p>
               </div>
             )}
           </div>
@@ -1729,139 +1664,130 @@ export default function AdminDashboard() {
 
         {/* Feature Flags — SUPER_ADMIN only */}
         {tab === "flags" && session?.user?.role === "SUPER_ADMIN" && (
-          <div className="max-w-2xl space-y-4">
-            <p className="text-xs text-gray-400 bg-amber-50 border border-amber-100 rounded-md px-4 py-2">
+          <div style={{ maxWidth: "640px", display: "flex", flexDirection: "column", gap: "14px" }}>
+            <p style={{ fontSize: "0.75rem", color: "#92400E", background: "#FFFBEB", border: "1px solid #FDE68A", borderRadius: "8px", padding: "8px 16px" }}>
               Disabled features are hidden from all non-admin users.
             </p>
             {featureFlags.length === 0 ? (
-              <div className="bg-white rounded-xl border border-gray-200 p-8 text-center">
-                <p className="text-gray-400 text-sm">Loading...</p>
+              <div style={{ background: "var(--card-bg)", borderRadius: "14px", border: "1.5px solid var(--card-border)", padding: "32px", textAlign: "center" }}>
+                <p style={{ color: "var(--gray-400)", fontSize: "0.875rem" }}>Loading...</p>
               </div>
             ) : (
-              <div className="bg-white rounded-xl border border-gray-200 divide-y divide-gray-100">
-                {featureFlags.map((flag) => (
-                  <div key={flag.id} className="flex items-center justify-between px-5 py-4 gap-4">
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium text-black">{flag.label}</p>
-                      <p className="text-xs text-gray-400 font-mono">{flag.key}</p>
-                      {flag.description && <p className="text-xs text-gray-500 mt-0.5">{flag.description}</p>}
+              <div style={{ background: "var(--card-bg)", borderRadius: "14px", border: "1.5px solid var(--card-border)", overflow: "hidden" }}>
+                {featureFlags.map((flag, idx) => (
+                  <div key={flag.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 20px", gap: "16px", borderBottom: idx < featureFlags.length - 1 ? "1px solid var(--card-border)" : "none" }}>
+                    <div style={{ minWidth: 0 }}>
+                      <p style={{ fontSize: "0.875rem", fontWeight: 600, color: "var(--gray-900)" }}>{flag.label}</p>
+                      <p style={{ fontSize: "0.72rem", fontFamily: "monospace", color: "var(--gray-400)" }}>{flag.key}</p>
+                      {flag.description && <p style={{ fontSize: "0.75rem", color: "var(--gray-600)", marginTop: "2px" }}>{flag.description}</p>}
                     </div>
                     <button
                       role="switch"
                       aria-checked={flag.enabled}
                       onClick={() => toggleFlag(flag.key, !flag.enabled)}
-                      className={`relative inline-flex h-5 w-9 flex-shrink-0 rounded-full border-2 border-transparent transition-colors focus:outline-none ${
-                        flag.enabled ? "bg-[#4A90D9]" : "bg-gray-200"
-                      }`}
+                      style={{ position: "relative", display: "inline-flex", height: "20px", width: "36px", flexShrink: 0, borderRadius: "99px", border: "2px solid transparent", background: flag.enabled ? "var(--blue)" : "var(--gray-200)", cursor: "pointer", outline: "none" }}
                     >
-                      <span className={`inline-block h-4 w-4 rounded-full bg-white shadow transition-transform ${flag.enabled ? "translate-x-4" : "translate-x-0"}`} />
+                      <span style={{ display: "inline-block", height: "16px", width: "16px", borderRadius: "50%", background: "#fff", boxShadow: "0 1px 3px rgba(0,0,0,.2)", transform: flag.enabled ? "translateX(16px)" : "translateX(0)", transition: "transform 0.15s" }} />
                     </button>
                   </div>
                 ))}
               </div>
             )}
 
-            {/* Test Email section */}
-            <div className="bg-white rounded-xl border border-gray-200 p-6">
-              <h3 className="text-sm font-medium text-gray-700 mb-1">Test Email</h3>
-              <p className="text-xs text-gray-400 mb-4">Send a test email to verify email delivery is working.</p>
-              <div className="flex gap-3">
+            <div style={{ background: "var(--card-bg)", borderRadius: "14px", border: "1.5px solid var(--card-border)", padding: "24px" }}>
+              <h3 style={{ fontSize: "0.875rem", fontWeight: 600, color: "var(--gray-600)", marginBottom: "4px" }}>Test Email</h3>
+              <p style={{ fontSize: "0.75rem", color: "var(--gray-400)", marginBottom: "16px" }}>Send a test email to verify email delivery is working.</p>
+              <div style={{ display: "flex", gap: "10px" }}>
                 <input
                   type="email"
                   placeholder="recipient@example.com"
                   value={testEmailTo}
                   onChange={(e) => setTestEmailTo(e.target.value)}
-                  className="flex-1 px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-300"
+                  style={{ flex: 1, padding: "9px 12px", fontSize: "0.875rem", border: "1.5px solid var(--card-border)", borderRadius: "9px", background: "var(--card-bg)", color: "var(--gray-900)", outline: "none", fontFamily: "'DM Sans', sans-serif" }}
                 />
                 <button
                   disabled={!testEmailTo.trim() || testEmailStatus === "sending"}
                   onClick={sendTestEmailFn}
-                  className="px-4 py-2 text-sm bg-[#4A90D9] text-white hover:bg-[#357ABD] rounded-full transition-colors disabled:opacity-50"
+                  style={{ padding: "9px 22px", fontSize: "0.875rem", background: "var(--blue)", color: "#fff", border: "none", borderRadius: "99px", cursor: "pointer", fontWeight: 600, opacity: (!testEmailTo.trim() || testEmailStatus === "sending") ? 0.5 : 1, fontFamily: "'DM Sans', sans-serif" }}
                 >
                   {testEmailStatus === "sending" ? "Sending..." : "Send Test Email"}
                 </button>
               </div>
-              {testEmailStatus === "sent" && <p className="mt-2 text-xs text-emerald-600">Test email sent!</p>}
-              {testEmailStatus === "error" && <p className="mt-2 text-xs text-red-500">Failed to send test email.</p>}
+              {testEmailStatus === "sent" && <p style={{ marginTop: "8px", fontSize: "0.75rem", color: "#16A34A" }}>Test email sent!</p>}
+              {testEmailStatus === "error" && <p style={{ marginTop: "8px", fontSize: "0.75rem", color: "#EF4444" }}>Failed to send test email.</p>}
             </div>
           </div>
         )}
 
         {/* Messages — admin/super_admin */}
         {tab === "suggestions" && (
-          <div className="space-y-4">
+          <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
             {suggestions.length === 0 ? (
-              <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
-                <p className="text-gray-400">No messages yet.</p>
+              <div style={{ background: "var(--card-bg)", borderRadius: "14px", border: "1.5px solid var(--card-border)", padding: "48px", textAlign: "center" }}>
+                <p style={{ color: "var(--gray-400)" }}>No messages yet.</p>
               </div>
             ) : (
-              <div className="space-y-3">
-                {suggestions.map((s) => (
-                  <div key={s.id} className="bg-white rounded-xl border border-gray-200 p-5">
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2 flex-wrap mb-1">
-                          <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                            s.type === "BUG" ? "bg-red-50 text-red-700" :
-                            s.type === "FEATURE" ? "bg-[#EBF3FC] text-[#041E42]" :
-                            s.type === "CONTACT" ? "bg-teal-50 text-teal-700" :
-                            "bg-gray-100 text-gray-600"
-                          }`}>
-                            {s.type === "BUG" ? "Bug" : s.type === "FEATURE" ? "Feature" : s.type === "CONTACT" ? "Contact" : "General"}
-                          </span>
-                          <span className="font-medium text-black text-sm">{s.subject}</span>
-                          <span className="text-xs text-gray-400">{new Date(s.createdAt).toLocaleDateString()}</span>
-                        </div>
-                        <p className="text-sm text-gray-600 mb-2">{s.message}</p>
-                        <p className="text-xs text-gray-400">
-                          {s.submittedBy ? (s.submittedBy.name ?? s.submittedBy.email) : "Anonymous"}
-                        </p>
-                        {/* Admin note */}
-                        <input
-                          type="text"
-                          placeholder="Admin note..."
-                          defaultValue={s.adminNote ?? ""}
-                          onBlur={(e) => {
-                            if (e.target.value !== (s.adminNote ?? "")) {
-                              void updateSuggestionNote(s.id, e.target.value);
-                            }
-                          }}
-                          className="mt-2 w-full px-2 py-1 text-xs border border-gray-100 rounded focus:outline-none focus:ring-1 focus:ring-gray-300 text-gray-600 bg-gray-50"
-                        />
-                      </div>
-                      <div className="shrink-0 flex flex-col items-end gap-2">
-                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                          s.status === "OPEN" ? "bg-amber-50 text-amber-700" :
-                          s.status === "NOTED" ? "bg-[#EBF3FC] text-[#041E42]" :
-                          "bg-gray-100 text-gray-500"
-                        }`}>
-                          {s.status}
+              suggestions.map((s) => (
+                <div key={s.id} style={{ background: "var(--card-bg)", borderRadius: "14px", border: "1.5px solid var(--card-border)", padding: "20px" }}>
+                  <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "16px" }}>
+                    <div style={{ minWidth: 0, flex: 1 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap", marginBottom: "4px" }}>
+                        <span style={{ fontSize: "0.72rem", padding: "2px 8px", borderRadius: "99px", fontWeight: 600,
+                          background: s.type === "BUG" ? "#FEF2F2" : s.type === "FEATURE" ? "#EBF3FC" : s.type === "CONTACT" ? "#F0FDFA" : "var(--gray-200)",
+                          color: s.type === "BUG" ? "#B91C1C" : s.type === "FEATURE" ? "#0D1F3C" : s.type === "CONTACT" ? "#0F766E" : "var(--gray-600)"
+                        }}>
+                          {s.type === "BUG" ? "Bug" : s.type === "FEATURE" ? "Feature" : s.type === "CONTACT" ? "Contact" : "General"}
                         </span>
-                        <select
-                          value={s.status}
-                          onChange={(e) => void updateSuggestionStatus(s.id, e.target.value)}
-                          className="text-xs border border-gray-200 rounded px-2 py-1 text-gray-600 bg-white focus:outline-none"
-                        >
-                          <option value="OPEN">OPEN</option>
-                          <option value="NOTED">NOTED</option>
-                          <option value="CLOSED">CLOSED</option>
-                        </select>
-                        {s.status === "CLOSED" && (
-                          <button
-                            onClick={async () => {
-                              const res = await fetch(`/api/suggestions/${s.id}`, { method: "DELETE" });
-                              if (res.ok) setSuggestions((prev) => prev.filter((x) => x.id !== s.id));
-                            }}
-                            className="text-xs px-2 py-1 bg-red-50 text-red-500 hover:bg-red-100 rounded transition-colors"
-                          >
-                            Delete
-                          </button>
-                        )}
+                        <span style={{ fontWeight: 600, color: "var(--gray-900)", fontSize: "0.875rem" }}>{s.subject}</span>
+                        <span style={{ fontSize: "0.72rem", color: "var(--gray-400)" }}>{new Date(s.createdAt).toLocaleDateString()}</span>
                       </div>
+                      <p style={{ fontSize: "0.875rem", color: "var(--gray-600)", marginBottom: "8px" }}>{s.message}</p>
+                      <p style={{ fontSize: "0.75rem", color: "var(--gray-400)" }}>
+                        {s.submittedBy ? (s.submittedBy.name ?? s.submittedBy.email) : "Anonymous"}
+                      </p>
+                      <input
+                        type="text"
+                        placeholder="Admin note..."
+                        defaultValue={s.adminNote ?? ""}
+                        onBlur={(e) => {
+                          if (e.target.value !== (s.adminNote ?? "")) {
+                            void updateSuggestionNote(s.id, e.target.value);
+                          }
+                        }}
+                        style={{ marginTop: "8px", width: "100%", padding: "6px 10px", fontSize: "0.75rem", border: "1.5px solid var(--card-border)", borderRadius: "8px", outline: "none", color: "var(--gray-600)", background: "rgba(0,0,0,.02)", fontFamily: "'DM Sans', sans-serif", boxSizing: "border-box" }}
+                      />
+                    </div>
+                    <div style={{ flexShrink: 0, display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "8px" }}>
+                      <span style={{ fontSize: "0.72rem", padding: "2px 8px", borderRadius: "99px", fontWeight: 600,
+                        background: s.status === "OPEN" ? "#FFFBEB" : s.status === "NOTED" ? "#EBF3FC" : "var(--gray-200)",
+                        color: s.status === "OPEN" ? "#B45309" : s.status === "NOTED" ? "#0D1F3C" : "var(--gray-600)"
+                      }}>
+                        {s.status}
+                      </span>
+                      <select
+                        value={s.status}
+                        onChange={(e) => void updateSuggestionStatus(s.id, e.target.value)}
+                        style={{ fontSize: "0.75rem", border: "1.5px solid var(--card-border)", borderRadius: "8px", padding: "4px 8px", color: "var(--gray-600)", background: "var(--card-bg)", outline: "none", fontFamily: "'DM Sans', sans-serif", cursor: "pointer" }}
+                      >
+                        <option value="OPEN">OPEN</option>
+                        <option value="NOTED">NOTED</option>
+                        <option value="CLOSED">CLOSED</option>
+                      </select>
+                      {s.status === "CLOSED" && (
+                        <button
+                          onClick={async () => {
+                            const res = await fetch(`/api/suggestions/${s.id}`, { method: "DELETE" });
+                            if (res.ok) setSuggestions((prev) => prev.filter((x) => x.id !== s.id));
+                          }}
+                          style={{ fontSize: "0.75rem", padding: "4px 12px", background: "#FEF2F2", color: "#EF4444", border: "none", borderRadius: "8px", cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}
+                        >
+                          Delete
+                        </button>
+                      )}
                     </div>
                   </div>
-                ))}
-              </div>
+                </div>
+              ))
             )}
           </div>
         )}
@@ -1876,25 +1802,25 @@ export default function AdminDashboard() {
           : "DELETE";
 
         return (
-          <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-xl shadow-xl w-full max-w-md">
-              <div className="px-6 py-4 border-b border-gray-100">
-                <h3 className="text-sm font-semibold text-black">Delete {selectedSlotsList.length} Slot{selectedSlotsList.length !== 1 ? "s" : ""}</h3>
-                <p className="text-xs text-gray-400 mt-0.5">This will cancel the slot and notify any signed-up volunteers.</p>
+          <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.45)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 200, padding: "16px" }}>
+            <div style={{ background: "var(--card-bg)", borderRadius: "16px", boxShadow: "0 8px 32px rgba(0,0,0,.18)", width: "100%", maxWidth: "440px" }}>
+              <div style={{ padding: "16px 24px", borderBottom: "1.5px solid var(--card-border)" }}>
+                <h3 style={{ fontSize: "0.875rem", fontWeight: 700, color: "var(--gray-900)" }}>Delete {selectedSlotsList.length} Slot{selectedSlotsList.length !== 1 ? "s" : ""}</h3>
+                <p style={{ fontSize: "0.75rem", color: "var(--gray-400)", marginTop: "2px" }}>This will cancel the slot and notify any signed-up volunteers.</p>
               </div>
-              <div className="px-6 py-4">
-                <div className="max-h-40 overflow-y-auto space-y-1 mb-4">
+              <div style={{ padding: "16px 24px" }}>
+                <div style={{ maxHeight: "160px", overflowY: "auto", display: "flex", flexDirection: "column", gap: "4px", marginBottom: "16px" }}>
                   {selectedSlotsList.map((s) => (
-                    <div key={s.id} className="text-xs text-gray-600 py-1 border-b border-gray-50 last:border-0">
-                      <span className="font-medium">{s.clinic.name}</span> · {formatDate(s.date)} · {formatHour(s.startTime)}–{formatHour(s.endTime)} · {LANG_LABELS[s.language]}
+                    <div key={s.id} style={{ fontSize: "0.78rem", color: "var(--gray-600)", padding: "4px 0", borderBottom: "1px solid var(--card-border)" }}>
+                      <span style={{ fontWeight: 600 }}>{s.clinic.name}</span> · {formatDate(s.date)} · {formatHour(s.startTime)}–{formatHour(s.endTime)} · {LANG_LABELS[s.language]}
                       {s.signups.length > 0 && (
-                        <span className="ml-1 text-amber-600">({s.signups.length} volunteer{s.signups.length !== 1 ? "s" : ""} affected)</span>
+                        <span style={{ marginLeft: "4px", color: "#D97706" }}>({s.signups.length} volunteer{s.signups.length !== 1 ? "s" : ""} affected)</span>
                       )}
                     </div>
                   ))}
                 </div>
-                <div className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 mb-4">
-                  <p className="text-xs text-amber-800">
+                <div style={{ background: "#FFFBEB", border: "1px solid #FDE68A", borderRadius: "10px", padding: "12px 16px", marginBottom: "16px" }}>
+                  <p style={{ fontSize: "0.78rem", color: "#92400E" }}>
                     {isSingle
                       ? <>To confirm, type the clinic name and date: <strong>{confirmText}</strong></>
                       : <>To confirm, type: <strong>DELETE</strong></>}
@@ -1906,19 +1832,19 @@ export default function AdminDashboard() {
                   placeholder={confirmText}
                   value={adminDeleteInput}
                   onChange={(e) => setAdminDeleteInput(e.target.value)}
-                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-300 mb-4"
+                  style={{ width: "100%", padding: "9px 12px", fontSize: "0.875rem", border: "1.5px solid var(--card-border)", borderRadius: "9px", background: "var(--card-bg)", color: "var(--gray-900)", outline: "none", fontFamily: "'DM Sans', sans-serif", marginBottom: "16px", boxSizing: "border-box" }}
                 />
-                <div className="flex gap-2">
+                <div style={{ display: "flex", gap: "8px" }}>
                   <button
                     onClick={() => { setAdminDeleteModal(false); setAdminDeleteInput(""); }}
-                    className="flex-1 px-4 py-2 text-sm border border-gray-200 text-gray-600 rounded-lg hover:bg-gray-50 transition-colors"
+                    style={{ flex: 1, padding: "9px", fontSize: "0.875rem", border: "1.5px solid var(--card-border)", color: "var(--gray-600)", borderRadius: "10px", background: "none", cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}
                   >
                     Cancel
                   </button>
                   <button
                     disabled={adminDeleteInput.trim() !== confirmText || actionLoading === "admin-batch-delete"}
                     onClick={confirmAdminDeleteSlots}
-                    className="flex-1 px-4 py-2 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-40"
+                    style={{ flex: 1, padding: "9px", fontSize: "0.875rem", background: "#DC2626", color: "#fff", border: "none", borderRadius: "10px", cursor: "pointer", opacity: (adminDeleteInput.trim() !== confirmText || actionLoading === "admin-batch-delete") ? 0.4 : 1, fontFamily: "'DM Sans', sans-serif", fontWeight: 600 }}
                   >
                     {actionLoading === "admin-batch-delete" ? "Deleting..." : "Confirm Delete"}
                   </button>
@@ -1945,30 +1871,28 @@ export default function AdminDashboard() {
         const targetSlot = adminSlots.find((s) => s.id === volunteerAssignTarget.slotId);
 
         return (
-          <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-xl shadow-xl w-full max-w-md">
-              {/* Header */}
-              <div className="px-6 py-4 border-b border-gray-100">
-                <h3 className="text-sm font-semibold text-black">Assign a Volunteer</h3>
-                <p className="text-xs text-gray-400 mt-0.5">
+          <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.45)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 200, padding: "16px" }}>
+            <div style={{ background: "var(--card-bg)", borderRadius: "16px", boxShadow: "0 8px 32px rgba(0,0,0,.18)", width: "100%", maxWidth: "440px" }}>
+              <div style={{ padding: "16px 24px", borderBottom: "1.5px solid var(--card-border)" }}>
+                <h3 style={{ fontSize: "0.875rem", fontWeight: 700, color: "var(--gray-900)" }}>Assign a Volunteer</h3>
+                <p style={{ fontSize: "0.75rem", color: "var(--gray-400)", marginTop: "2px" }}>
                   {LANG_LABELS[volunteerAssignTarget.language]} &middot; {formatDate(volunteerAssignTarget.date)} &middot; {formatHour(volunteerAssignTarget.hour)}–{formatHour(volunteerAssignTarget.hour + 1)} &middot; {volunteerAssignTarget.clinicName}
                 </p>
               </div>
 
               {!assignSelected ? (
-                /* Step 1: search and select */
-                <div className="px-6 py-4">
+                <div style={{ padding: "16px 24px" }}>
                   <input
                     autoFocus
                     type="text"
                     placeholder="Search by name or email..."
                     value={assignSearch}
                     onChange={(e) => setAssignSearch(e.target.value)}
-                    className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-300 mb-3"
+                    style={{ width: "100%", padding: "9px 12px", fontSize: "0.875rem", border: "1.5px solid var(--card-border)", borderRadius: "9px", background: "var(--card-bg)", color: "var(--gray-900)", outline: "none", fontFamily: "'DM Sans', sans-serif", marginBottom: "10px", boxSizing: "border-box" }}
                   />
-                  <div className="max-h-64 overflow-y-auto space-y-1">
+                  <div style={{ maxHeight: "256px", overflowY: "auto", display: "flex", flexDirection: "column", gap: "4px" }}>
                     {filtered.length === 0 && (
-                      <p className="text-xs text-gray-400 text-center py-6">No volunteers found.</p>
+                      <p style={{ fontSize: "0.75rem", color: "var(--gray-400)", textAlign: "center", padding: "24px 0" }}>No volunteers found.</p>
                     )}
                     {filtered.map((u) => {
                       const alreadySigned = targetSlot?.signups.some(
@@ -1983,16 +1907,16 @@ export default function AdminDashboard() {
                           onClick={() =>
                             setAssignSelected({ userId: u.id, name: u.name ?? u.email, email: u.email })
                           }
-                          className="w-full text-left px-3 py-2.5 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed border border-transparent hover:border-gray-200"
+                          style={{ width: "100%", textAlign: "left", padding: "10px 12px", borderRadius: "9px", border: "1.5px solid transparent", background: "none", cursor: alreadySigned ? "not-allowed" : "pointer", opacity: alreadySigned ? 0.4 : 1, fontFamily: "'DM Sans', sans-serif" }}
                         >
-                          <div className="flex items-center justify-between gap-3">
-                            <div className="min-w-0">
-                              <p className="text-sm font-medium text-black truncate">{u.name ?? "—"}</p>
-                              <p className="text-xs text-gray-400 truncate">{u.email}</p>
+                          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px" }}>
+                            <div style={{ minWidth: 0 }}>
+                              <p style={{ fontSize: "0.875rem", fontWeight: 600, color: "var(--gray-900)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{u.name ?? "—"}</p>
+                              <p style={{ fontSize: "0.72rem", color: "var(--gray-400)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{u.email}</p>
                             </div>
-                            <div className="flex items-center gap-1.5 shrink-0">
+                            <div style={{ display: "flex", alignItems: "center", gap: "6px", flexShrink: 0 }}>
                               {alreadySigned && (
-                                <span className="text-xs px-2 py-0.5 bg-emerald-50 text-emerald-600 rounded-full">Signed up</span>
+                                <span style={{ fontSize: "0.72rem", padding: "2px 8px", background: "#DCFCE7", color: "#15803D", borderRadius: "99px" }}>Signed up</span>
                               )}
                               {u.volunteer?.languages?.map((l) => (
                                 <span key={l} className={`text-xs px-1.5 py-0.5 rounded-full ${LANG_COLORS[l] ?? "bg-gray-100 text-gray-500"}`}>
@@ -2007,47 +1931,46 @@ export default function AdminDashboard() {
                   </div>
                   <button
                     onClick={closeAssignModal}
-                    className="mt-4 text-xs text-gray-400 hover:text-gray-600"
+                    style={{ marginTop: "16px", fontSize: "0.75rem", color: "var(--gray-400)", background: "none", border: "none", cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}
                   >
                     Cancel
                   </button>
                 </div>
               ) : (
-                /* Step 2: confirm */
-                <div className="px-6 py-4">
-                  <div className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 mb-4">
-                    <p className="text-xs font-semibold text-amber-800 mb-2">Confirm Assignment</p>
-                    <p className="text-sm text-amber-900">
+                <div style={{ padding: "16px 24px" }}>
+                  <div style={{ background: "#FFFBEB", border: "1px solid #FDE68A", borderRadius: "10px", padding: "12px 16px", marginBottom: "16px" }}>
+                    <p style={{ fontSize: "0.75rem", fontWeight: 700, color: "#92400E", marginBottom: "6px" }}>Confirm Assignment</p>
+                    <p style={{ fontSize: "0.875rem", color: "#78350F" }}>
                       Assign <strong>{assignSelected.name}</strong> to this shift?
                     </p>
-                    <p className="text-xs text-amber-700 mt-0.5">{assignSelected.email}</p>
-                    <div className="mt-2 pt-2 border-t border-amber-200 text-xs text-amber-700 space-y-0.5">
+                    <p style={{ fontSize: "0.75rem", color: "#92400E", marginTop: "2px" }}>{assignSelected.email}</p>
+                    <div style={{ marginTop: "8px", paddingTop: "8px", borderTop: "1px solid #FDE68A", fontSize: "0.75rem", color: "#92400E", display: "flex", flexDirection: "column", gap: "2px" }}>
                       <p>{LANG_LABELS[volunteerAssignTarget.language]} · {volunteerAssignTarget.clinicName}</p>
                       <p>{formatDate(volunteerAssignTarget.date)} · {formatHour(volunteerAssignTarget.hour)}–{formatHour(volunteerAssignTarget.hour + 1)}</p>
-                      <p className="mt-1 text-amber-600">They will receive a calendar invite.</p>
+                      <p style={{ marginTop: "4px", color: "#D97706" }}>They will receive a calendar invite.</p>
                     </div>
                   </div>
                   {assignError && (
-                    <p className="text-xs text-red-600 mb-3">{assignError}</p>
+                    <p style={{ fontSize: "0.75rem", color: "#DC2626", marginBottom: "12px" }}>{assignError}</p>
                   )}
-                  <div className="flex gap-2">
+                  <div style={{ display: "flex", gap: "8px" }}>
                     <button
                       onClick={() => { setAssignSelected(null); setAssignError(""); }}
-                      className="flex-1 px-4 py-2 text-sm border border-gray-200 text-gray-600 rounded-lg hover:bg-gray-50 transition-colors"
+                      style={{ flex: 1, padding: "9px", fontSize: "0.875rem", border: "1.5px solid var(--card-border)", color: "var(--gray-600)", borderRadius: "10px", background: "none", cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}
                     >
                       ← Back
                     </button>
                     <button
                       disabled={assignLoading}
                       onClick={assignVolunteer}
-                      className="flex-1 px-4 py-2 text-sm bg-[#4A90D9] text-white rounded-full hover:bg-[#357ABD] transition-colors disabled:opacity-50"
+                      style={{ flex: 1, padding: "9px", fontSize: "0.875rem", background: "var(--blue)", color: "#fff", border: "none", borderRadius: "10px", cursor: "pointer", fontWeight: 600, opacity: assignLoading ? 0.5 : 1, fontFamily: "'DM Sans', sans-serif" }}
                     >
                       {assignLoading ? "Assigning..." : "Confirm Assignment"}
                     </button>
                   </div>
                   <button
                     onClick={closeAssignModal}
-                    className="mt-3 text-xs text-gray-400 hover:text-gray-600 w-full text-center"
+                    style={{ marginTop: "12px", fontSize: "0.75rem", color: "var(--gray-400)", background: "none", border: "none", cursor: "pointer", width: "100%", textAlign: "center", fontFamily: "'DM Sans', sans-serif" }}
                   >
                     Cancel
                   </button>
@@ -2060,24 +1983,24 @@ export default function AdminDashboard() {
 
       {/* PIN Reveal Modal */}
       {pinReveal && (
-        <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-6 w-full max-w-sm shadow-xl">
-            <h3 className="text-sm font-semibold text-black mb-1">New PIN for {pinReveal.clinicName}</h3>
-            <p className="text-xs text-gray-400 mb-4">
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.35)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 200 }}>
+          <div style={{ background: "var(--card-bg)", borderRadius: "16px", padding: "24px", width: "100%", maxWidth: "380px", boxShadow: "0 8px 32px rgba(0,0,0,.18)" }}>
+            <h3 style={{ fontSize: "0.875rem", fontWeight: 700, color: "var(--gray-900)", marginBottom: "4px" }}>New PIN for {pinReveal.clinicName}</h3>
+            <p style={{ fontSize: "0.75rem", color: "var(--gray-400)", marginBottom: "16px" }}>
               Copy this PIN now — it cannot be shown again. Share it with the clinic directly.
             </p>
-            <div className="flex items-center gap-3 bg-gray-50 border border-gray-200 rounded-lg px-4 py-3 mb-4">
-              <span className="text-2xl font-mono font-bold tracking-[0.3em] text-black">{pinReveal.pin}</span>
+            <div style={{ display: "flex", alignItems: "center", gap: "12px", background: "rgba(0,0,0,.04)", border: "1.5px solid var(--card-border)", borderRadius: "10px", padding: "12px 16px", marginBottom: "16px" }}>
+              <span style={{ fontSize: "1.5rem", fontFamily: "monospace", fontWeight: 700, letterSpacing: "0.25em", color: "var(--gray-900)" }}>{pinReveal.pin}</span>
               <button
                 onClick={() => navigator.clipboard.writeText(pinReveal.pin)}
-                className="ml-auto text-xs px-2 py-1 bg-gray-200 hover:bg-gray-300 text-gray-600 rounded transition-colors"
+                style={{ marginLeft: "auto", fontSize: "0.75rem", padding: "4px 12px", background: "var(--gray-200)", color: "var(--gray-600)", border: "none", borderRadius: "6px", cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}
               >
                 Copy
               </button>
             </div>
             <button
               onClick={() => setPinReveal(null)}
-              className="w-full px-4 py-2 text-sm bg-[#4A90D9] text-white hover:bg-[#357ABD] rounded-lg transition-colors"
+              style={{ width: "100%", padding: "9px", fontSize: "0.875rem", background: "var(--blue)", color: "#fff", border: "none", borderRadius: "10px", cursor: "pointer", fontWeight: 600, fontFamily: "'DM Sans', sans-serif" }}
             >
               Done
             </button>
@@ -2087,34 +2010,34 @@ export default function AdminDashboard() {
 
       {/* Language Deactivate Conflict Modal */}
       {langDeactivateConflict && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-md">
-            <div className="px-6 py-4 border-b border-gray-100">
-              <h3 className="text-sm font-semibold text-black">Deactivate {langDeactivateConflict.langName}?</h3>
-              <p className="text-xs text-gray-400 mt-0.5">This will affect upcoming clinic postings.</p>
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.45)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 200, padding: "16px" }}>
+          <div style={{ background: "var(--card-bg)", borderRadius: "16px", boxShadow: "0 8px 32px rgba(0,0,0,.18)", width: "100%", maxWidth: "440px" }}>
+            <div style={{ padding: "16px 24px", borderBottom: "1.5px solid var(--card-border)" }}>
+              <h3 style={{ fontSize: "0.875rem", fontWeight: 700, color: "var(--gray-900)" }}>Deactivate {langDeactivateConflict.langName}?</h3>
+              <p style={{ fontSize: "0.75rem", color: "var(--gray-400)", marginTop: "2px" }}>This will affect upcoming clinic postings.</p>
             </div>
-            <div className="px-6 py-4">
-              <p className="text-sm text-gray-600 mb-3">
+            <div style={{ padding: "16px 24px" }}>
+              <p style={{ fontSize: "0.875rem", color: "var(--gray-600)", marginBottom: "12px" }}>
                 The following upcoming slots use <strong>{langDeactivateConflict.langName}</strong> and will be <strong>deleted</strong> if you proceed. Clinics will be notified.
               </p>
-              <div className="max-h-40 overflow-y-auto space-y-1 mb-4">
+              <div style={{ maxHeight: "160px", overflowY: "auto", display: "flex", flexDirection: "column", gap: "4px", marginBottom: "16px" }}>
                 {langDeactivateConflict.conflicts.map((c) => (
-                  <div key={c.id} className="text-xs text-gray-600 py-1 border-b border-gray-50 last:border-0">
-                    <span className="font-medium">{c.clinicName}</span> · {new Date(c.date.slice(0,10) + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                  <div key={c.id} style={{ fontSize: "0.78rem", color: "var(--gray-600)", padding: "4px 0", borderBottom: "1px solid var(--card-border)" }}>
+                    <span style={{ fontWeight: 600 }}>{c.clinicName}</span> · {new Date(c.date.slice(0,10) + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
                   </div>
                 ))}
               </div>
-              <div className="flex gap-2">
+              <div style={{ display: "flex", gap: "8px" }}>
                 <button
                   onClick={() => setLangDeactivateConflict(null)}
-                  className="flex-1 px-4 py-2 text-sm border border-gray-200 text-gray-600 rounded-lg hover:bg-gray-50"
+                  style={{ flex: 1, padding: "9px", fontSize: "0.875rem", border: "1.5px solid var(--card-border)", color: "var(--gray-600)", borderRadius: "10px", background: "none", cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}
                 >
                   Cancel
                 </button>
                 <button
                   disabled={langDeactivateLoading}
                   onClick={forceDeactivateLanguage}
-                  className="flex-1 px-4 py-2 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50"
+                  style={{ flex: 1, padding: "9px", fontSize: "0.875rem", background: "#DC2626", color: "#fff", border: "none", borderRadius: "10px", cursor: "pointer", fontWeight: 600, opacity: langDeactivateLoading ? 0.5 : 1, fontFamily: "'DM Sans', sans-serif" }}
                 >
                   {langDeactivateLoading ? "Deactivating..." : "Deactivate & Delete Slots"}
                 </button>
@@ -2126,12 +2049,12 @@ export default function AdminDashboard() {
 
       {/* Assign Clinic Modal */}
       {assignModal && (
-        <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-6 w-full max-w-sm shadow-xl">
-            <h3 className="text-sm font-medium text-gray-700 mb-3">
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.35)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 200 }}>
+          <div style={{ background: "var(--card-bg)", borderRadius: "16px", padding: "24px", width: "100%", maxWidth: "380px", boxShadow: "0 8px 32px rgba(0,0,0,.18)" }}>
+            <h3 style={{ fontSize: "0.875rem", fontWeight: 600, color: "var(--gray-600)", marginBottom: "12px" }}>
               Assign {assignModal.userName} to a clinic
             </h3>
-            <div className="space-y-2">
+            <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
               {clinics.map((clinic) => (
                 <button
                   key={clinic.id}
@@ -2139,7 +2062,7 @@ export default function AdminDashboard() {
                     await updateUser(assignModal.userId, { clinicId: clinic.id });
                     setAssignModal(null);
                   }}
-                  className="w-full text-left px-3 py-2 text-sm border border-gray-200 rounded-md hover:bg-gray-50 transition-colors"
+                  style={{ width: "100%", textAlign: "left", padding: "9px 12px", fontSize: "0.875rem", border: "1.5px solid var(--card-border)", borderRadius: "9px", background: "none", cursor: "pointer", color: "var(--gray-900)", fontFamily: "'DM Sans', sans-serif" }}
                 >
                   {clinic.name}
                 </button>
@@ -2147,7 +2070,7 @@ export default function AdminDashboard() {
             </div>
             <button
               onClick={() => setAssignModal(null)}
-              className="mt-4 text-xs text-gray-400 hover:text-gray-600"
+              style={{ marginTop: "16px", fontSize: "0.75rem", color: "var(--gray-400)", background: "none", border: "none", cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}
             >
               Cancel
             </button>
