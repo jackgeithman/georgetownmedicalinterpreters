@@ -165,11 +165,7 @@ export default function ClinicDashboard() {
   }, [status, session, router]);
 
   const fetchSlots = useCallback(async () => {
-    const [slotsRes, notifRes, statusRes] = await Promise.all([
-      fetch("/api/clinic/slots"),
-      fetch("/api/clinic/notif-prefs"),
-      fetch("/api/feedback/my-status"),
-    ]);
+    const [slotsRes, notifRes] = await Promise.all([fetch("/api/clinic/slots"), fetch("/api/clinic/notif-prefs")]);
     if (slotsRes.ok) setSlots(await slotsRes.json());
     if (notifRes.ok) setNotifPrefs(await notifRes.json());
     if (statusRes.ok) {
