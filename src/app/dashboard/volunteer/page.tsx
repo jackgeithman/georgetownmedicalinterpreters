@@ -44,7 +44,30 @@ type VolunteerNotifPrefs = {
   unfilledSlotAlert: boolean;
 };
 
-type Tab = "browse" | "signups" | "profile";
+type Tab = "browse" | "signups" | "profile" | "training" | "suggestions";
+
+type FeedbackEntry = { id: string; authorRole: string; rating: number | null; note: string; createdAt: string };
+
+const RATING_OPTIONS = [
+  { value: 1, label: "Needs Improvement", active: "bg-red-100 text-red-700 border-red-300", idle: "bg-white text-stone-500 border-stone-200 hover:border-red-200 hover:text-red-600" },
+  { value: 2, label: "Okay",              active: "bg-orange-100 text-orange-700 border-orange-300", idle: "bg-white text-stone-500 border-stone-200 hover:border-orange-200 hover:text-orange-600" },
+  { value: 3, label: "Good",              active: "bg-yellow-100 text-yellow-700 border-yellow-300", idle: "bg-white text-stone-500 border-stone-200 hover:border-yellow-200 hover:text-yellow-600" },
+  { value: 4, label: "Excellent",         active: "bg-green-100 text-green-700 border-green-300",  idle: "bg-white text-stone-500 border-stone-200 hover:border-green-200 hover:text-green-600" },
+  { value: 5, label: "I'd literally hire them", active: "bg-emerald-100 text-emerald-700 border-emerald-300", idle: "bg-white text-stone-500 border-stone-200 hover:border-emerald-200 hover:text-emerald-600" },
+];
+
+type TrainingMaterial = {
+  id: string;
+  title: string;
+  description: string | null;
+  type: string;
+  url: string;
+  fileName: string | null;
+  languageCode: string | null;
+  category: string;
+  uploadedBy: { name: string | null; email: string };
+  createdAt: string;
+};
 
 const LANG_LABELS: Record<string, string> = {
   ES: "Spanish",
@@ -57,6 +80,33 @@ const LANG_COLORS: Record<string, string> = {
   ZH: "bg-red-50 text-red-700",
   KO: "bg-blue-50 text-blue-700",
 };
+
+function MapsLinks({ address }: { address: string }) {
+  const q = encodeURIComponent(address);
+  return (
+    <span className="inline-flex gap-1.5 ml-1.5 items-center">
+      <a
+        href={`https://www.google.com/maps/search/?api=1&query=${q}`}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="text-xs text-blue-500 hover:text-blue-700 underline"
+        title="Google Maps"
+      >
+        G Maps
+      </a>
+      <span className="text-stone-300">·</span>
+      <a
+        href={`https://maps.apple.com/?q=${q}`}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="text-xs text-blue-500 hover:text-blue-700 underline"
+        title="Apple Maps"
+      >
+        Apple Maps
+      </a>
+    </span>
+  );
+}
 
 function formatHour(h: number): string {
   if (h === 0) return "12 AM";
@@ -96,6 +146,8 @@ export default function VolunteerDashboard() {
     unfilledSlotAlert: false,
   });
   const [notifSaved, setNotifSaved] = useState(false);
+  const [trainingMaterials, setTrainingMaterials] = useState<TrainingMaterial[]>([]);
+  const [trainingLoaded, setTrainingLoaded] = useState(false);
   // Anti-spam: track cancel counts per slotId-hour key
   const [cancelCounts, setCancelCounts] = useState<Record<string, number>>({});
   const [spamModal, setSpamModal] = useState<{ onProceed: (() => void) | null; isBlocked: boolean } | null>(null);
@@ -103,6 +155,17 @@ export default function VolunteerDashboard() {
   const [easterBg, setEasterBg] = useState("transparent");
   const [easterOpen, setEasterOpen] = useState(false);
   const [easterCount, setEasterCount] = useState(0);
+
+  // Feedback state — inline (no modal)
+  const [feedbackGiven, setFeedbackGiven] = useState<Set<string>>(new Set()); // slotIds
+  const [feedbackForms, setFeedbackForms] = useState<Record<string, { rating: number; note: string }>>({});
+  const [submittingFeedbackFor, setSubmittingFeedbackFor] = useState<string | null>(null);
+
+  // Suggestions state
+  const [suggForm, setSuggForm] = useState({ type: "FEATURE", subject: "", message: "" });
+  const [suggSubmitting, setSuggSubmitting] = useState(false);
+  const [suggSuccess, setSuggSuccess] = useState(false);
+  const [suggError, setSuggError] = useState("");
 
   const isAdmin = session?.user?.role === "ADMIN" || session?.user?.role === "SUPER_ADMIN";
 
@@ -120,7 +183,11 @@ export default function VolunteerDashboard() {
       fetch("/api/volunteer/notif-prefs"),
     ]);
     if (slotsRes.ok) setBrowseSlots(await slotsRes.json());
-    if (signupsRes.ok) setMySignups(await signupsRes.json());
+    let loadedSignups: MySignup[] = [];
+    if (signupsRes.ok) {
+      loadedSignups = await signupsRes.json();
+      setMySignups(loadedSignups);
+    }
     if (profileRes.ok) {
       const p = await profileRes.json();
       setProfile(p);
@@ -128,6 +195,13 @@ export default function VolunteerDashboard() {
     }
     if (notifRes.ok) setNotifPrefs(await notifRes.json());
     setLoading(false);
+
+    // Load which slots the volunteer already rated — single API call
+    const statusRes = await fetch("/api/feedback/my-status");
+    if (statusRes.ok) {
+      const { givenSlotIds } = await statusRes.json();
+      setFeedbackGiven(new Set<string>(givenSlotIds ?? []));
+    }
   }, []);
 
   const fetchBrowse = useCallback(async () => {
@@ -226,6 +300,40 @@ export default function VolunteerDashboard() {
     setProfileForm({ languages: langs });
   };
 
+  const submitInlineFeedback = async (slotId: string, signupId: string) => {
+    const form = feedbackForms[slotId];
+    if (!form?.rating) return;
+    setSubmittingFeedbackFor(slotId);
+    const res = await fetch("/api/feedback", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ signupId, rating: form.rating, note: form.note ?? "" }),
+    });
+    if (res.ok || res.status === 409) {
+      setFeedbackGiven((prev) => new Set([...prev, slotId]));
+    }
+    setSubmittingFeedbackFor(null);
+  };
+
+  const submitSuggestion = async () => {
+    setSuggSubmitting(true);
+    setSuggError("");
+    const res = await fetch("/api/suggestions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(suggForm),
+    });
+    if (res.ok) {
+      setSuggSuccess(true);
+      setSuggForm({ type: "FEATURE", subject: "", message: "" });
+      setTimeout(() => setSuggSuccess(false), 3000);
+    } else {
+      const err = await res.json().catch(() => ({}));
+      setSuggError(err.error ?? "Could not submit suggestion.");
+    }
+    setSuggSubmitting(false);
+  };
+
   if (status === "loading" || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-stone-50">
@@ -245,66 +353,76 @@ export default function VolunteerDashboard() {
     <div className="min-h-screen bg-stone-50">
       {/* Header */}
       <header className="bg-white border-b border-stone-200">
-        <div className="max-w-6xl mx-auto px-6 py-5 flex items-center justify-between">
-          <div className="flex items-center gap-4">
+        <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
             <div>
-              <h1 className="text-xl font-semibold text-stone-900 tracking-tight">Georgetown Medical Interpreters</h1>
-              <p className="text-sm text-stone-500 mt-0.5">Volunteer Dashboard</p>
+              <h1 className="text-lg font-semibold text-stone-800 tracking-tight">Georgetown Medical Interpreters</h1>
+              <p className="text-xs text-stone-400">Volunteer Dashboard</p>
             </div>
             <a
               href="mailto:georgetownmedicalinterpreters@gmail.com"
-              className="text-sm text-stone-400 hover:text-stone-700 hover:underline underline-offset-2 transition-colors"
+              className="text-sm px-3 py-1.5 bg-stone-100 hover:bg-stone-200 text-stone-600 rounded-md transition-colors"
             >
               Contact Us
             </a>
           </div>
           <div className="flex items-center gap-3">
-            <span className="text-sm text-stone-400 hidden sm:block">{session?.user?.email}</span>
+            <span className="text-sm text-stone-500">{session?.user?.email}</span>
             {isAdmin && (
               <button
                 onClick={() => router.push("/dashboard/admin")}
-                className="text-sm px-3 py-1.5 bg-violet-50 hover:bg-violet-100 text-violet-700 rounded-lg transition-colors font-medium"
+                className="text-sm px-3 py-1.5 bg-violet-50 hover:bg-violet-100 text-violet-700 rounded-md transition-colors"
               >
                 Admin Dashboard
               </button>
             )}
             <button
               onClick={() => signOut({ callbackUrl: "/login" })}
-              className="text-sm px-3 py-1.5 bg-stone-100 hover:bg-stone-200 text-stone-600 rounded-lg transition-colors"
+              className="text-sm px-3 py-1.5 bg-stone-100 hover:bg-stone-200 text-stone-600 rounded-md transition-colors"
             >
               Sign Out
             </button>
           </div>
         </div>
-
-        {/* Tabs */}
-        <div className="max-w-6xl mx-auto px-6">
-          <div className="flex gap-0">
-            {[
-              { key: "browse" as Tab, label: "Browse Slots", count: 0 },
-              { key: "signups" as Tab, label: "My Signups", count: mySignups.length },
-              { key: "profile" as Tab, label: "Profile", count: 0 },
-            ].map((t) => (
-              <button
-                key={t.key}
-                onClick={() => setTab(t.key)}
-                className={`px-4 py-3 text-sm font-medium transition-colors border-b-2 -mb-px ${
-                  tab === t.key
-                    ? "border-stone-900 text-stone-900"
-                    : "border-transparent text-stone-500 hover:text-stone-700 hover:border-stone-300"
-                }`}
-              >
-                {t.label}
-                {t.count > 0 && (
-                  <span className="ml-2 text-xs px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700">
-                    {t.count}
-                  </span>
-                )}
-              </button>
-            ))}
-          </div>
-        </div>
       </header>
+
+      {/* Tabs */}
+      <div className="max-w-6xl mx-auto px-6 pt-6">
+        <div className="flex gap-1 bg-stone-200/50 p-1 rounded-lg w-fit">
+          {[
+            { key: "browse" as Tab, label: "Browse Slots", count: 0 },
+            { key: "signups" as Tab, label: "My Signups", count: mySignups.length },
+            { key: "profile" as Tab, label: "Profile", count: 0 },
+            { key: "training" as Tab, label: "Training", count: 0 },
+            { key: "suggestions" as Tab, label: "Suggestions", count: 0 },
+          ].map((t) => (
+            <button
+              key={t.key}
+              onClick={() => {
+                setTab(t.key);
+                if (t.key === "training" && !trainingLoaded) {
+                  fetch("/api/training")
+                    .then((r) => r.json())
+                    .then((data) => { setTrainingMaterials(data); setTrainingLoaded(true); })
+                    .catch(() => setTrainingLoaded(true));
+                }
+              }}
+              className={`px-4 py-2 text-sm rounded-md transition-colors ${
+                tab === t.key
+                  ? "bg-white text-stone-800 shadow-sm font-medium"
+                  : "text-stone-500 hover:text-stone-700"
+              }`}
+            >
+              {t.label}
+              {t.count > 0 && (
+                <span className="ml-2 text-xs px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700">
+                  {t.count}
+                </span>
+              )}
+            </button>
+          ))}
+        </div>
+      </div>
 
       {/* Content */}
       <div className="max-w-6xl mx-auto px-6 py-6">
@@ -338,7 +456,7 @@ export default function VolunteerDashboard() {
           const renderSlot = (slot: BrowseSlot, isPast: boolean) => {
             const subBlocks = Array.from({ length: slot.endTime - slot.startTime }, (_, i) => slot.startTime + i);
             return (
-              <div key={slot.id} className={`bg-white rounded-xl border border-stone-200 shadow-sm p-5 ${isPast ? "opacity-50" : ""}`}>
+              <div key={slot.id} className={`bg-white rounded-xl border border-stone-200 p-5 ${isPast ? "opacity-50" : ""}`}>
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex items-center gap-3 flex-wrap">
                     <span className={`text-xs px-2 py-1 rounded-full font-medium ${LANG_COLORS[slot.language]}`}>
@@ -354,7 +472,12 @@ export default function VolunteerDashboard() {
                   </div>
                   <div className="text-right">
                     <p className="text-sm font-medium text-stone-800">{slot.clinic.name}</p>
-                    {slot.clinic.address && <p className="text-xs text-stone-400">{slot.clinic.address}</p>}
+                    {slot.clinic.address && (
+                      <p className="text-xs text-stone-400">
+                        {slot.clinic.address}
+                        <MapsLinks address={slot.clinic.address} />
+                      </p>
+                    )}
                   </div>
                 </div>
                 {slot.notes && <p className="text-xs text-stone-400 italic mb-3">{slot.notes}</p>}
@@ -532,7 +655,10 @@ export default function VolunteerDashboard() {
                         </span>
                         <span className="text-sm text-stone-600">{slot.clinic.name}</span>
                         {slot.clinic.address && (
-                          <span className="text-xs text-stone-400">{slot.clinic.address}</span>
+                          <span className="text-xs text-stone-400">
+                            {slot.clinic.address}
+                            <MapsLinks address={slot.clinic.address} />
+                          </span>
                         )}
                       </div>
                       <div className="space-y-2">
@@ -556,6 +682,50 @@ export default function VolunteerDashboard() {
                             </div>
                           ))}
                       </div>
+                      {/* Inline feedback for past slots */}
+                      {(() => {
+                        const end = new Date(slot.date.slice(0, 10) + "T" + String(slot.endTime).padStart(2, "0") + ":00:00");
+                        if (end >= new Date()) return null;
+                        const signupId = sigs[0].id;
+                        if (feedbackGiven.has(slot.id)) {
+                          return <p className="mt-3 pt-3 border-t border-stone-100 text-xs text-emerald-600">✓ Feedback submitted</p>;
+                        }
+                        const form = feedbackForms[slot.id] ?? { rating: 0, note: "" };
+                        return (
+                          <div className="mt-3 pt-3 border-t border-stone-100">
+                            <p className="text-xs text-stone-500 mb-2 font-medium">How was your shift at {slot.clinic.name}?</p>
+                            <div className="flex flex-wrap gap-1.5 mb-2">
+                              {RATING_OPTIONS.map((opt) => (
+                                <button
+                                  key={opt.value}
+                                  onClick={() => setFeedbackForms((prev) => ({ ...prev, [slot.id]: { ...form, rating: opt.value } }))}
+                                  className={`px-2.5 py-1 text-xs rounded-md border transition-colors ${form.rating === opt.value ? opt.active : opt.idle}`}
+                                >
+                                  {opt.label}
+                                </button>
+                              ))}
+                            </div>
+                            {form.rating > 0 && (
+                              <div className="flex gap-2 items-start mt-2">
+                                <textarea
+                                  placeholder="Any comments? (optional)"
+                                  value={form.note}
+                                  onChange={(e) => setFeedbackForms((prev) => ({ ...prev, [slot.id]: { ...form, note: e.target.value } }))}
+                                  rows={2}
+                                  className="flex-1 px-2.5 py-1.5 text-xs border border-stone-200 rounded-md focus:outline-none focus:ring-1 focus:ring-stone-300 resize-none"
+                                />
+                                <button
+                                  disabled={submittingFeedbackFor === slot.id}
+                                  onClick={() => submitInlineFeedback(slot.id, signupId)}
+                                  className="px-3 py-1.5 text-xs bg-stone-800 text-white rounded-md hover:bg-stone-700 transition-colors disabled:opacity-50 whitespace-nowrap"
+                                >
+                                  {submittingFeedbackFor === slot.id ? "..." : "Submit"}
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })()}
                     </div>
                   );
                 })}
@@ -702,7 +872,124 @@ export default function VolunteerDashboard() {
             )}
           </div>
         )}
+
+        {/* Training */}
+        {tab === "training" && (
+          <div className="space-y-4">
+            {!trainingLoaded ? (
+              <div className="bg-white rounded-xl border border-stone-200 p-12 text-center">
+                <p className="text-stone-400">Loading training materials...</p>
+              </div>
+            ) : trainingMaterials.length === 0 ? (
+              <div className="bg-white rounded-xl border border-stone-200 p-12 text-center">
+                <p className="text-stone-400">No training materials available yet.</p>
+              </div>
+            ) : (() => {
+              const categories = Array.from(new Set(trainingMaterials.map((m) => m.category))).sort();
+              return (
+                <div className="space-y-6">
+                  {categories.map((cat) => (
+                    <div key={cat}>
+                      <h3 className="text-xs font-medium text-stone-400 uppercase tracking-wider mb-3">{cat}</h3>
+                      <div className="space-y-3">
+                        {trainingMaterials.filter((m) => m.category === cat).map((m) => (
+                          <div key={m.id} className="bg-white rounded-xl border border-stone-200 p-5">
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="min-w-0 flex-1">
+                                <div className="flex items-center gap-2 flex-wrap mb-1">
+                                  <span className="font-medium text-stone-800 text-sm">{m.title}</span>
+                                  {m.languageCode && (
+                                    <span className="text-xs px-1.5 py-0.5 rounded bg-blue-50 text-blue-700">{m.languageCode}</span>
+                                  )}
+                                  <span className={`text-xs px-1.5 py-0.5 rounded ${m.type === "FILE" ? "bg-amber-50 text-amber-700" : "bg-emerald-50 text-emerald-700"}`}>
+                                    {m.type}
+                                  </span>
+                                </div>
+                                {m.description && <p className="text-xs text-stone-500 mb-2">{m.description}</p>}
+                                {m.type === "FILE" ? (
+                                  <a href={m.url} target="_blank" rel="noopener noreferrer" className="text-xs text-stone-600 hover:text-stone-800 underline">
+                                    {m.fileName ?? "Download"}
+                                  </a>
+                                ) : (
+                                  <a href={m.url} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:text-blue-800 underline break-all">
+                                    {m.url}
+                                  </a>
+                                )}
+                                <p className="text-xs text-stone-400 mt-2">
+                                  by {m.uploadedBy.name ?? m.uploadedBy.email} · {new Date(m.createdAt).toLocaleDateString()}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              );
+            })()}
+          </div>
+        )}
       </div>
+
+      {/* Suggestions */}
+      {tab === "suggestions" && (
+        <div className="max-w-lg space-y-4">
+          <div className="bg-white rounded-xl border border-stone-200 p-6">
+            <h3 className="text-sm font-medium text-stone-700 mb-1">Suggestion Box</h3>
+            <p className="text-xs text-stone-400 mb-5">Have a suggestion for the website? We&apos;d love to hear it.</p>
+
+            {suggSuccess ? (
+              <div className="text-center py-6">
+                <p className="text-emerald-600 font-medium text-sm">Thanks! Your suggestion has been submitted.</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-xs text-stone-500 mb-1">Type</label>
+                  <select
+                    value={suggForm.type}
+                    onChange={(e) => setSuggForm({ ...suggForm, type: e.target.value })}
+                    className="w-full px-3 py-2 text-sm border border-stone-200 rounded-md focus:outline-none focus:ring-2 focus:ring-stone-300 bg-white"
+                  >
+                    <option value="FEATURE">Feature Request</option>
+                    <option value="BUG">Bug Report</option>
+                    <option value="GENERAL">General Feedback</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs text-stone-500 mb-1">Subject</label>
+                  <input
+                    type="text"
+                    placeholder="Brief subject..."
+                    value={suggForm.subject}
+                    onChange={(e) => setSuggForm({ ...suggForm, subject: e.target.value })}
+                    className="w-full px-3 py-2 text-sm border border-stone-200 rounded-md focus:outline-none focus:ring-2 focus:ring-stone-300"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-stone-500 mb-1">Message</label>
+                  <textarea
+                    placeholder="Describe your suggestion in detail..."
+                    value={suggForm.message}
+                    onChange={(e) => setSuggForm({ ...suggForm, message: e.target.value })}
+                    rows={4}
+                    className="w-full px-3 py-2 text-sm border border-stone-200 rounded-md focus:outline-none focus:ring-2 focus:ring-stone-300 resize-none"
+                  />
+                </div>
+                {suggError && <p className="text-xs text-red-500">{suggError}</p>}
+                <button
+                  disabled={suggSubmitting || !suggForm.subject.trim() || !suggForm.message.trim()}
+                  onClick={submitSuggestion}
+                  className="px-4 py-2 text-sm bg-stone-800 text-white hover:bg-stone-700 rounded-md transition-colors disabled:opacity-50"
+                >
+                  {suggSubmitting ? "Submitting..." : "Submit Suggestion"}
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Anti-spam modal */}
       {spamModal && (

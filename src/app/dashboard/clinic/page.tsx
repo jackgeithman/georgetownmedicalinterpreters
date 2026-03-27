@@ -43,11 +43,46 @@ const LANG_LABELS: Record<string, string> = {
   KO: "Korean",
 };
 
+const RATING_OPTIONS = [
+  { value: 1, label: "Needs Improvement", active: "bg-red-100 text-red-700 border-red-300", idle: "bg-white text-stone-500 border-stone-200 hover:border-red-200 hover:text-red-600" },
+  { value: 2, label: "Okay",              active: "bg-orange-100 text-orange-700 border-orange-300", idle: "bg-white text-stone-500 border-stone-200 hover:border-orange-200 hover:text-orange-600" },
+  { value: 3, label: "Good",              active: "bg-yellow-100 text-yellow-700 border-yellow-300", idle: "bg-white text-stone-500 border-stone-200 hover:border-yellow-200 hover:text-yellow-600" },
+  { value: 4, label: "Excellent",         active: "bg-green-100 text-green-700 border-green-300",  idle: "bg-white text-stone-500 border-stone-200 hover:border-green-200 hover:text-green-600" },
+  { value: 5, label: "I'd literally hire them", active: "bg-emerald-100 text-emerald-700 border-emerald-300", idle: "bg-white text-stone-500 border-stone-200 hover:border-emerald-200 hover:text-emerald-600" },
+];
+
 const LANG_COLORS: Record<string, string> = {
   ES: "bg-amber-50 text-amber-700",
   ZH: "bg-red-50 text-red-700",
   KO: "bg-blue-50 text-blue-700",
 };
+
+function MapsLinks({ address }: { address: string }) {
+  const q = encodeURIComponent(address);
+  return (
+    <span className="inline-flex gap-1.5 ml-1.5 items-center">
+      <a
+        href={`https://www.google.com/maps/search/?api=1&query=${q}`}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="text-xs text-blue-500 hover:text-blue-700 underline"
+        title="Google Maps"
+      >
+        G Maps
+      </a>
+      <span className="text-stone-300">·</span>
+      <a
+        href={`https://maps.apple.com/?q=${q}`}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="text-xs text-blue-500 hover:text-blue-700 underline"
+        title="Apple Maps"
+      >
+        Apple Maps
+      </a>
+    </span>
+  );
+}
 
 function formatHour(h: number): string {
   if (h === 0) return "12 AM";
@@ -103,6 +138,10 @@ export default function ClinicDashboard() {
   });
   const [selectedSlotIds, setSelectedSlotIds] = useState<Set<string>>(new Set());
   const [postError, setPostError] = useState("");
+  // Feedback state — inline (no modal), keyed by "${slotId}-${volunteerId}"
+  const [feedbackGiven, setFeedbackGiven] = useState<Set<string>>(new Set());
+  const [feedbackForms, setFeedbackForms] = useState<Record<string, { rating: number; note: string }>>({});
+  const [submittingFeedbackFor, setSubmittingFeedbackFor] = useState<string | null>(null);
 
   useEffect(() => {
     if (status === "unauthenticated") router.push("/login");
@@ -110,12 +149,17 @@ export default function ClinicDashboard() {
   }, [status, session, router]);
 
   const fetchSlots = useCallback(async () => {
-    const [slotsRes, notifRes] = await Promise.all([
+    const [slotsRes, notifRes, statusRes] = await Promise.all([
       fetch("/api/clinic/slots"),
       fetch("/api/clinic/notif-prefs"),
+      fetch("/api/feedback/my-status"),
     ]);
     if (slotsRes.ok) setSlots(await slotsRes.json());
     if (notifRes.ok) setNotifPrefs(await notifRes.json());
+    if (statusRes.ok) {
+      const { givenKeys } = await statusRes.json();
+      setFeedbackGiven(new Set<string>(givenKeys ?? []));
+    }
     setLoading(false);
   }, []);
 
@@ -242,8 +286,30 @@ export default function ClinicDashboard() {
     setActionLoading(null);
   };
 
+  const submitInlineFeedback = async (feedbackKey: string, signupId: string) => {
+    const form = feedbackForms[feedbackKey];
+    if (!form?.rating) return;
+    setSubmittingFeedbackFor(feedbackKey);
+    const res = await fetch("/api/feedback", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ signupId, rating: form.rating, note: form.note ?? "" }),
+    });
+    if (res.ok || res.status === 409) {
+      setFeedbackGiven((prev) => new Set([...prev, feedbackKey]));
+    }
+    setSubmittingFeedbackFor(null);
+  };
+
   const upcoming = slots.filter((s) => s.status === "ACTIVE" && isUpcoming(s));
   const past = slots.filter((s) => !isUpcoming(s) || s.status !== "ACTIVE");
+
+  // Count how many volunteer ratings are still pending across all past slots
+  const pendingFeedbackCount = past.reduce((total, slot) => {
+    const uniqueVolunteers = [...new Map(slot.signups.map((s) => [s.volunteer.id, s])).values()];
+    const pending = uniqueVolunteers.filter((s) => !feedbackGiven.has(`${slot.id}-${s.volunteer.id}`)).length;
+    return total + pending;
+  }, 0);
 
   if (status === "loading" || loading) {
     return (
@@ -272,20 +338,20 @@ export default function ClinicDashboard() {
     <div className="min-h-screen bg-stone-50">
       {/* Header */}
       <header className="bg-white border-b border-stone-200">
-        <div className="max-w-6xl mx-auto px-6 py-5 flex items-center justify-between">
-          <div className="flex items-center gap-4">
+        <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
             <div>
-              <h1 className="text-xl font-semibold text-stone-900 tracking-tight">Georgetown Medical Interpreters</h1>
-              <p className="text-sm text-stone-500 mt-0.5">
+              <h1 className="text-lg font-semibold text-stone-800 tracking-tight">Georgetown Medical Interpreters</h1>
+              <p className="text-xs text-stone-400">
                 Clinic Dashboard
                 {session?.user?.name && (
-                  <span className="ml-1">— {session.user.name}</span>
+                  <span className="ml-1 text-stone-500">— {session.user.name}</span>
                 )}
               </p>
             </div>
             <a
               href="mailto:georgetownmedicalinterpreters@gmail.com"
-              className="text-sm text-stone-400 hover:text-stone-700 hover:underline underline-offset-2 transition-colors"
+              className="text-sm px-3 py-1.5 bg-stone-100 hover:bg-stone-200 text-stone-600 rounded-md transition-colors"
             >
               Contact Us
             </a>
@@ -293,39 +359,45 @@ export default function ClinicDashboard() {
           <div className="flex items-center gap-3">
             <button
               onClick={() => signOut({ callbackUrl: "/login" })}
-              className="text-sm px-3 py-1.5 bg-stone-100 hover:bg-stone-200 text-stone-600 rounded-lg transition-colors"
+              className="text-sm px-3 py-1.5 bg-stone-100 hover:bg-stone-200 text-stone-600 rounded-md transition-colors"
             >
               Sign Out
             </button>
           </div>
         </div>
+      </header>
 
-        {/* Tabs + Post Slot button */}
-        <div className="max-w-6xl mx-auto px-6 flex items-end justify-between">
-          <div className="flex gap-0">
-            {[
-              { key: "upcoming" as Tab, label: "Upcoming", count: upcoming.length },
-              { key: "past" as Tab, label: "Past", count: past.length },
-              { key: "settings" as Tab, label: "Notifications", count: 0 },
-            ].map((t) => (
-              <button
-                key={t.key}
-                onClick={() => setTab(t.key)}
-                className={`px-4 py-3 text-sm font-medium transition-colors border-b-2 -mb-px ${
-                  tab === t.key
-                    ? "border-stone-900 text-stone-900"
-                    : "border-transparent text-stone-500 hover:text-stone-700 hover:border-stone-300"
-                }`}
-              >
-                {t.label}
-                {t.count > 0 && (
-                  <span className="ml-2 text-xs px-1.5 py-0.5 rounded-full bg-stone-100 text-stone-500">
-                    {t.count}
-                  </span>
-                )}
-              </button>
-            ))}
-          </div>
+      {/* Tabs */}
+      <div className="max-w-6xl mx-auto px-6 pt-6 flex items-center justify-between">
+        <div className="flex gap-1 bg-stone-200/50 p-1 rounded-lg w-fit">
+          {[
+            { key: "upcoming" as Tab, label: "Upcoming", count: upcoming.length },
+            { key: "past" as Tab, label: "Past", count: past.length, pendingFeedback: pendingFeedbackCount },
+            { key: "settings" as Tab, label: "Notifications", count: 0 },
+          ].map((t) => (
+            <button
+              key={t.key}
+              onClick={() => setTab(t.key)}
+              className={`relative px-4 py-2 text-sm rounded-md transition-colors ${
+                tab === t.key
+                  ? "bg-white text-stone-800 shadow-sm font-medium"
+                  : "text-stone-500 hover:text-stone-700"
+              }`}
+            >
+              {t.label}
+              {t.count > 0 && (
+                <span className="ml-2 text-xs px-1.5 py-0.5 rounded-full bg-stone-100 text-stone-500">
+                  {t.count}
+                </span>
+              )}
+              {"pendingFeedback" in t && (t.pendingFeedback ?? 0) > 0 && (
+                <span className="ml-1.5 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 text-[10px] font-bold rounded-full bg-red-500 text-white">
+                  {t.pendingFeedback}
+                </span>
+              )}
+            </button>
+          ))}
+        </div>
         {tab === "upcoming" && !showPostForm && (
           <div className="flex items-center gap-3">
             <span className="text-xs text-stone-400">{upcoming.length}/100 slots</span>
@@ -347,8 +419,7 @@ export default function ClinicDashboard() {
             Cancel
           </button>
         )}
-        </div>
-      </header>
+      </div>
 
       {/* Content */}
       <div className="max-w-6xl mx-auto px-6 py-6 space-y-4">
@@ -613,15 +684,18 @@ export default function ClinicDashboard() {
                                 </td>
                                 {isPast && (
                                   <td className="px-4 py-2.5 text-right">
-                                    {signup.status === "ACTIVE" && (
-                                      <button
-                                        disabled={actionLoading === signup.id}
-                                        onClick={() => reportNoShow(slot.id, signup.id)}
-                                        className="text-xs px-2 py-1 bg-amber-50 text-amber-700 hover:bg-amber-100 rounded transition-colors disabled:opacity-50"
-                                      >
-                                        No-Show
-                                      </button>
-                                    )}
+                                    <div className="flex items-center justify-end gap-2">
+                                      {signup.status === "ACTIVE" && (
+                                        <button
+                                          disabled={actionLoading === signup.id}
+                                          onClick={() => reportNoShow(slot.id, signup.id)}
+                                          className="text-xs px-2 py-1 bg-amber-50 text-amber-700 hover:bg-amber-100 rounded transition-colors disabled:opacity-50"
+                                        >
+                                          No-Show
+                                        </button>
+                                      )}
+                                      {/* Rate button removed — ratings now in the section below the table */}
+                                    </div>
                                   </td>
                                 )}
                               </tr>
@@ -646,6 +720,69 @@ export default function ClinicDashboard() {
                     </tbody>
                   </table>
                 </div>
+
+                {/* Inline volunteer feedback section — only for past slots with actual signups */}
+                {isPast && (() => {
+                  const uniqueVols = [...new Map(
+                    slot.signups.map((s) => [s.volunteer.id, s])
+                  ).values()];
+                  if (uniqueVols.length === 0) return null;
+                  const anyPending = uniqueVols.some((s) => !feedbackGiven.has(`${slot.id}-${s.volunteer.id}`));
+                  if (!anyPending) return (
+                    <p className="px-5 pb-4 text-xs text-emerald-600">✓ All volunteers rated</p>
+                  );
+                  return (
+                    <div className="border-t border-stone-100 px-5 py-4 space-y-4">
+                      <p className="text-xs font-medium text-stone-500">Rate volunteers from this shift</p>
+                      {uniqueVols.map((s) => {
+                        const feedbackKey = `${slot.id}-${s.volunteer.id}`;
+                        const form = feedbackForms[feedbackKey] ?? { rating: 0, note: "" };
+                        if (feedbackGiven.has(feedbackKey)) {
+                          return (
+                            <div key={s.volunteer.id} className="flex items-center gap-2">
+                              <span className="text-xs font-medium text-stone-700">{s.volunteer.user.name ?? s.volunteer.user.email}</span>
+                              <span className="text-xs text-emerald-600">✓ Rated</span>
+                            </div>
+                          );
+                        }
+                        return (
+                          <div key={s.volunteer.id}>
+                            <p className="text-xs font-medium text-stone-700 mb-1.5">{s.volunteer.user.name ?? s.volunteer.user.email}</p>
+                            <div className="flex flex-wrap gap-1.5 mb-2">
+                              {RATING_OPTIONS.map((opt) => (
+                                <button
+                                  key={opt.value}
+                                  onClick={() => setFeedbackForms((prev) => ({ ...prev, [feedbackKey]: { ...form, rating: opt.value } }))}
+                                  className={`px-2.5 py-1 text-xs rounded-md border transition-colors ${form.rating === opt.value ? opt.active : opt.idle}`}
+                                >
+                                  {opt.label}
+                                </button>
+                              ))}
+                            </div>
+                            {form.rating > 0 && (
+                              <div className="flex gap-2 items-start">
+                                <textarea
+                                  placeholder="Any comments? (optional)"
+                                  value={form.note}
+                                  onChange={(e) => setFeedbackForms((prev) => ({ ...prev, [feedbackKey]: { ...form, note: e.target.value } }))}
+                                  rows={2}
+                                  className="flex-1 px-2.5 py-1.5 text-xs border border-stone-200 rounded-md focus:outline-none focus:ring-1 focus:ring-stone-300 resize-none"
+                                />
+                                <button
+                                  disabled={submittingFeedbackFor === feedbackKey}
+                                  onClick={() => submitInlineFeedback(feedbackKey, s.id)}
+                                  className="px-3 py-1.5 text-xs bg-stone-800 text-white rounded-md hover:bg-stone-700 transition-colors disabled:opacity-50 whitespace-nowrap"
+                                >
+                                  {submittingFeedbackFor === feedbackKey ? "..." : "Submit"}
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })()}
               </div>
             );
           })

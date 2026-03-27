@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
+// Language field is now a plain String in schema
 
 async function getActiveVolunteer() {
   const session = await getServerSession(authOptions);
@@ -43,8 +44,8 @@ export async function GET(req: NextRequest) {
     where.date = { gte: thirtyDaysAgo };
   }
 
-  if (language && ["ES", "ZH", "KO"].includes(language)) {
-    where.language = language as Prisma.EnumLanguageFilter["equals"];
+  if (language) {
+    where.language = language;
   }
 
   const slots = await prisma.slot.findMany({
