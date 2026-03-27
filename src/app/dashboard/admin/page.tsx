@@ -64,11 +64,11 @@ type AdminProfile = {
 };
 
 type EmailRule = { id: string; email: string; type: "ALLOW" | "BLOCK"; note: string | null };
-type LanguageConfig = { id: string; code: string; name: string; isActive: boolean; createdAt: string };
+type LanguageConfig = { id: string; code: string; name: string; isActive: boolean; createdAt: string; volunteerCount?: number };
 type TrainingMaterial = { id: string; title: string; description: string | null; type: string; url: string; fileName: string | null; languageCode: string | null; category: string; uploadedBy: { name: string | null; email: string }; createdAt: string };
 type Metrics = { totalHours: number; hoursByLanguage: { code: string; name: string; hours: number }[]; hoursByClinic: { clinicId: string; clinicName: string; hours: number }[]; volunteerCount: number; activeSlotCount: number; feedbackCount?: number; avgVolunteerRating?: number | null; avgClinicRating?: number | null };
 type FeatureFlag = { id: string; key: string; label: string; description: string | null; enabled: boolean };
-type Tab = "slots" | "pending" | "users" | "clinics" | "profile" | "access" | "languages" | "metrics" | "training" | "flags" | "suggestions";
+type Tab = "slots" | "users" | "clinics" | "profile" | "access" | "languages" | "metrics" | "training" | "flags" | "suggestions";
 
 type AdminFeedback = {
   id: string;
@@ -191,6 +191,8 @@ export default function AdminDashboard() {
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [testEmailTo, setTestEmailTo] = useState("");
   const [testEmailStatus, setTestEmailStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
+  const [langDeactivateConflict, setLangDeactivateConflict] = useState<{ langId: string; langName: string; conflicts: { id: string; clinicName: string; date: string; language: string }[] } | null>(null);
+  const [langDeactivateLoading, setLangDeactivateLoading] = useState(false);
 
   useEffect(() => {
     if (status === "unauthenticated") router.push("/login");
@@ -453,7 +455,7 @@ export default function AdminDashboard() {
     const res = await fetch("/api/admin/languages", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ code: langForm.code.trim().toUpperCase(), name: langForm.name.trim() }),
+      body: JSON.stringify({ name: langForm.name.trim() }),
     });
     if (res.ok) {
       const lang = await res.json();
@@ -465,16 +467,51 @@ export default function AdminDashboard() {
     }
   };
 
-  const toggleLanguageActive = async (id: string, isActive: boolean) => {
-    const res = await fetch(`/api/admin/languages/${id}`, {
+  const toggleLanguageActive = async (id: string, newIsActive: boolean, langName: string) => {
+    if (!newIsActive) {
+      // Deactivating - check for conflicts first
+      const res = await fetch(`/api/admin/languages/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isActive: false }),
+      });
+      if (res.status === 409) {
+        const data = await res.json();
+        setLangDeactivateConflict({ langId: id, langName, conflicts: data.conflicts });
+        return;
+      }
+      if (res.ok) {
+        const updated = await res.json();
+        setLanguages((prev) => prev.map((l) => (l.id === id ? updated : l)));
+      }
+    } else {
+      // Activating - straightforward
+      const res = await fetch(`/api/admin/languages/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isActive: true }),
+      });
+      if (res.ok) {
+        const updated = await res.json();
+        setLanguages((prev) => prev.map((l) => (l.id === id ? updated : l)));
+      }
+    }
+  };
+
+  const forceDeactivateLanguage = async () => {
+    if (!langDeactivateConflict) return;
+    setLangDeactivateLoading(true);
+    const res = await fetch(`/api/admin/languages/${langDeactivateConflict.langId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ isActive }),
+      body: JSON.stringify({ isActive: false, force: true }),
     });
     if (res.ok) {
       const updated = await res.json();
-      setLanguages((prev) => prev.map((l) => (l.id === id ? updated : l)));
+      setLanguages((prev) => prev.map((l) => (l.id === langDeactivateConflict.langId ? updated : l)));
+      setLangDeactivateConflict(null);
     }
+    setLangDeactivateLoading(false);
   };
 
   const submitTraining = async () => {
@@ -767,12 +804,12 @@ export default function AdminDashboard() {
               <h1 className="text-lg font-semibold text-stone-800 tracking-tight">Georgetown Medical Interpreters</h1>
               <p className="text-xs text-stone-400">Admin Dashboard</p>
             </div>
-            <a
-              href="mailto:georgetownmedicalinterpreters@gmail.com"
+            <button
+              onClick={() => setTab("suggestions")}
               className="text-sm px-3 py-1.5 bg-stone-100 hover:bg-stone-200 text-stone-600 rounded-md transition-colors"
             >
               Contact Us
-            </a>
+            </button>
           </div>
           <div className="flex items-center gap-3">
             <span className="text-sm text-stone-500">{session?.user?.email}</span>
@@ -806,14 +843,13 @@ export default function AdminDashboard() {
         <div className="flex gap-1 bg-stone-200/50 p-1 rounded-lg w-fit">
           {[
             { key: "slots" as Tab, label: "Browse Slots", count: 0 },
-            { key: "pending" as Tab, label: "Pending", count: pendingUsers.length },
-            { key: "users" as Tab, label: "All Users", count: users.length },
+            { key: "users" as Tab, label: "All Users", count: users.length, pendingCount: pendingUsers.length },
             { key: "clinics" as Tab, label: "Clinics", count: clinics.length },
             { key: "profile" as Tab, label: "My Profile", count: 0 },
             { key: "languages" as Tab, label: "Languages", count: 0 },
             { key: "metrics" as Tab, label: "Metrics", count: 0 },
             { key: "training" as Tab, label: "Training", count: 0 },
-            { key: "suggestions" as Tab, label: "Suggestions", count: suggestions.filter((s) => s.status === "OPEN").length },
+            { key: "suggestions" as Tab, label: "Messages", count: suggestions.filter((s) => s.status === "OPEN").length },
             ...(session?.user?.role === "SUPER_ADMIN"
               ? [
                   { key: "access" as Tab, label: "Access Control", count: 0 },
@@ -831,17 +867,15 @@ export default function AdminDashboard() {
               }`}
             >
               {t.label}
-              {t.count > 0 && (
-                <span
-                  className={`ml-2 text-xs px-1.5 py-0.5 rounded-full ${
-                    t.key === "pending" && t.count > 0
-                      ? "bg-amber-100 text-amber-700"
-                      : "bg-stone-100 text-stone-500"
-                  }`}
-                >
+              {("pendingCount" in t) && (t as { pendingCount: number }).pendingCount > 0 ? (
+                <span className="ml-2 text-xs px-1.5 py-0.5 rounded-full bg-red-100 text-red-700">
+                  {(t as { pendingCount: number }).pendingCount}
+                </span>
+              ) : t.count > 0 ? (
+                <span className="ml-2 text-xs px-1.5 py-0.5 rounded-full bg-stone-100 text-stone-500">
                   {t.count}
                 </span>
-              )}
+              ) : null}
             </button>
           ))}
         </div>
@@ -975,47 +1009,6 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        {/* Pending Approvals */}
-        {tab === "pending" && (
-          <div>
-            {pendingUsers.length === 0 ? (
-              <div className="bg-white rounded-xl border border-stone-200 p-12 text-center">
-                <p className="text-stone-400">No pending approvals</p>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {pendingUsers.map((user) => (
-                  <div key={user.id} className="bg-white rounded-xl border border-stone-200 p-5 flex items-center justify-between">
-                    <div>
-                      <p className="font-medium text-stone-800">{user.name}</p>
-                      <p className="text-sm text-stone-500">{user.email}</p>
-                      <p className="text-xs text-stone-400 mt-1">
-                        Applied {new Date(user.createdAt).toLocaleDateString()}
-                      </p>
-                    </div>
-                    <div className="flex gap-2">
-                      <button
-                        disabled={actionLoading === user.id}
-                        onClick={() => updateUser(user.id, { status: "ACTIVE", role: "VOLUNTEER" })}
-                        className="px-4 py-2 text-sm bg-emerald-50 text-emerald-700 hover:bg-emerald-100 rounded-md transition-colors disabled:opacity-50"
-                      >
-                        Approve
-                      </button>
-                      <button
-                        disabled={actionLoading === user.id}
-                        onClick={() => updateUser(user.id, { status: "SUSPENDED" })}
-                        className="px-4 py-2 text-sm bg-red-50 text-red-600 hover:bg-red-100 rounded-md transition-colors disabled:opacity-50"
-                      >
-                        Reject
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-
         {/* All Users */}
         {tab === "users" && (
           <div className="bg-white rounded-xl border border-stone-200 overflow-hidden">
@@ -1025,38 +1018,80 @@ export default function AdminDashboard() {
                   <th className="text-left text-xs font-medium text-stone-400 uppercase tracking-wider px-5 py-3">Name</th>
                   <th className="text-left text-xs font-medium text-stone-400 uppercase tracking-wider px-5 py-3">Email</th>
                   <th className="text-left text-xs font-medium text-stone-400 uppercase tracking-wider px-5 py-3">Role</th>
-                  <th className="text-left text-xs font-medium text-stone-400 uppercase tracking-wider px-5 py-3">Status</th>
-                  <th className="text-left text-xs font-medium text-stone-400 uppercase tracking-wider px-5 py-3">Clinic</th>
                   <th className="text-left text-xs font-medium text-stone-400 uppercase tracking-wider px-5 py-3">Volunteer Stats</th>
                   <th className="text-right text-xs font-medium text-stone-400 uppercase tracking-wider px-5 py-3">Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {users.map((user) => (
-                  <tr key={user.id} className="border-b border-stone-50 last:border-0">
+                {(() => {
+                  const sortedUsers = [...users].sort((a, b) => {
+                    if (a.status === "PENDING_APPROVAL" && b.status !== "PENDING_APPROVAL") return -1;
+                    if (a.status !== "PENDING_APPROVAL" && b.status === "PENDING_APPROVAL") return 1;
+                    return 0;
+                  });
+                  return sortedUsers;
+                })().map((user) => (
+                  <tr key={user.id} className={`border-b border-stone-50 last:border-0 ${user.status === "PENDING_APPROVAL" ? "bg-amber-50/30" : ""}`}>
                     <td className="px-5 py-3.5 text-sm text-stone-800">{user.name}</td>
                     <td className="px-5 py-3.5 text-sm text-stone-500">{user.email}</td>
                     <td className="px-5 py-3.5">
-                      <span className={`text-xs px-2 py-1 rounded-full font-medium ${
-                        user.role === "SUPER_ADMIN" ? "bg-violet-100 text-violet-800" :
-                        user.role === "ADMIN" ? "bg-violet-50 text-violet-700" :
-                        user.role === "CLINIC" ? "bg-blue-50 text-blue-700" :
-                        user.role === "VOLUNTEER" ? "bg-emerald-50 text-emerald-700" :
-                        "bg-stone-100 text-stone-500"
-                      }`}>
-                        {user.role === "SUPER_ADMIN" ? "Super Admin" : user.role}
-                      </span>
+                      <div className="flex flex-wrap gap-1">
+                        {/* Primary role chip */}
+                        <span className={`text-xs px-2 py-0.5 rounded font-medium ${
+                          user.role === "SUPER_ADMIN" ? "bg-violet-100 text-violet-800 border border-violet-200" :
+                          user.role === "ADMIN" ? "bg-violet-50 text-violet-700 border border-violet-100" :
+                          user.role === "INSTRUCTOR" ? "bg-indigo-50 text-indigo-700 border border-indigo-100" :
+                          user.role === "CLINIC" ? "bg-blue-50 text-blue-700 border border-blue-100" :
+                          user.role === "VOLUNTEER" ? "bg-emerald-50 text-emerald-700 border border-emerald-100" :
+                          "bg-stone-100 text-stone-500 border border-stone-200"
+                        }`}>
+                          {user.role === "SUPER_ADMIN" ? "Super Admin" :
+                           user.role.charAt(0) + user.role.slice(1).toLowerCase()}
+                        </span>
+
+                        {/* Volunteer chip for admins/instructors */}
+                        {(user.role === "ADMIN" || user.role === "SUPER_ADMIN" || user.role === "INSTRUCTOR") && user.volunteer && (
+                          <span className="text-xs px-2 py-0.5 rounded font-medium bg-emerald-50 text-emerald-700 border border-emerald-100">
+                            Volunteer
+                          </span>
+                        )}
+
+                        {/* Clearance chip — click to toggle */}
+                        {user.volunteer && (
+                          <button
+                            disabled={actionLoading === `clearance-${user.id}`}
+                            onClick={() => setClearance(user.id, !user.volunteer!.isCleared)}
+                            title={user.volunteer.isCleared ? "Click to revoke clearance" : "Click to mark as cleared"}
+                            className={`text-xs px-2 py-0.5 rounded font-medium transition-opacity disabled:opacity-50 hover:opacity-70 ${
+                              user.volunteer.isCleared
+                                ? "bg-teal-50 text-teal-700 border border-teal-100"
+                                : "bg-amber-50 text-amber-600 border border-amber-100"
+                            }`}
+                          >
+                            {actionLoading === `clearance-${user.id}` ? "…" : user.volunteer.isCleared ? "Cleared" : "Uncleared"}
+                          </button>
+                        )}
+
+                        {/* Status chip — only show if not ACTIVE */}
+                        {user.status === "SUSPENDED" && (
+                          <span className="text-xs px-2 py-0.5 rounded font-medium bg-red-50 text-red-600 border border-red-100">
+                            Suspended
+                          </span>
+                        )}
+                        {user.status === "PENDING_APPROVAL" && (
+                          <span className="text-xs px-2 py-0.5 rounded font-medium bg-amber-50 text-amber-700 border border-amber-100">
+                            Pending
+                          </span>
+                        )}
+                      </div>
+                      {/* Clearance log line below chips */}
+                      {user.volunteer?.clearanceLogs?.[0] && (
+                        <p className="text-xs text-stone-400 mt-1">
+                          by {user.volunteer.clearanceLogs[0].clearedBy.name ?? user.volunteer.clearanceLogs[0].clearedBy.email}{" "}
+                          · {new Date(user.volunteer.clearanceLogs[0].createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                        </p>
+                      )}
                     </td>
-                    <td className="px-5 py-3.5">
-                      <span className={`text-xs px-2 py-1 rounded-full ${
-                        user.status === "ACTIVE" ? "bg-green-50 text-green-700" :
-                        user.status === "SUSPENDED" ? "bg-red-50 text-red-600" :
-                        "bg-amber-50 text-amber-700"
-                      }`}>
-                        {user.status}
-                      </span>
-                    </td>
-                    <td className="px-5 py-3.5 text-sm text-stone-500">{user.clinic?.name || "—"}</td>
                     <td className="px-5 py-3.5">
                       {user.volunteer ? (
                         <div className="flex gap-3 text-xs text-stone-500">
@@ -1077,71 +1112,62 @@ export default function AdminDashboard() {
                     </td>
                     <td className="px-5 py-3.5 text-right">
                       <div className="flex flex-col gap-1.5 items-end">
-                        {user.role !== "SUPER_ADMIN" && (user.role !== "ADMIN" || session?.user?.role === "SUPER_ADMIN") && (
+                        {user.status === "PENDING_APPROVAL" ? (
                           <div className="flex gap-1">
-                            <select
-                              className="text-xs border border-stone-200 rounded px-2 py-1 text-stone-600"
-                              value={user.role}
-                              onChange={(e) => updateUser(user.id, { role: e.target.value })}
+                            <button
+                              disabled={actionLoading === user.id}
+                              onClick={() => updateUser(user.id, { status: "ACTIVE", role: "VOLUNTEER" })}
+                              className="px-3 py-1.5 text-xs bg-emerald-50 text-emerald-700 hover:bg-emerald-100 rounded-md transition-colors disabled:opacity-50"
                             >
-                              <option value="VOLUNTEER">Volunteer</option>
-                              <option value="CLINIC">Clinic</option>
-                              {session?.user?.role === "SUPER_ADMIN" && (
-                                <option value="ADMIN">Admin</option>
+                              Approve
+                            </button>
+                            <button
+                              disabled={actionLoading === user.id}
+                              onClick={() => updateUser(user.id, { status: "SUSPENDED" })}
+                              className="px-3 py-1.5 text-xs bg-red-50 text-red-600 hover:bg-red-100 rounded-md transition-colors disabled:opacity-50"
+                            >
+                              Reject
+                            </button>
+                          </div>
+                        ) : (
+                          user.role !== "SUPER_ADMIN" && (user.role !== "ADMIN" || session?.user?.role === "SUPER_ADMIN") && (
+                            <div className="flex gap-1">
+                              <select
+                                className="text-xs border border-stone-200 rounded px-2 py-1 text-stone-600"
+                                value={user.role}
+                                onChange={(e) => updateUser(user.id, { role: e.target.value })}
+                              >
+                                <option value="VOLUNTEER">Volunteer</option>
+                                <option value="CLINIC">Clinic</option>
+                                {session?.user?.role === "SUPER_ADMIN" && (
+                                  <option value="ADMIN">Admin</option>
+                                )}
+                              </select>
+                              {user.role === "CLINIC" && (
+                                <button
+                                  onClick={() => setAssignModal({ userId: user.id, userName: user.name })}
+                                  className="text-xs px-2 py-1 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded transition-colors"
+                                >
+                                  Assign Clinic
+                                </button>
                               )}
-                            </select>
-                            {user.role === "CLINIC" && (
-                              <button
-                                onClick={() => setAssignModal({ userId: user.id, userName: user.name })}
-                                className="text-xs px-2 py-1 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded transition-colors"
-                              >
-                                Assign Clinic
-                              </button>
-                            )}
-                            {user.status === "ACTIVE" ? (
-                              <button
-                                onClick={() => updateUser(user.id, { status: "SUSPENDED" })}
-                                className="text-xs px-2 py-1 bg-red-50 text-red-600 hover:bg-red-100 rounded transition-colors"
-                              >
-                                Suspend
-                              </button>
-                            ) : (
-                              <button
-                                onClick={() => updateUser(user.id, { status: "ACTIVE" })}
-                                className="text-xs px-2 py-1 bg-green-50 text-green-700 hover:bg-green-100 rounded transition-colors"
-                              >
-                                Activate
-                              </button>
-                            )}
-                          </div>
-                        )}
-                        {user.role === "VOLUNTEER" && user.volunteer && (
-                          <div className="flex flex-col items-end gap-0.5">
-                            <div className="flex items-center gap-1.5">
-                              <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                                user.volunteer.isCleared ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"
-                              }`}>
-                                {user.volunteer.isCleared ? "Cleared" : "Not Cleared"}
-                              </span>
-                              <button
-                                disabled={actionLoading === `clearance-${user.id}`}
-                                onClick={() => setClearance(user.id, !user.volunteer!.isCleared)}
-                                className={`text-xs px-2 py-0.5 rounded transition-colors disabled:opacity-50 ${
-                                  user.volunteer.isCleared
-                                    ? "bg-red-50 text-red-600 hover:bg-red-100"
-                                    : "bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
-                                }`}
-                              >
-                                {actionLoading === `clearance-${user.id}` ? "..." : user.volunteer.isCleared ? "Revoke" : "Mark Cleared"}
-                              </button>
+                              {user.status === "ACTIVE" ? (
+                                <button
+                                  onClick={() => updateUser(user.id, { status: "SUSPENDED" })}
+                                  className="text-xs px-2 py-1 bg-red-50 text-red-600 hover:bg-red-100 rounded transition-colors"
+                                >
+                                  Suspend
+                                </button>
+                              ) : (
+                                <button
+                                  onClick={() => updateUser(user.id, { status: "ACTIVE" })}
+                                  className="text-xs px-2 py-1 bg-green-50 text-green-700 hover:bg-green-100 rounded transition-colors"
+                                >
+                                  Activate
+                                </button>
+                              )}
                             </div>
-                            {user.volunteer.clearanceLogs[0] && (
-                              <p className="text-xs text-stone-400">
-                                by {user.volunteer.clearanceLogs[0].clearedBy.name ?? user.volunteer.clearanceLogs[0].clearedBy.email}{" "}
-                                · {new Date(user.volunteer.clearanceLogs[0].createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
-                              </p>
-                            )}
-                          </div>
+                          )
                         )}
                       </div>
                     </td>
@@ -1320,20 +1346,13 @@ export default function AdminDashboard() {
               <p className="text-xs text-stone-400 mb-4">Inactive languages are hidden from dropdowns but shown here.</p>
               <div className="flex gap-3">
                 <input
-                  placeholder="Code (e.g. FR)"
-                  value={langForm.code}
-                  onChange={(e) => setLangForm({ ...langForm, code: e.target.value.toUpperCase() })}
-                  maxLength={4}
-                  className="w-28 px-3 py-2 text-sm border border-stone-200 rounded-md focus:outline-none focus:ring-2 focus:ring-stone-300 uppercase"
-                />
-                <input
                   placeholder="Name (e.g. French)"
                   value={langForm.name}
                   onChange={(e) => setLangForm({ ...langForm, name: e.target.value })}
                   className="flex-1 px-3 py-2 text-sm border border-stone-200 rounded-md focus:outline-none focus:ring-2 focus:ring-stone-300"
                 />
                 <button
-                  disabled={!langForm.code || !langForm.name}
+                  disabled={!langForm.name}
                   onClick={createLanguage}
                   className="px-4 py-2 text-sm bg-stone-800 text-white hover:bg-stone-700 rounded-md transition-colors disabled:opacity-50"
                 >
@@ -1354,15 +1373,15 @@ export default function AdminDashboard() {
                 {languages.map((lang) => (
                   <div key={lang.id} className="flex items-center justify-between px-5 py-3 gap-3">
                     <div className="flex items-center gap-3">
-                      <span className="text-xs font-mono font-semibold px-2 py-1 bg-stone-100 text-stone-700 rounded">{lang.code}</span>
                       <span className="text-sm text-stone-800">{lang.name}</span>
+                      <span className="text-xs text-stone-400">{lang.volunteerCount ?? 0} volunteer{(lang.volunteerCount ?? 0) !== 1 ? "s" : ""}</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <span className={`text-xs px-2 py-0.5 rounded-full ${lang.isActive ? "bg-emerald-50 text-emerald-700" : "bg-stone-100 text-stone-400"}`}>
                         {lang.isActive ? "Active" : "Inactive"}
                       </span>
                       <button
-                        onClick={() => toggleLanguageActive(lang.id, !lang.isActive)}
+                        onClick={() => toggleLanguageActive(lang.id, !lang.isActive, lang.name)}
                         className={`text-xs px-2 py-1 rounded-md transition-colors ${
                           lang.isActive
                             ? "bg-stone-100 text-stone-600 hover:bg-stone-200"
@@ -1768,12 +1787,12 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        {/* Suggestions — admin/super_admin */}
+        {/* Messages — admin/super_admin */}
         {tab === "suggestions" && (
           <div className="space-y-4">
             {suggestions.length === 0 ? (
               <div className="bg-white rounded-xl border border-stone-200 p-12 text-center">
-                <p className="text-stone-400">No suggestions yet.</p>
+                <p className="text-stone-400">No messages yet.</p>
               </div>
             ) : (
               <div className="space-y-3">
@@ -1785,9 +1804,10 @@ export default function AdminDashboard() {
                           <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
                             s.type === "BUG" ? "bg-red-50 text-red-700" :
                             s.type === "FEATURE" ? "bg-blue-50 text-blue-700" :
+                            s.type === "CONTACT" ? "bg-teal-50 text-teal-700" :
                             "bg-stone-100 text-stone-600"
                           }`}>
-                            {s.type === "FEATURE" ? "Feature" : s.type === "BUG" ? "Bug" : "General"}
+                            {s.type === "BUG" ? "Bug" : s.type === "FEATURE" ? "Feature" : s.type === "CONTACT" ? "Contact" : "General"}
                           </span>
                           <span className="font-medium text-stone-800 text-sm">{s.subject}</span>
                           <span className="text-xs text-stone-400">{new Date(s.createdAt).toLocaleDateString()}</span>
@@ -1826,6 +1846,17 @@ export default function AdminDashboard() {
                           <option value="NOTED">NOTED</option>
                           <option value="CLOSED">CLOSED</option>
                         </select>
+                        {s.status === "CLOSED" && (
+                          <button
+                            onClick={async () => {
+                              const res = await fetch(`/api/suggestions/${s.id}`, { method: "DELETE" });
+                              if (res.ok) setSuggestions((prev) => prev.filter((x) => x.id !== s.id));
+                            }}
+                            className="text-xs px-2 py-1 bg-red-50 text-red-500 hover:bg-red-100 rounded transition-colors"
+                          >
+                            Delete
+                          </button>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -2050,6 +2081,45 @@ export default function AdminDashboard() {
             >
               Done
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Language Deactivate Conflict Modal */}
+      {langDeactivateConflict && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-md">
+            <div className="px-6 py-4 border-b border-stone-100">
+              <h3 className="text-sm font-semibold text-stone-800">Deactivate {langDeactivateConflict.langName}?</h3>
+              <p className="text-xs text-stone-400 mt-0.5">This will affect upcoming clinic postings.</p>
+            </div>
+            <div className="px-6 py-4">
+              <p className="text-sm text-stone-600 mb-3">
+                The following upcoming slots use <strong>{langDeactivateConflict.langName}</strong> and will be <strong>deleted</strong> if you proceed. Clinics will be notified.
+              </p>
+              <div className="max-h-40 overflow-y-auto space-y-1 mb-4">
+                {langDeactivateConflict.conflicts.map((c) => (
+                  <div key={c.id} className="text-xs text-stone-600 py-1 border-b border-stone-50 last:border-0">
+                    <span className="font-medium">{c.clinicName}</span> · {new Date(c.date.slice(0,10) + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                  </div>
+                ))}
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setLangDeactivateConflict(null)}
+                  className="flex-1 px-4 py-2 text-sm border border-stone-200 text-stone-600 rounded-lg hover:bg-stone-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  disabled={langDeactivateLoading}
+                  onClick={forceDeactivateLanguage}
+                  className="flex-1 px-4 py-2 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50"
+                >
+                  {langDeactivateLoading ? "Deactivating..." : "Deactivate & Delete Slots"}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

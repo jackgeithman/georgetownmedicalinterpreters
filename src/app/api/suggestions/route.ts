@@ -30,12 +30,26 @@ export async function POST(req: NextRequest) {
   if (!subject || !subject.trim()) return NextResponse.json({ error: "subject required" }, { status: 400 });
   if (!message || !message.trim()) return NextResponse.json({ error: "message required" }, { status: 400 });
 
-  // Clinic sessions don't have a userId in the user table, so submittedById may be null
   const isClinic = (session.user as { isClinicSession?: boolean }).isClinicSession || session.user.role === "CLINIC";
   let submittedById: string | null = null;
 
   if (!isClinic && session.user.id) {
     submittedById = session.user.id as string;
+
+    // Rate limit: max 3 per user per 24 hours
+    const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const recentCount = await prisma.suggestion.count({
+      where: {
+        submittedById,
+        createdAt: { gte: since },
+      },
+    });
+    if (recentCount >= 3) {
+      return NextResponse.json(
+        { error: "You can submit up to 3 suggestions per day. Please try again tomorrow." },
+        { status: 429 }
+      );
+    }
   }
 
   const suggestion = await prisma.suggestion.create({
