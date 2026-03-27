@@ -26,24 +26,24 @@ export default function DashboardPage() {
 
   if (status === "loading") {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-stone-50">
-        <p className="text-stone-500 text-lg">Loading...</p>
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <p className="text-gray-500 text-lg">Loading...</p>
       </div>
     );
   }
 
   if (session?.user?.status === "PENDING_APPROVAL") {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-stone-50">
-        <div className="bg-white p-8 rounded-xl shadow-sm border border-stone-200 max-w-md text-center">
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="bg-white p-8 rounded-xl shadow-sm border border-gray-200 max-w-md text-center">
           <div className="w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <span className="text-amber-600 text-xl">⏳</span>
           </div>
-          <h2 className="text-xl font-semibold text-stone-800 mb-2">Pending Approval</h2>
-          <p className="text-stone-500 mb-6">Your account is awaiting admin approval. You&apos;ll receive an email when approved.</p>
+          <h2 className="text-xl font-semibold text-black mb-2">Pending Approval</h2>
+          <p className="text-gray-500 mb-6">Your account is awaiting admin approval. You&apos;ll receive an email when approved.</p>
           <button
             onClick={() => signOut({ callbackUrl: "/login" })}
-            className="text-sm text-stone-400 hover:text-stone-600 underline"
+            className="text-sm text-gray-400 hover:text-gray-700 underline"
           >
             Sign Out
           </button>
