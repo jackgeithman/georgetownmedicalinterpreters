@@ -43,6 +43,8 @@ const LANG_LABELS: Record<string, string> = {
   KO: "Korean",
 };
 
+<<<<<<< HEAD
+=======
 const RATING_OPTIONS = [
   { value: 1, label: "Needs Improvement", active: "bg-red-100 text-red-700 border-red-300", idle: "bg-white text-gray-500 border-gray-200 hover:border-red-200 hover:text-red-600" },
   { value: 2, label: "Okay",              active: "bg-orange-100 text-orange-700 border-orange-300", idle: "bg-white text-gray-500 border-gray-200 hover:border-orange-200 hover:text-orange-600" },
@@ -84,6 +86,7 @@ function MapsLinks({ address }: { address: string }) {
   );
 }
 
+>>>>>>> origin/main
 function formatHour(h: number): string {
   if (h === 0) return "12 AM";
   if (h < 12) return `${h} AM`;
@@ -93,20 +96,48 @@ function formatHour(h: number): string {
 
 function formatDate(s: string): string {
   const d = new Date(s.slice(0, 10) + "T12:00:00");
-  return d.toLocaleDateString("en-US", {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-  });
+  return d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+}
+
+function formatDateLong(s: string): string {
+  return new Date(s.slice(0, 10) + "T12:00:00").toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
 }
 
 function isUpcoming(slot: Slot): boolean {
-  // A slot is upcoming until its end time has passed (local/browser time matches ET for GMI)
-  const slotEnd = new Date(slot.date.slice(0, 10) + "T" + String(slot.endTime).padStart(2, "0") + ":00:00");
-  return slotEnd > new Date();
+  return new Date(slot.date.slice(0, 10) + "T" + String(slot.endTime).padStart(2, "0") + ":00:00") > new Date();
 }
 
 const HOUR_OPTIONS = Array.from({ length: 24 }, (_, i) => i);
+
+const iStyle: React.CSSProperties = {
+  width: "100%", padding: "10px 14px", border: "1.5px solid var(--card-border)",
+  borderRadius: "9px", fontFamily: "inherit", fontSize: "0.9rem",
+  color: "var(--gray-900)", background: "#fff", outline: "none",
+};
+
+const btnPrimary: React.CSSProperties = {
+  background: "var(--blue)", color: "#fff", border: "none", borderRadius: "9px",
+  padding: "10px 22px", fontFamily: "inherit", fontSize: "0.875rem", fontWeight: 600,
+  cursor: "pointer", transition: "all .18s",
+};
+
+const card: React.CSSProperties = {
+  background: "var(--card-bg)", border: "1.5px solid var(--card-border)",
+  borderRadius: "14px", overflow: "hidden", marginBottom: "14px",
+  boxShadow: "0 2px 6px rgba(0,0,0,.05)",
+};
+
+function Toggle({ on, onToggle }: { on: boolean; onToggle: () => void }) {
+  return (
+    <button role="switch" aria-checked={on} onClick={onToggle} style={{ flexShrink: 0, position: "relative", display: "inline-flex", height: "22px", width: "38px", borderRadius: "99px", border: "none", cursor: "pointer", background: on ? "var(--blue)" : "var(--gray-200)", transition: "background .15s" }}>
+      <span style={{ display: "inline-block", width: "16px", height: "16px", borderRadius: "50%", background: "#fff", position: "absolute", top: "3px", left: on ? "19px" : "3px", transition: "left .15s", boxShadow: "0 1px 2px rgba(0,0,0,.2)" }} />
+    </button>
+  );
+}
+
+function FieldLabel({ children }: { children: React.ReactNode }) {
+  return <label style={{ display: "block", fontSize: "0.72rem", fontWeight: 700, textTransform: "uppercase" as const, letterSpacing: "0.08em", color: "var(--gray-600)", marginBottom: "6px" }}>{children}</label>;
+}
 
 export default function ClinicDashboard() {
   const { data: session, status } = useSession();
@@ -120,22 +151,9 @@ export default function ClinicDashboard() {
   const [editScope, setEditScope] = useState<"single" | "this_and_future">("single");
   const [cancelConfirm, setCancelConfirm] = useState<CancelConfirm | null>(null);
   const [editWarning, setEditWarning] = useState<{ cancelCount: number } | null>(null);
-  const [notifPrefs, setNotifPrefs] = useState<ClinicNotifPrefs>({
-    dailySummary: true,
-    volunteerCancelWindow: null,
-    unfilledAlert24h: true,
-  });
+  const [notifPrefs, setNotifPrefs] = useState<ClinicNotifPrefs>({ dailySummary: true, volunteerCancelWindow: null, unfilledAlert24h: true });
   const [notifSaved, setNotifSaved] = useState(false);
-  const [form, setForm] = useState({
-    language: "ES",
-    date: "",
-    startTime: 9,
-    endTime: 12,
-    interpreterCount: 1,
-    notes: "",
-    isRecurring: false,
-    recurrenceEndDate: "",
-  });
+  const [form, setForm] = useState({ language: "ES", date: "", startTime: 9, endTime: 12, interpreterCount: 1, notes: "", isRecurring: false, recurrenceEndDate: "" });
   const [selectedSlotIds, setSelectedSlotIds] = useState<Set<string>>(new Set());
   const [postError, setPostError] = useState("");
   const [activeLanguages, setActiveLanguages] = useState<{ code: string; name: string }[]>([]);
@@ -150,11 +168,15 @@ export default function ClinicDashboard() {
   }, [status, session, router]);
 
   const fetchSlots = useCallback(async () => {
+<<<<<<< HEAD
+    const [slotsRes, notifRes] = await Promise.all([fetch("/api/clinic/slots"), fetch("/api/clinic/notif-prefs")]);
+=======
     const [slotsRes, notifRes, statusRes] = await Promise.all([
       fetch("/api/clinic/slots"),
       fetch("/api/clinic/notif-prefs"),
       fetch("/api/feedback/my-status"),
     ]);
+>>>>>>> origin/main
     if (slotsRes.ok) setSlots(await slotsRes.json());
     if (notifRes.ok) setNotifPrefs(await notifRes.json());
     if (statusRes.ok) {
@@ -164,6 +186,9 @@ export default function ClinicDashboard() {
     setLoading(false);
   }, []);
 
+<<<<<<< HEAD
+  useEffect(() => { if (session?.user?.role === "CLINIC") fetchSlots(); }, [session, fetchSlots]);
+=======
   useEffect(() => {
     if (session?.user?.role === "CLINIC") {
       fetchSlots();
@@ -173,124 +198,67 @@ export default function ClinicDashboard() {
         .catch(() => {});
     }
   }, [session, fetchSlots]);
+>>>>>>> origin/main
 
   const saveNotifPrefs = async (updated: ClinicNotifPrefs) => {
-    await fetch("/api/clinic/notif-prefs", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(updated),
-    });
-    setNotifPrefs(updated);
-    setNotifSaved(true);
-    setTimeout(() => setNotifSaved(false), 2000);
+    await fetch("/api/clinic/notif-prefs", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(updated) });
+    setNotifPrefs(updated); setNotifSaved(true); setTimeout(() => setNotifSaved(false), 2000);
   };
 
   const postSlot = async () => {
-    if (!form.date) return;
-    if (form.isRecurring && !form.recurrenceEndDate) return;
-    setActionLoading("post");
-    setPostError("");
-    const res = await fetch("/api/clinic/slots", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(form),
-    });
+    if (!form.date || (form.isRecurring && !form.recurrenceEndDate)) return;
+    setActionLoading("post"); setPostError("");
+    const res = await fetch("/api/clinic/slots", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(form) });
     if (res.ok) {
-      await fetchSlots();
-      setShowPostForm(false);
+      await fetchSlots(); setShowPostForm(false);
       setForm({ language: "ES", date: "", startTime: 9, endTime: 12, interpreterCount: 1, notes: "", isRecurring: false, recurrenceEndDate: "" });
-    } else {
-      const data = await res.json().catch(() => ({}));
-      setPostError(data.error ?? "Could not post slot.");
-    }
+    } else { const d = await res.json().catch(() => ({})); setPostError(d.error ?? "Could not post slot."); }
     setActionLoading(null);
   };
 
   const toggleSelectSlot = (slotId: string) => {
-    setSelectedSlotIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(slotId)) next.delete(slotId);
-      else next.add(slotId);
-      return next;
-    });
+    setSelectedSlotIds((prev) => { const next = new Set(prev); if (next.has(slotId)) next.delete(slotId); else next.add(slotId); return next; });
   };
 
   const cancelSelectedSlots = async () => {
-    if (selectedSlotIds.size === 0) return;
-    if (!confirm(`Cancel ${selectedSlotIds.size} selected slot(s)? This cannot be undone.`)) return;
+    if (!selectedSlotIds.size || !confirm(`Cancel ${selectedSlotIds.size} slot(s)? This cannot be undone.`)) return;
     setActionLoading("batch-delete");
-    for (const slotId of selectedSlotIds) {
-      await fetch(`/api/clinic/slots/${slotId}?deleteScope=single`, { method: "DELETE" });
-    }
-    setSelectedSlotIds(new Set());
-    await fetchSlots();
-    setActionLoading(null);
+    for (const id of selectedSlotIds) await fetch(`/api/clinic/slots/${id}?deleteScope=single`, { method: "DELETE" });
+    setSelectedSlotIds(new Set()); await fetchSlots(); setActionLoading(null);
   };
 
-  // Called when the clinic clicks "Save Changes" — checks for affected volunteers first.
   const requestSaveEdit = () => {
     if (!editSlot) return;
     const original = slots.find((s) => s.id === editSlot.id);
     if (!original) { void confirmSaveEdit(); return; }
-
     const dateChanged = editSlot.date.split("T")[0] !== original.date.split("T")[0];
     const langChanged = editSlot.language !== original.language;
-
     const cancelCount = original.signups.filter((s) => {
       if (s.status !== "ACTIVE") return false;
-      if (langChanged || dateChanged) return true; // all signups affected
+      if (langChanged || dateChanged) return true;
       return s.subBlockHour < editSlot.startTime || s.subBlockHour >= editSlot.endTime;
     }).length;
-
-    if (cancelCount > 0) {
-      setEditWarning({ cancelCount });
-    } else {
-      void confirmSaveEdit();
-    }
+    if (cancelCount > 0) setEditWarning({ cancelCount }); else void confirmSaveEdit();
   };
 
-  // Actually sends the PATCH request — called after confirmation.
   const confirmSaveEdit = async () => {
     if (!editSlot) return;
-    setEditWarning(null);
-    setActionLoading("edit");
-    const res = await fetch(`/api/clinic/slots/${editSlot.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        language: editSlot.language,
-        date: editSlot.date.split("T")[0],
-        startTime: editSlot.startTime,
-        endTime: editSlot.endTime,
-        interpreterCount: editSlot.interpreterCount,
-        notes: editSlot.notes,
-        editScope,
-      }),
-    });
-    if (res.ok) {
-      await fetchSlots();
-      setEditSlot(null);
-    }
+    setEditWarning(null); setActionLoading("edit");
+    const res = await fetch(`/api/clinic/slots/${editSlot.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ language: editSlot.language, date: editSlot.date.split("T")[0], startTime: editSlot.startTime, endTime: editSlot.endTime, interpreterCount: editSlot.interpreterCount, notes: editSlot.notes, editScope }) });
+    if (res.ok) { await fetchSlots(); setEditSlot(null); }
     setActionLoading(null);
   };
 
   const cancelSlot = async (slotId: string, deleteScope: "single" | "this_and_future") => {
     setActionLoading(slotId);
     const res = await fetch(`/api/clinic/slots/${slotId}?deleteScope=${deleteScope}`, { method: "DELETE" });
-    if (res.ok) await fetchSlots();
-    setCancelConfirm(null);
-    setActionLoading(null);
+    if (res.ok) await fetchSlots(); setCancelConfirm(null); setActionLoading(null);
   };
 
   const reportNoShow = async (slotId: string, signupId: string) => {
     setActionLoading(signupId);
-    const res = await fetch(`/api/clinic/slots/${slotId}/no-show`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ signupId }),
-    });
-    if (res.ok) await fetchSlots();
-    setActionLoading(null);
+    const res = await fetch(`/api/clinic/slots/${slotId}/no-show`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ signupId }) });
+    if (res.ok) await fetchSlots(); setActionLoading(null);
   };
 
   const submitInlineFeedback = async (feedbackKey: string, signupId: string) => {
@@ -311,6 +279,15 @@ export default function ClinicDashboard() {
   const upcoming = slots.filter((s) => s.status === "ACTIVE" && isUpcoming(s));
   const past = slots.filter((s) => !isUpcoming(s) || s.status !== "ACTIVE");
 
+<<<<<<< HEAD
+  if (status === "loading" || loading) return <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--page-bg)" }}><p style={{ color: "var(--gray-400)" }}>Loading…</p></div>;
+
+  if (!session?.user?.clinicId) return (
+    <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--page-bg)" }}>
+      <div style={{ textAlign: "center" }}>
+        <p style={{ fontWeight: 600, color: "var(--gray-900)" }}>No clinic assigned</p>
+        <p style={{ color: "var(--gray-600)", fontSize: "0.875rem", marginTop: "6px" }}>Contact your admin to be assigned to a clinic.</p>
+=======
   // Count how many volunteer ratings are still pending across all past slots
   const pendingFeedbackCount = past.reduce((total, slot) => {
     const uniqueVolunteers = [...new Map(slot.signups.map((s) => [s.volunteer.id, s])).values()];
@@ -335,13 +312,27 @@ export default function ClinicDashboard() {
             Contact your admin to be assigned to a clinic.
           </p>
         </div>
+>>>>>>> origin/main
       </div>
-    );
-  }
+    </div>
+  );
 
   const displaySlots = tab === "upcoming" ? upcoming : past;
+  const upcomingByDate: Record<string, Slot[]> = {};
+  for (const s of upcoming) { const label = formatDateLong(s.date); if (!upcomingByDate[label]) upcomingByDate[label] = []; upcomingByDate[label].push(s); }
+  const postDisabled = !form.date || form.endTime <= form.startTime || (form.isRecurring && !form.recurrenceEndDate) || actionLoading === "post";
 
   return (
+<<<<<<< HEAD
+    <div style={{ minHeight: "100vh", background: "var(--page-bg)" }}>
+      {/* Topbar */}
+      <header style={{ background: "var(--navy)", height: "64px", position: "sticky", top: 0, zIndex: 100, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 32px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
+          <div style={{ width: "36px", height: "36px", borderRadius: "9px", background: "linear-gradient(135deg,#2563EB,#60A5FA)", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, color: "#fff", fontSize: "1rem" }}>G</div>
+          <div>
+            <div style={{ color: "#fff", fontSize: "0.95rem", fontWeight: 600 }}>Georgetown Medical Interpreters</div>
+            <div style={{ color: "#94A3B8", fontSize: "0.72rem" }}>Clinic Dashboard{session?.user?.name ? ` — ${session.user.name}` : ""}</div>
+=======
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <header className="bg-[#041E42]">
@@ -370,10 +361,38 @@ export default function ClinicDashboard() {
             >
               Sign Out
             </button>
+>>>>>>> origin/main
           </div>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
+          <a href="mailto:georgetownmedicalinterpreters@gmail.com" style={{ color: "#CBD5E1", fontSize: "0.8rem", textDecoration: "none", padding: "6px 12px", borderRadius: "8px", border: "1px solid rgba(255,255,255,.15)" }}>Contact Us</a>
+          <button onClick={() => signOut({ callbackUrl: "/login" })} style={{ background: "rgba(255,255,255,.08)", border: "1px solid rgba(255,255,255,.2)", color: "#fff", fontFamily: "inherit", fontSize: "0.8rem", fontWeight: 500, padding: "7px 16px", borderRadius: "8px", cursor: "pointer" }}>Sign Out</button>
         </div>
       </header>
 
+<<<<<<< HEAD
+      <main style={{ maxWidth: "920px", margin: "0 auto", padding: "36px 24px" }}>
+        {/* Tabs + action */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "28px" }}>
+          <div style={{ display: "flex", gap: "4px", background: "var(--card-bg)", padding: "5px", borderRadius: "12px", boxShadow: "0 1px 3px rgba(0,0,0,.08)", border: "1px solid var(--card-border)" }}>
+            {[{ key: "upcoming" as Tab, label: "Upcoming", count: upcoming.length }, { key: "past" as Tab, label: "Past", count: past.length }, { key: "settings" as Tab, label: "Notifications" }].map((t) => (
+              <button key={t.key} onClick={() => setTab(t.key)} style={{ padding: "9px 20px", borderRadius: "9px", fontSize: "0.9rem", fontWeight: 500, cursor: "pointer", border: "none", fontFamily: "inherit", transition: "all .15s", background: tab === t.key ? "var(--blue)" : "none", color: tab === t.key ? "#fff" : "var(--gray-600)", whiteSpace: "nowrap" }}>
+                {t.label}
+                {t.count !== undefined && t.count > 0 && <span style={{ background: tab === t.key ? "rgba(255,255,255,.3)" : "var(--gray-200)", color: tab === t.key ? "#fff" : "var(--gray-600)", fontSize: "0.7rem", fontWeight: 700, padding: "1px 7px", borderRadius: "99px", marginLeft: "5px" }}>{t.count}</span>}
+              </button>
+            ))}
+          </div>
+          {tab === "upcoming" && (
+            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+              <span style={{ fontSize: "0.82rem", color: "var(--gray-400)" }}>{upcoming.length}/100 slots</span>
+              {!showPostForm
+                ? <button onClick={() => setShowPostForm(true)} disabled={upcoming.length >= 100} style={{ ...btnPrimary, opacity: upcoming.length >= 100 ? 0.4 : 1 }}>+ Post Slot</button>
+                : <button onClick={() => setShowPostForm(false)} style={{ padding: "10px 22px", borderRadius: "9px", background: "none", border: "1.5px solid var(--card-border)", color: "var(--gray-600)", fontFamily: "inherit", fontSize: "0.875rem", cursor: "pointer" }}>Cancel</button>
+              }
+            </div>
+          )}
+        </div>
+=======
       {/* Tabs */}
       <div className="max-w-6xl mx-auto px-6 pt-6 flex items-center justify-between">
         <div className="flex gap-1 bg-gray-200/50 p-1 rounded-xl w-fit">
@@ -427,11 +446,34 @@ export default function ClinicDashboard() {
           </button>
         )}
       </div>
+>>>>>>> origin/main
 
-      {/* Content */}
-      <div className="max-w-6xl mx-auto px-6 py-6 space-y-4">
         {/* Post Slot Form */}
         {showPostForm && tab === "upcoming" && (
+<<<<<<< HEAD
+          <div style={{ ...card, padding: "24px", marginBottom: "20px" }}>
+            <h3 style={{ fontSize: "1.05rem", fontWeight: 700, color: "var(--navy)", marginBottom: "18px" }}>New Slot</h3>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" }}>
+              <div><FieldLabel>Language</FieldLabel><select value={form.language} onChange={(e) => setForm({ ...form, language: e.target.value })} style={{ ...iStyle, cursor: "pointer" }}>{Object.entries(LANG_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></div>
+              <div><FieldLabel>Date</FieldLabel><input type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} style={iStyle} /></div>
+              <div><FieldLabel>Start Time</FieldLabel><select value={form.startTime} onChange={(e) => setForm({ ...form, startTime: Number(e.target.value) })} style={{ ...iStyle, cursor: "pointer" }}>{HOUR_OPTIONS.map((h) => <option key={h} value={h}>{formatHour(h)}</option>)}</select></div>
+              <div><FieldLabel>End Time</FieldLabel><select value={form.endTime} onChange={(e) => setForm({ ...form, endTime: Number(e.target.value) })} style={{ ...iStyle, cursor: "pointer" }}>{HOUR_OPTIONS.map((h) => <option key={h} value={h}>{formatHour(h)}</option>)}</select></div>
+              <div><FieldLabel>Interpreters / Hour</FieldLabel><input type="number" min={1} max={10} value={form.interpreterCount} onChange={(e) => setForm({ ...form, interpreterCount: Number(e.target.value) })} style={iStyle} /></div>
+              <div><FieldLabel>Notes (optional)</FieldLabel><input placeholder="Any notes for volunteers…" value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} style={iStyle} /></div>
+            </div>
+            <div style={{ marginTop: "18px", paddingTop: "16px", borderTop: "1px solid var(--card-border)" }}>
+              <label style={{ display: "flex", alignItems: "center", gap: "10px", cursor: "pointer", fontSize: "0.9rem", color: "var(--gray-900)" }}>
+                <Toggle on={form.isRecurring} onToggle={() => setForm({ ...form, isRecurring: !form.isRecurring, recurrenceEndDate: "" })} />
+                Repeat weekly
+              </label>
+              {form.isRecurring && (
+                <div style={{ display: "flex", alignItems: "center", gap: "12px", marginTop: "12px" }}>
+                  <span style={{ fontSize: "0.82rem", color: "var(--gray-600)" }}>Repeat until</span>
+                  <input type="date" value={form.recurrenceEndDate} min={form.date || undefined} onChange={(e) => setForm({ ...form, recurrenceEndDate: e.target.value })} style={{ ...iStyle, width: "auto" }} />
+                  {form.date && form.recurrenceEndDate && form.recurrenceEndDate >= form.date && (
+                    <span style={{ fontSize: "0.82rem", color: "var(--gray-400)" }}>
+                      {Math.floor((new Date(form.recurrenceEndDate + "T12:00:00").getTime() - new Date(form.date + "T12:00:00").getTime()) / (7 * 24 * 60 * 60 * 1000)) + 1} occurrences
+=======
           <div className="bg-white rounded-xl border border-gray-200 p-6">
             <h3 className="text-sm font-medium text-gray-700 mb-4">New Slot</h3>
             <div className="grid grid-cols-2 gap-4">
@@ -531,11 +573,21 @@ export default function ClinicDashboard() {
                           (7 * 24 * 60 * 60 * 1000)
                       ) + 1}{" "}
                       occurrences
+>>>>>>> origin/main
                     </span>
                   )}
                 </div>
               )}
             </div>
+<<<<<<< HEAD
+            {postError && <p style={{ marginTop: "10px", fontSize: "0.82rem", color: "#DC2626" }}>{postError}</p>}
+            {form.endTime <= form.startTime && form.date && <p style={{ marginTop: "6px", fontSize: "0.82rem", color: "#DC2626" }}>End time must be after start time.</p>}
+            <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "18px" }}>
+              <button disabled={postDisabled} onClick={postSlot} style={{ ...btnPrimary, opacity: postDisabled ? 0.5 : 1 }}>
+                {actionLoading === "post" ? "Posting…" : form.isRecurring ? "Post Recurring Slots" : "Post Slot"}
+              </button>
+            </div>
+=======
 
             {postError && (
               <p className="mt-2 text-xs text-red-500">{postError}</p>
@@ -555,29 +607,59 @@ export default function ClinicDashboard() {
             {form.endTime <= form.startTime && form.date && (
               <p className="mt-2 text-xs text-red-500">End time must be after start time.</p>
             )}
+>>>>>>> origin/main
           </div>
         )}
 
-
+        {/* Bulk selection bar */}
         {selectedSlotIds.size > 0 && tab !== "settings" && (
-          <div className="flex items-center gap-3 px-4 py-3 bg-red-50 border border-red-200 rounded-lg">
-            <span className="text-sm text-red-700 font-medium">{selectedSlotIds.size} slot{selectedSlotIds.size !== 1 ? "s" : ""} selected</span>
-            <button
-              disabled={actionLoading === "batch-delete"}
-              onClick={cancelSelectedSlots}
-              className="px-3 py-1.5 text-xs bg-red-600 text-white hover:bg-red-700 rounded-md transition-colors disabled:opacity-50"
-            >
-              {actionLoading === "batch-delete" ? "Cancelling..." : "Cancel Selected"}
-            </button>
-            <button
-              onClick={() => setSelectedSlotIds(new Set())}
-              className="text-xs text-red-500 hover:text-red-700"
-            >
-              Clear selection
-            </button>
+          <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "16px", padding: "12px 16px", background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: "10px" }}>
+            <span style={{ fontSize: "0.875rem", color: "#B91C1C", fontWeight: 600 }}>{selectedSlotIds.size} slot{selectedSlotIds.size !== 1 ? "s" : ""} selected</span>
+            <button disabled={actionLoading === "batch-delete"} onClick={cancelSelectedSlots} style={{ padding: "6px 14px", fontSize: "0.8rem", background: "#DC2626", color: "#fff", border: "none", borderRadius: "7px", fontFamily: "inherit", cursor: "pointer", opacity: actionLoading === "batch-delete" ? 0.5 : 1 }}>{actionLoading === "batch-delete" ? "Cancelling…" : "Cancel Selected"}</button>
+            <button onClick={() => setSelectedSlotIds(new Set())} style={{ background: "none", border: "none", color: "#DC2626", fontFamily: "inherit", fontSize: "0.8rem", cursor: "pointer" }}>Clear</button>
           </div>
         )}
 
+<<<<<<< HEAD
+        {/* Slot list */}
+        {tab !== "settings" && (
+          displaySlots.length === 0
+            ? <div style={{ ...card, padding: "48px", textAlign: "center" }}><p style={{ color: "var(--gray-400)" }}>{tab === "upcoming" ? "No upcoming slots. Post one to get started." : "No past slots."}</p></div>
+            : tab === "upcoming"
+              ? Object.entries(upcomingByDate).map(([label, ds]) => (
+                <div key={label}>
+                  <div style={{ fontSize: "0.78rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", color: "var(--gray-600)", margin: "28px 0 12px" }}>{label}</div>
+                  {ds.map((slot) => <SlotCard key={slot.id} slot={slot} isPast={false} selectedSlotIds={selectedSlotIds} actionLoading={actionLoading} onToggleSelect={toggleSelectSlot} onEdit={(s) => { setEditSlot({ ...s }); setEditScope("single"); }} onCancel={(s) => setCancelConfirm({ slotId: s.id, isRecurring: s.isRecurring && !!s.recurrenceGroupId })} onNoShow={reportNoShow} />)}
+                </div>
+              ))
+              : past.map((slot) => <SlotCard key={slot.id} slot={slot} isPast={!isUpcoming(slot)} selectedSlotIds={selectedSlotIds} actionLoading={actionLoading} onToggleSelect={toggleSelectSlot} onEdit={(s) => { setEditSlot({ ...s }); setEditScope("single"); }} onCancel={(s) => setCancelConfirm({ slotId: s.id, isRecurring: s.isRecurring && !!s.recurrenceGroupId })} onNoShow={reportNoShow} />)
+        )}
+
+        {/* Notification Settings */}
+        {tab === "settings" && (
+          <div style={{ maxWidth: "560px" }}>
+            <div style={card}>
+              <div style={{ padding: "18px 24px", borderBottom: "1.5px solid var(--card-border)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <h2 style={{ fontSize: "1.05rem", fontWeight: 700, color: "var(--navy)" }}>Email Notifications</h2>
+                {notifSaved && <span style={{ fontSize: "0.82rem", color: "var(--green)" }}>Saved ✓</span>}
+              </div>
+              <div style={{ padding: "20px 24px" }}>
+                <p style={{ fontSize: "0.82rem", color: "var(--gray-600)", marginBottom: "20px" }}>Changes save instantly.</p>
+                <label style={{ display: "flex", alignItems: "flex-start", gap: "12px", marginBottom: "18px", cursor: "pointer" }}>
+                  <Toggle on={notifPrefs.dailySummary} onToggle={() => saveNotifPrefs({ ...notifPrefs, dailySummary: !notifPrefs.dailySummary })} />
+                  <div><p style={{ fontSize: "0.9rem", fontWeight: 500, color: "var(--gray-900)" }}>Daily summary email</p><p style={{ fontSize: "0.8rem", color: "var(--gray-600)", marginTop: "2px" }}>Sent each morning with all your upcoming slots and their current roster</p></div>
+                </label>
+                <label style={{ display: "flex", alignItems: "flex-start", gap: "12px", marginBottom: "22px", cursor: "pointer" }}>
+                  <Toggle on={notifPrefs.unfilledAlert24h} onToggle={() => saveNotifPrefs({ ...notifPrefs, unfilledAlert24h: !notifPrefs.unfilledAlert24h })} />
+                  <div><p style={{ fontSize: "0.9rem", fontWeight: 500, color: "var(--gray-900)" }}>Unfilled slot alert (24 hrs before)</p><p style={{ fontSize: "0.8rem", color: "var(--gray-600)", marginTop: "2px" }}>Email if any sub-block is still open within 24 hours</p></div>
+                </label>
+                <div style={{ paddingTop: "18px", borderTop: "1px solid var(--card-border)" }}>
+                  <p style={{ fontSize: "0.9rem", fontWeight: 500, color: "var(--gray-900)", marginBottom: "4px" }}>Volunteer cancellation alert</p>
+                  <p style={{ fontSize: "0.8rem", color: "var(--gray-600)", marginBottom: "12px" }}>Get notified when a volunteer cancels within a certain window of the appointment</p>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
+                    {([null, 2, 4, 12, 24] as (number | null)[]).map((v) => (
+                      <button key={String(v)} onClick={() => saveNotifPrefs({ ...notifPrefs, volunteerCancelWindow: v })} style={{ padding: "8px 16px", fontSize: "0.82rem", fontFamily: "inherit", cursor: "pointer", borderRadius: "8px", border: "1.5px solid", background: notifPrefs.volunteerCancelWindow === v ? "var(--blue)" : "transparent", color: notifPrefs.volunteerCancelWindow === v ? "#fff" : "var(--gray-600)", borderColor: notifPrefs.volunteerCancelWindow === v ? "var(--blue)" : "var(--card-border)", fontWeight: 500 }}>
+=======
         {/* Slot List */}
         {tab !== "settings" && (displaySlots.length === 0 ? (
           <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
@@ -856,6 +938,7 @@ export default function ClinicDashboard() {
                             : "bg-white text-gray-500 border-gray-200 hover:border-gray-300"
                         }`}
                       >
+>>>>>>> origin/main
                         {v === null ? "Don't notify" : `Within ${v}h`}
                       </button>
                     ))}
@@ -865,10 +948,39 @@ export default function ClinicDashboard() {
             </div>
           </div>
         )}
-      </div>
+      </main>
 
       {/* Edit Slot Modal */}
       {editSlot && (
+<<<<<<< HEAD
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.3)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 50, padding: "16px" }}>
+          <div style={{ background: "#fff", borderRadius: "16px", width: "100%", maxWidth: "520px", boxShadow: "0 20px 60px rgba(0,0,0,.2)", overflow: "hidden" }}>
+            <div style={{ padding: "20px 24px", borderBottom: "1.5px solid var(--card-border)" }}>
+              <h3 style={{ fontSize: "1rem", fontWeight: 700, color: "var(--navy)" }}>Edit Slot</h3>
+            </div>
+            <div style={{ padding: "20px 24px" }}>
+              {editSlot.isRecurring && editSlot.recurrenceGroupId && (
+                <div style={{ display: "flex", border: "1.5px solid var(--card-border)", borderRadius: "10px", overflow: "hidden", marginBottom: "18px" }}>
+                  {(["single", "this_and_future"] as const).map((scope, i) => (
+                    <button key={scope} onClick={() => setEditScope(scope)} style={{ flex: 1, padding: "10px 14px", fontSize: "0.875rem", fontFamily: "inherit", cursor: "pointer", border: "none", background: editScope === scope ? "var(--blue)" : "#fff", color: editScope === scope ? "#fff" : "var(--gray-600)", fontWeight: editScope === scope ? 600 : 400, borderRight: i === 0 ? "1px solid var(--card-border)" : "none" }}>
+                      {scope === "single" ? "This date only" : "This and all future dates"}
+                    </button>
+                  ))}
+                </div>
+              )}
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                <div><FieldLabel>Language</FieldLabel><select value={editSlot.language} onChange={(e) => setEditSlot({ ...editSlot, language: e.target.value })} style={{ ...iStyle, cursor: "pointer" }}>{Object.entries(LANG_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></div>
+                <div><FieldLabel>Date</FieldLabel><input type="date" value={editSlot.date.split("T")[0]} onChange={(e) => setEditSlot({ ...editSlot, date: e.target.value })} style={iStyle} /></div>
+                <div><FieldLabel>Start Time</FieldLabel><select value={editSlot.startTime} onChange={(e) => setEditSlot({ ...editSlot, startTime: Number(e.target.value) })} style={{ ...iStyle, cursor: "pointer" }}>{HOUR_OPTIONS.map((h) => <option key={h} value={h}>{formatHour(h)}</option>)}</select></div>
+                <div><FieldLabel>End Time</FieldLabel><select value={editSlot.endTime} onChange={(e) => setEditSlot({ ...editSlot, endTime: Number(e.target.value) })} style={{ ...iStyle, cursor: "pointer" }}>{HOUR_OPTIONS.map((h) => <option key={h} value={h}>{formatHour(h)}</option>)}</select></div>
+                <div><FieldLabel>Interpreters / Hour</FieldLabel><input type="number" min={1} max={10} value={editSlot.interpreterCount} onChange={(e) => setEditSlot({ ...editSlot, interpreterCount: Number(e.target.value) })} style={iStyle} /></div>
+                <div><FieldLabel>Notes</FieldLabel><input value={editSlot.notes ?? ""} onChange={(e) => setEditSlot({ ...editSlot, notes: e.target.value })} style={iStyle} /></div>
+              </div>
+              <div style={{ display: "flex", gap: "10px", marginTop: "20px" }}>
+                <button disabled={actionLoading === "edit" || editSlot.endTime <= editSlot.startTime} onClick={requestSaveEdit} style={{ ...btnPrimary, opacity: actionLoading === "edit" || editSlot.endTime <= editSlot.startTime ? 0.5 : 1 }}>{actionLoading === "edit" ? "Saving…" : "Save Changes"}</button>
+                <button onClick={() => setEditSlot(null)} style={{ padding: "10px 22px", borderRadius: "9px", background: "none", border: "1.5px solid var(--card-border)", color: "var(--gray-600)", fontFamily: "inherit", fontSize: "0.875rem", cursor: "pointer" }}>Cancel</button>
+              </div>
+=======
         <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
           <div className="bg-white rounded-xl p-6 w-full max-w-md shadow-xl">
             <h3 className="text-sm font-medium text-gray-700 mb-4">Edit Slot</h3>
@@ -972,22 +1084,30 @@ export default function ClinicDashboard() {
               >
                 Cancel
               </button>
+>>>>>>> origin/main
             </div>
           </div>
         </div>
       )}
 
-      {/* Edit — Volunteer Cancellation Warning Modal */}
+      {/* Edit Warning Modal */}
       {editWarning && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-[60]">
-          <div className="bg-white rounded-xl p-6 w-full max-w-sm shadow-xl">
-            <div className="flex items-start gap-3 mb-4">
-              <div className="shrink-0 w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
-                </svg>
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.4)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 60, padding: "16px" }}>
+          <div style={{ background: "#fff", borderRadius: "16px", padding: "28px 24px", width: "100%", maxWidth: "380px", boxShadow: "0 20px 60px rgba(0,0,0,.2)" }}>
+            <div style={{ display: "flex", alignItems: "flex-start", gap: "12px", marginBottom: "20px" }}>
+              <div style={{ flexShrink: 0, width: "36px", height: "36px", borderRadius: "50%", background: "#FFFBEB", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="#D97706" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" /></svg>
               </div>
               <div>
+<<<<<<< HEAD
+                <h3 style={{ fontSize: "0.95rem", fontWeight: 700, color: "var(--navy)", marginBottom: "6px" }}>Volunteers will be removed</h3>
+                <p style={{ fontSize: "0.875rem", color: "var(--gray-600)" }}>{editWarning.cancelCount} volunteer signup{editWarning.cancelCount !== 1 ? "s" : ""} conflict with your changes and will be cancelled.</p>
+              </div>
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+              <button disabled={actionLoading === "edit"} onClick={confirmSaveEdit} style={{ ...btnPrimary, width: "100%", textAlign: "center", opacity: actionLoading === "edit" ? 0.5 : 1 }}>{actionLoading === "edit" ? "Saving…" : "Save Changes Anyway"}</button>
+              <button onClick={() => setEditWarning(null)} style={{ padding: "10px", borderRadius: "9px", background: "var(--page-bg)", border: "1.5px solid var(--card-border)", color: "var(--gray-600)", fontFamily: "inherit", fontSize: "0.875rem", fontWeight: 500, cursor: "pointer" }}>Go Back &amp; Edit</button>
+=======
                 <h3 className="text-sm font-semibold text-black">Volunteers will be removed</h3>
                 <p className="text-sm text-gray-500 mt-1">
                   {editWarning.cancelCount} volunteer signup{editWarning.cancelCount !== 1 ? "s" : ""}{" "}
@@ -1010,13 +1130,39 @@ export default function ClinicDashboard() {
               >
                 Go Back &amp; Edit
               </button>
+>>>>>>> origin/main
             </div>
           </div>
         </div>
       )}
 
-      {/* Cancel Confirmation Modal */}
+      {/* Cancel Confirm Modal */}
       {cancelConfirm && (
+<<<<<<< HEAD
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.3)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 50, padding: "16px" }}>
+          <div style={{ background: "#fff", borderRadius: "16px", padding: "24px", width: "100%", maxWidth: "360px", boxShadow: "0 20px 60px rgba(0,0,0,.2)" }}>
+            <h3 style={{ fontSize: "0.95rem", fontWeight: 700, color: "var(--navy)", marginBottom: "6px" }}>Cancel Slot</h3>
+            <p style={{ fontSize: "0.82rem", color: "var(--gray-600)", marginBottom: "16px" }}>All volunteer signups for the cancelled slot(s) will be removed.</p>
+            <div style={{ display: "flex", flexDirection: "column", gap: "8px", marginBottom: "10px" }}>
+              {cancelConfirm.isRecurring ? (
+                <>
+                  <button disabled={!!actionLoading} onClick={() => cancelSlot(cancelConfirm.slotId, "single")} style={{ textAlign: "left", padding: "12px 16px", border: "1.5px solid var(--card-border)", borderRadius: "9px", background: "var(--card-bg)", fontFamily: "inherit", cursor: "pointer", opacity: !!actionLoading ? 0.5 : 1 }}>
+                    <p style={{ fontSize: "0.875rem", fontWeight: 600, color: "var(--gray-900)" }}>This date only</p>
+                    <p style={{ fontSize: "0.78rem", color: "var(--gray-400)", marginTop: "2px" }}>Cancel just this occurrence</p>
+                  </button>
+                  <button disabled={!!actionLoading} onClick={() => cancelSlot(cancelConfirm.slotId, "this_and_future")} style={{ textAlign: "left", padding: "12px 16px", border: "1px solid #FECACA", borderRadius: "9px", background: "#FEF2F2", fontFamily: "inherit", cursor: "pointer", opacity: !!actionLoading ? 0.5 : 1 }}>
+                    <p style={{ fontSize: "0.875rem", fontWeight: 600, color: "#DC2626" }}>This and all future dates</p>
+                    <p style={{ fontSize: "0.78rem", color: "#EF4444", marginTop: "2px" }}>Cancel this and all future occurrences</p>
+                  </button>
+                </>
+              ) : (
+                <button disabled={!!actionLoading} onClick={() => cancelSlot(cancelConfirm.slotId, "single")} style={{ textAlign: "left", padding: "12px 16px", border: "1px solid #FECACA", borderRadius: "9px", background: "#FEF2F2", fontFamily: "inherit", cursor: "pointer", opacity: !!actionLoading ? 0.5 : 1, fontSize: "0.875rem", fontWeight: 600, color: "#DC2626" }}>
+                  {actionLoading ? "Cancelling…" : "Confirm Cancel"}
+                </button>
+              )}
+            </div>
+            <button onClick={() => setCancelConfirm(null)} style={{ width: "100%", padding: "10px", borderRadius: "9px", background: "none", border: "1.5px solid var(--card-border)", color: "var(--gray-600)", fontFamily: "inherit", fontSize: "0.875rem", cursor: "pointer" }}>Keep Slot</button>
+=======
         <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
           <div className="bg-white rounded-xl p-6 w-full max-w-sm shadow-xl">
             <h3 className="text-sm font-medium text-gray-700 mb-2">Cancel Slot</h3>
@@ -1059,9 +1205,100 @@ export default function ClinicDashboard() {
             >
               Keep Slot
             </button>
+>>>>>>> origin/main
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+// ── Slot Card ─────────────────────────────────────────────────────────────────
+
+function SlotCard({ slot, isPast, selectedSlotIds, actionLoading, onToggleSelect, onEdit, onCancel, onNoShow }: {
+  slot: Slot; isPast: boolean; selectedSlotIds: Set<string>; actionLoading: string | null;
+  onToggleSelect: (id: string) => void; onEdit: (slot: Slot) => void;
+  onCancel: (slot: Slot) => void; onNoShow: (slotId: string, signupId: string) => void;
+}) {
+  const subBlocks = Array.from({ length: slot.endTime - slot.startTime }, (_, i) => slot.startTime + i);
+  const totalFilled = slot.signups.filter((s) => s.status === "ACTIVE").length;
+  const openCount = subBlocks.length * slot.interpreterCount - totalFilled;
+
+  return (
+    <div style={{ background: "var(--card-bg)", borderRadius: "14px", border: "1.5px solid var(--card-border)", overflow: "hidden", marginBottom: "14px", boxShadow: "0 2px 6px rgba(0,0,0,.05)", opacity: isPast ? 0.55 : 1 }}>
+      {/* Header */}
+      <div style={{ padding: "16px 22px 14px", borderBottom: "1.5px solid var(--card-border)", display: "grid", gridTemplateColumns: "1fr auto", gap: "16px", alignItems: "center" }}>
+        <div>
+          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+            {!isPast && slot.status === "ACTIVE" && <input type="checkbox" checked={selectedSlotIds.has(slot.id)} onChange={() => onToggleSelect(slot.id)} onClick={(e) => e.stopPropagation()} style={{ width: "16px", height: "16px", cursor: "pointer", accentColor: "var(--navy)" }} />}
+            <span style={{ fontSize: "1.15rem", fontWeight: 700, color: "var(--navy)" }}>{LANG_LABELS[slot.language]}</span>
+            {slot.isRecurring && <span style={{ fontSize: "0.72rem", fontWeight: 600, padding: "2px 9px", borderRadius: "99px", background: "#F5F3FF", color: "#7C3AED", border: "1px solid #E9D5FF" }}>Weekly</span>}
+            {slot.status === "CANCELLED" && <span style={{ fontSize: "0.72rem", fontWeight: 600, padding: "2px 9px", borderRadius: "99px", background: "var(--gray-200)", color: "var(--gray-600)" }}>Cancelled</span>}
+          </div>
+          <div style={{ display: "flex", gap: "24px", marginTop: "10px", flexWrap: "wrap" }}>
+            {[{ label: "Date", val: formatDate(slot.date) }, { label: "Session", val: `${formatHour(slot.startTime)} – ${formatHour(slot.endTime)}` }, { label: "Interpreters/hr", val: String(slot.interpreterCount) }].map(({ label, val }) => (
+              <div key={label} style={{ display: "flex", flexDirection: "column", gap: "3px" }}>
+                <span style={{ fontSize: "0.68rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.09em", color: "var(--gray-400)" }}>{label}</span>
+                <span style={{ fontSize: "0.95rem", fontWeight: 600, color: "var(--gray-900)" }}>{val}</span>
+              </div>
+            ))}
+          </div>
+          {slot.notes && <p style={{ fontSize: "0.82rem", color: "var(--gray-600)", fontStyle: "italic", marginTop: "8px" }}>{slot.notes}</p>}
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "8px" }}>
+          {!isPast && <div style={{ background: openCount > 0 ? "var(--green-light)" : "var(--gray-200)", color: openCount > 0 ? "var(--green)" : "var(--gray-600)", fontSize: "0.9rem", fontWeight: 700, padding: "9px 18px", borderRadius: "10px", textAlign: "center", lineHeight: 1.2 }}>{openCount} open<span style={{ display: "block", fontSize: "0.72rem", fontWeight: 500, marginTop: "2px", opacity: 0.8 }}>slots</span></div>}
+          {!isPast && slot.status === "ACTIVE" && (
+            <div style={{ display: "flex", gap: "8px" }}>
+              <button onClick={() => onEdit(slot)} style={{ fontSize: "0.78rem", padding: "6px 14px", background: "var(--page-bg)", color: "var(--gray-600)", border: "1px solid var(--card-border)", borderRadius: "7px", fontFamily: "inherit", cursor: "pointer" }}>Edit</button>
+              <button disabled={actionLoading === slot.id} onClick={() => onCancel(slot)} style={{ fontSize: "0.78rem", padding: "6px 14px", background: "#FEF2F2", color: "#DC2626", border: "1px solid #FECACA", borderRadius: "7px", fontFamily: "inherit", cursor: "pointer", opacity: actionLoading === slot.id ? 0.5 : 1 }}>Cancel Slot</button>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Sub-blocks table */}
+      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.875rem" }}>
+        <thead>
+          <tr style={{ background: "#FAFAF9", borderBottom: "1px solid var(--card-border)" }}>
+            {["Hour", "Volunteer", "Status", ...(isPast ? ["Action"] : [])].map((h) => (
+              <th key={h} style={{ textAlign: h === "Action" ? "right" : "left", fontSize: "0.68rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.09em", color: "var(--gray-400)", padding: "9px 16px" }}>{h}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {subBlocks.map((hour) => {
+            const hourSignups = slot.signups.filter((s) => s.subBlockHour === hour);
+            const empty = slot.interpreterCount - hourSignups.length;
+            return (
+              <Fragment key={hour}>
+                {hourSignups.map((signup) => (
+                  <tr key={signup.id} style={{ borderBottom: "1px solid var(--card-border)" }}>
+                    <td style={{ padding: "10px 16px", color: "var(--gray-600)", fontSize: "0.82rem", whiteSpace: "nowrap" }}>{formatHour(hour)} – {formatHour(hour + 1)}</td>
+                    <td style={{ padding: "10px 16px", fontSize: "0.82rem" }}>
+                      <span style={{ fontWeight: 500, color: "var(--gray-900)" }}>{signup.volunteer.user.name}</span>
+                      <span style={{ color: "var(--gray-400)", marginLeft: "8px", fontSize: "0.78rem" }}>{signup.volunteer.user.email}</span>
+                    </td>
+                    <td style={{ padding: "10px 16px" }}>
+                      <span style={{ fontSize: "0.72rem", fontWeight: 600, padding: "3px 9px", borderRadius: "99px", background: signup.status === "ACTIVE" ? "var(--green-light)" : signup.status === "NO_SHOW" ? "#FEF2F2" : "var(--gray-200)", color: signup.status === "ACTIVE" ? "var(--green)" : signup.status === "NO_SHOW" ? "#DC2626" : "var(--gray-600)" }}>
+                        {signup.status === "ACTIVE" ? "Confirmed" : signup.status.replace("_", " ")}
+                      </span>
+                    </td>
+                    {isPast && <td style={{ padding: "10px 16px", textAlign: "right" }}>{signup.status === "ACTIVE" && <button disabled={actionLoading === signup.id} onClick={() => onNoShow(slot.id, signup.id)} style={{ fontSize: "0.75rem", padding: "4px 10px", background: "#FFFBEB", color: "#D97706", border: "1px solid #FDE68A", borderRadius: "6px", fontFamily: "inherit", cursor: "pointer", opacity: actionLoading === signup.id ? 0.5 : 1 }}>No-Show</button>}</td>}
+                  </tr>
+                ))}
+                {Array.from({ length: empty }).map((_, i) => (
+                  <tr key={`empty-${hour}-${i}`} style={{ borderBottom: "1px solid var(--card-border)" }}>
+                    <td style={{ padding: "10px 16px", color: "var(--gray-600)", fontSize: "0.82rem", whiteSpace: "nowrap" }}>{formatHour(hour)} – {formatHour(hour + 1)}</td>
+                    <td style={{ padding: "10px 16px", color: "var(--gray-400)", fontSize: "0.82rem", fontStyle: "italic" }}>Open</td>
+                    <td style={{ padding: "10px 16px" }}><span style={{ fontSize: "0.72rem", fontWeight: 600, padding: "3px 9px", borderRadius: "99px", background: "var(--page-bg)", color: "var(--gray-400)", border: "1px solid var(--card-border)" }}>Available</span></td>
+                    {isPast && <td />}
+                  </tr>
+                ))}
+              </Fragment>
+            );
+          })}
+        </tbody>
+      </table>
     </div>
   );
 }

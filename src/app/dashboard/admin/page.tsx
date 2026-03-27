@@ -140,6 +140,34 @@ function formatDate(s: string) {
   });
 }
 
+function formatDateLong(s: string) {
+  return new Date(s.slice(0, 10) + "T12:00:00").toLocaleDateString("en-US", {
+    weekday: "long", month: "long", day: "numeric",
+  });
+}
+
+// ── Shared style helpers ──────────────────────────────────────────────────────
+
+const card: React.CSSProperties = {
+  background: "var(--card-bg)", border: "1.5px solid var(--card-border)",
+  borderRadius: "14px", overflow: "hidden", marginBottom: "14px",
+  boxShadow: "0 2px 6px rgba(0,0,0,.05)",
+};
+
+const inputStyle: React.CSSProperties = {
+  width: "100%", padding: "10px 14px", border: "1.5px solid var(--card-border)",
+  borderRadius: "9px", fontFamily: "inherit", fontSize: "0.9rem",
+  color: "var(--gray-900)", background: "#fff", outline: "none",
+};
+
+const btnPrimary: React.CSSProperties = {
+  background: "var(--blue)", color: "#fff", border: "none", borderRadius: "9px",
+  padding: "10px 22px", fontFamily: "inherit", fontSize: "0.875rem", fontWeight: 600,
+  cursor: "pointer", transition: "all .18s", whiteSpace: "nowrap" as const,
+};
+
+// ── Main component ────────────────────────────────────────────────────────────
+
 export default function AdminDashboard() {
   const { data: session, status } = useSession();
   const router = useRouter();
@@ -634,28 +662,21 @@ export default function AdminDashboard() {
 
   if (status === "loading" || loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <p className="text-gray-400">Loading...</p>
+      <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--page-bg)" }}>
+        <p style={{ color: "var(--gray-400)" }}>Loading…</p>
       </div>
     );
   }
 
-  // --- Slots tab helpers ---
   const now = new Date();
-
-  // A slot is past when its end time has passed (local/browser time matches ET for GMI)
   const slotEnd = (s: AdminSlot) =>
     new Date(s.date.slice(0, 10) + "T" + String(s.endTime).padStart(2, "0") + ":00:00");
 
   const filteredSlots = adminSlots.filter((s) => {
     if (langFilter !== "ALL" && s.language !== langFilter) return false;
     if (clinicFilter !== "ALL" && s.clinic.name !== clinicFilter) return false;
-    if (dateFrom) {
-      if (new Date(s.date.slice(0, 10) + "T12:00:00") < new Date(dateFrom + "T00:00:00")) return false;
-    }
-    if (dateTo) {
-      if (new Date(s.date.slice(0, 10) + "T12:00:00") > new Date(dateTo + "T23:59:59")) return false;
-    }
+    if (dateFrom && new Date(s.date.slice(0, 10) + "T12:00:00") < new Date(dateFrom + "T00:00:00")) return false;
+    if (dateTo && new Date(s.date.slice(0, 10) + "T12:00:00") > new Date(dateTo + "T23:59:59")) return false;
     if (availableOnly) {
       const hasOpen = Array.from({ length: s.endTime - s.startTime }, (_, i) => s.startTime + i)
         .some((h) => s.signups.filter((sg) => sg.subBlockHour === h).length < s.interpreterCount);
@@ -665,21 +686,25 @@ export default function AdminDashboard() {
   });
 
   const uniqueClinics = Array.from(new Set(adminSlots.map((s) => s.clinic.name))).sort();
-
   const upcomingSlots = filteredSlots.filter((s) => slotEnd(s) > now);
-  const pastSlots = filteredSlots
-    .filter((s) => slotEnd(s) <= now)
-    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  const pastSlots = filteredSlots.filter((s) => slotEnd(s) <= now).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+  const upcomingByDate: Record<string, AdminSlot[]> = {};
+  for (const s of upcomingSlots) {
+    const label = formatDateLong(s.date);
+    if (!upcomingByDate[label]) upcomingByDate[label] = [];
+    upcomingByDate[label].push(s);
+  }
 
   const selectedSlots = upcomingSlots.filter((s) => adminSelectedSlotIds.has(s.id));
   const deleteConfirmText = selectedSlots.length === 1
     ? `${selectedSlots[0].clinic.name} ${selectedSlots[0].date.slice(0, 10)}`
     : "DELETE";
-  const deleteInputValid = adminDeleteInput.trim() === deleteConfirmText;
 
   const renderSlot = (slot: AdminSlot, isPast: boolean) => {
     const subBlocks = Array.from({ length: slot.endTime - slot.startTime }, (_, i) => slot.startTime + i);
     const canSignUp = adminProfile?.languages.includes(slot.language) ?? false;
+    const openCount = subBlocks.filter((h) => slot.signups.filter((s) => s.subBlockHour === h).length < slot.interpreterCount).length;
 
     return (
       <div key={slot.id} className={`bg-white rounded-xl border border-gray-200 p-5 ${isPast ? "opacity-50" : ""}`}>
@@ -787,54 +812,142 @@ export default function AdminDashboard() {
                     </div>
                   ))}
               </div>
-            );
-          })}
+              <div style={{ display: "flex", flexDirection: "column", gap: "3px" }}>
+                <span style={{ fontSize: "0.68rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.09em", color: "var(--gray-400)" }}>Session</span>
+                <span style={{ fontSize: "0.95rem", fontWeight: 600, color: "var(--gray-900)" }}>{formatHour(slot.startTime)} – {formatHour(slot.endTime)}</span>
+              </div>
+              {slot.clinic.address && (
+                <div style={{ display: "flex", flexDirection: "column", gap: "3px" }}>
+                  <span style={{ fontSize: "0.68rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.09em", color: "var(--gray-400)" }}>Location</span>
+                  <span style={{ fontSize: "0.95rem", fontWeight: 600, color: "var(--gray-900)" }}>{slot.clinic.address}</span>
+                </div>
+              )}
+            </div>
+          </div>
+          {isPast ? (
+            <span style={{ background: "var(--gray-200)", color: "var(--gray-600)", fontSize: "0.7rem", fontWeight: 600, padding: "4px 10px", borderRadius: "99px", textTransform: "uppercase" }}>Past</span>
+          ) : (
+            <div style={{ background: "var(--green-light)", color: "var(--green)", fontSize: "0.9rem", fontWeight: 700, padding: "9px 18px", borderRadius: "10px", whiteSpace: "nowrap", textAlign: "center", lineHeight: 1.2 }}>
+              {openCount} open<span style={{ display: "block", fontSize: "0.72rem", fontWeight: 500, marginTop: "2px", opacity: 0.8 }}>slots</span>
+            </div>
+          )}
         </div>
+
+        {subBlocks.map((hour, i) => {
+          const hoursSignups = slot.signups.filter((s) => s.subBlockHour === hour);
+          const mySignup = adminProfile ? hoursSignups.find((s) => s.volunteer.id === adminProfile.id) : null;
+          const filled = hoursSignups.length;
+          const isFull = filled >= slot.interpreterCount;
+          const signupKey = `signup-${slot.id}-${hour}`;
+          const isLast = i === subBlocks.length - 1;
+
+          return (
+            <div key={hour}>
+              <div style={{ display: "flex", alignItems: "center", padding: "12px 22px", borderBottom: "1px solid var(--card-border)", gap: "14px" }}>
+                <div style={{ width: "9px", height: "9px", borderRadius: "50%", background: isPast ? "var(--gray-400)" : "var(--green)", flexShrink: 0 }} />
+                <span style={{ fontSize: "0.95rem", fontWeight: 600, color: "var(--gray-900)", minWidth: "145px" }}>{formatHour(hour)} – {formatHour(hour + 1)}</span>
+                <span style={{ fontSize: "0.875rem", color: "var(--gray-600)", flex: 1 }}>{filled}/{slot.interpreterCount} filled</span>
+                <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+                  {!isPast && (
+                    <button
+                      onClick={() => { setVolunteerAssignTarget({ slotId: slot.id, hour, language: slot.language, date: slot.date, clinicName: slot.clinic.name }); setAssignSearch(""); setAssignSelected(null); setAssignError(""); }}
+                      style={{ fontSize: "0.78rem", padding: "5px 12px", background: "#EFF6FF", color: "#1D4ED8", border: "1px solid #BFDBFE", borderRadius: "7px", fontFamily: "inherit", cursor: "pointer" }}
+                    >
+                      Assign
+                    </button>
+                  )}
+                  {isPast ? (
+                    <span style={{ fontSize: "0.78rem", color: "var(--gray-400)" }}>Past</span>
+                  ) : mySignup ? (
+                    <button
+                      disabled={actionLoading === mySignup.id}
+                      onClick={() => cancelMySignup(mySignup.id)}
+                      style={{ fontSize: "0.78rem", padding: "5px 12px", background: "var(--green-light)", color: "var(--green)", border: "1px solid #86EFAC", borderRadius: "7px", fontFamily: "inherit", cursor: "pointer", opacity: actionLoading === mySignup.id ? 0.5 : 1 }}
+                      title="Click to cancel"
+                    >
+                      {actionLoading === mySignup.id ? "…" : "Signed Up ✓"}
+                    </button>
+                  ) : isFull ? (
+                    <span style={{ fontSize: "0.78rem", color: "var(--gray-400)" }}>Full</span>
+                  ) : (
+                    <button
+                      disabled={actionLoading === signupKey || !canSignUp}
+                      onClick={() => signUp(slot.id, hour)}
+                      title={!canSignUp ? "Add this language to your volunteer profile first" : undefined}
+                      style={{ ...btnPrimary, padding: "5px 14px", fontSize: "0.78rem", opacity: actionLoading === signupKey || !canSignUp ? 0.4 : 1 }}
+                    >
+                      {actionLoading === signupKey ? "…" : "Sign Up"}
+                    </button>
+                  )}
+                </div>
+              </div>
+              {hoursSignups.filter((s) => s.volunteer.id !== adminProfile?.id).map((s, si, sarr) => (
+                <div key={s.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "7px 22px 7px 48px", borderBottom: si === sarr.length - 1 && isLast ? "none" : "1px solid var(--card-border)", background: "#FAFAF9" }}>
+                  <div>
+                    <span style={{ fontSize: "0.82rem", color: "var(--gray-900)", fontWeight: 500 }}>{s.volunteer.user.name ?? s.volunteer.user.email}</span>
+                    <span style={{ fontSize: "0.75rem", color: "var(--gray-400)", marginLeft: "8px" }}>{s.volunteer.user.email}</span>
+                  </div>
+                  {!isPast && (
+                    <button
+                      disabled={actionLoading === s.id}
+                      onClick={() => removeVolunteer(s.id)}
+                      style={{ fontSize: "0.75rem", padding: "3px 10px", background: "#FEF2F2", color: "#DC2626", border: "1px solid #FECACA", borderRadius: "6px", fontFamily: "inherit", cursor: "pointer", opacity: actionLoading === s.id ? 0.5 : 1 }}
+                    >
+                      Remove
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          );
+        })}
       </div>
     );
   };
 
+  const tabs: { key: Tab; label: string; count?: number }[] = [
+    { key: "slots", label: "Browse Slots" },
+    { key: "pending", label: "Pending", count: pendingUsers.length },
+    { key: "users", label: "All Users", count: users.length },
+    { key: "clinics", label: "Clinics", count: clinics.length },
+    { key: "profile", label: "My Profile" },
+    ...(session?.user?.role === "SUPER_ADMIN" ? [{ key: "access" as Tab, label: "Access Control" }] : []),
+  ];
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-[#041E42]">
-        <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div>
-              <h1 className="text-lg font-semibold text-white tracking-tight">Georgetown Medical Interpreters</h1>
-              <p className="text-xs text-white/60">Admin Dashboard</p>
-            </div>
-            <button
-              onClick={() => setTab("suggestions")}
-              className="text-sm px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white rounded-md transition-colors"
-            >
-              Contact Us
-            </button>
+    <div style={{ minHeight: "100vh", background: "var(--page-bg)" }}>
+      {/* Topbar */}
+      <header style={{ background: "var(--navy)", height: "64px", position: "sticky", top: 0, zIndex: 100, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 32px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
+          <div style={{ width: "36px", height: "36px", borderRadius: "9px", background: "linear-gradient(135deg,#2563EB,#60A5FA)", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, color: "#fff", fontSize: "1rem" }}>G</div>
+          <div>
+            <div style={{ color: "#fff", fontSize: "0.95rem", fontWeight: 600 }}>Georgetown Medical Interpreters</div>
+            <div style={{ color: "#94A3B8", fontSize: "0.72rem" }}>Admin Dashboard</div>
           </div>
-          <div className="flex items-center gap-3">
-            <span className="text-sm text-white/70">{session?.user?.email}</span>
-            {session?.user?.role === "SUPER_ADMIN" && (
-              <span className="text-xs px-2 py-0.5 rounded-full bg-violet-400/20 text-violet-200 font-medium">
-                Super Admin
-              </span>
-            )}
-            <button
-              onClick={() => router.push("/dashboard/volunteer")}
-              className="text-sm px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white rounded-md transition-colors flex items-center gap-1.5"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-              </svg>
-              Volunteer View
-            </button>
-            <button
-              onClick={() => signOut({ callbackUrl: "/login" })}
-              className="text-sm px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white rounded-md transition-colors"
-            >
-              Sign Out
-            </button>
-          </div>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
+          {session?.user?.role === "SUPER_ADMIN" && (
+            <span style={{ background: "rgba(124,58,237,.25)", color: "#C4B5FD", fontSize: "0.72rem", fontWeight: 600, padding: "3px 10px", borderRadius: "99px", border: "1px solid rgba(124,58,237,.3)" }}>Super Admin</span>
+          )}
+          <button
+            onClick={() => router.push("/dashboard/volunteer")}
+            style={{ color: "#CBD5E1", fontSize: "0.8rem", padding: "6px 12px", borderRadius: "8px", border: "1px solid rgba(255,255,255,.15)", background: "transparent", cursor: "pointer", fontFamily: "inherit" }}
+          >
+            Volunteer View
+          </button>
+          <a
+            href="mailto:georgetownmedicalinterpreters@gmail.com"
+            style={{ color: "#CBD5E1", fontSize: "0.8rem", textDecoration: "none", padding: "6px 12px", borderRadius: "8px", border: "1px solid rgba(255,255,255,.15)" }}
+          >
+            Contact Us
+          </a>
+          <span style={{ color: "#CBD5E1", fontSize: "0.82rem" }}>{session?.user?.email}</span>
+          <button
+            onClick={() => signOut({ callbackUrl: "/login" })}
+            style={{ background: "rgba(255,255,255,.08)", border: "1px solid rgba(255,255,255,.2)", color: "#fff", fontFamily: "inherit", fontSize: "0.8rem", fontWeight: 500, padding: "7px 16px", borderRadius: "8px", cursor: "pointer" }}
+          >
+            Sign Out
+          </button>
         </div>
       </header>
 
@@ -879,132 +992,72 @@ export default function AdminDashboard() {
             </button>
           ))}
         </div>
-      </div>
 
-      {/* Content */}
-      <div className="max-w-6xl mx-auto px-6 py-6">
-
-        {/* Browse Slots */}
+        {/* ── Browse Slots ── */}
         {tab === "slots" && (
           <div>
             {adminSelectedSlotIds.size > 0 && (
-              <div className="flex items-center gap-3 mb-4 px-4 py-3 bg-red-50 border border-red-200 rounded-lg">
-                <span className="text-sm text-red-700 font-medium">{adminSelectedSlotIds.size} slot{adminSelectedSlotIds.size !== 1 ? "s" : ""} selected</span>
-                <button
-                  onClick={openAdminDeleteModal}
-                  className="px-3 py-1.5 text-xs bg-red-600 text-white hover:bg-red-700 rounded-md transition-colors"
-                >
-                  Delete Selected
-                </button>
-                <button
-                  onClick={() => setAdminSelectedSlotIds(new Set())}
-                  className="text-xs text-red-500 hover:text-red-700"
-                >
-                  Clear selection
-                </button>
+              <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "16px", padding: "12px 16px", background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: "10px" }}>
+                <span style={{ fontSize: "0.875rem", color: "#B91C1C", fontWeight: 600 }}>{adminSelectedSlotIds.size} slot{adminSelectedSlotIds.size !== 1 ? "s" : ""} selected</span>
+                <button onClick={openAdminDeleteModal} style={{ padding: "6px 14px", fontSize: "0.8rem", background: "#DC2626", color: "#fff", border: "none", borderRadius: "7px", fontFamily: "inherit", cursor: "pointer" }}>Delete Selected</button>
+                <button onClick={() => setAdminSelectedSlotIds(new Set())} style={{ background: "none", border: "none", color: "#DC2626", fontFamily: "inherit", fontSize: "0.8rem", cursor: "pointer" }}>Clear</button>
               </div>
             )}
             {!adminProfile?.languages.length && (
-              <div className="mb-4 px-4 py-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-700">
+              <div style={{ marginBottom: "16px", padding: "12px 16px", background: "#FFFBEB", border: "1px solid #FDE68A", borderRadius: "10px", fontSize: "0.875rem", color: "#92400E" }}>
                 To sign up for slots, add your languages in{" "}
-                <button
-                  onClick={() => setTab("profile")}
-                  className="underline font-medium"
-                >
-                  My Profile
-                </button>
-                .
+                <button onClick={() => setTab("profile")} style={{ background: "none", border: "none", color: "#92400E", fontFamily: "inherit", fontSize: "0.875rem", cursor: "pointer", textDecoration: "underline", fontWeight: 600 }}>My Profile</button>.
               </div>
             )}
 
             {/* Filters */}
-            <div className="flex flex-wrap items-center gap-2 mb-5">
-              {/* Language */}
-              {["ALL", "ES", "ZH", "KO"].map((lang) => (
-                <button
-                  key={lang}
-                  onClick={() => setLangFilter(lang)}
-                  className={`px-3 py-1.5 text-xs rounded-md transition-colors ${
-                    langFilter === lang
-                      ? "bg-[#4A90D9] text-white"
-                      : "bg-white border border-gray-200 text-gray-500 hover:border-gray-300"
-                  }`}
-                >
-                  {lang === "ALL" ? "All Languages" : LANG_LABELS[lang]}
-                </button>
-              ))}
-
-              <div className="w-px bg-gray-200 mx-1 self-stretch" />
-
-              {/* Clinic */}
-              <select
-                value={clinicFilter}
-                onChange={(e) => setClinicFilter(e.target.value)}
-                className="px-2 py-1.5 text-xs border border-gray-200 rounded-md bg-white text-gray-600 focus:outline-none"
-              >
+            <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "10px", marginBottom: "28px" }}>
+              <select value={langFilter} onChange={(e) => setLangFilter(e.target.value)} style={{ padding: "9px 14px", borderRadius: "9px", fontSize: "0.875rem", fontWeight: 500, border: "1.5px solid var(--card-border)", background: "var(--card-bg)", color: "var(--gray-900)", fontFamily: "inherit", cursor: "pointer", outline: "none" }}>
+                <option value="ALL">All Languages</option>
+                {Object.entries(LANG_LABELS).map(([code, label]) => <option key={code} value={code}>{label}</option>)}
+              </select>
+              <select value={clinicFilter} onChange={(e) => setClinicFilter(e.target.value)} style={{ padding: "9px 14px", borderRadius: "9px", fontSize: "0.875rem", fontWeight: 500, border: "1.5px solid var(--card-border)", background: "var(--card-bg)", color: "var(--gray-900)", fontFamily: "inherit", cursor: "pointer", outline: "none" }}>
                 <option value="ALL">All Clinics</option>
                 {uniqueClinics.map((c) => <option key={c} value={c}>{c}</option>)}
               </select>
-
-              <div className="w-px bg-gray-200 mx-1 self-stretch" />
-
-              {/* Date range */}
-              <div className="flex items-center gap-1.5">
-                <span className="text-xs text-gray-400">From</span>
-                <input
-                  type="date"
-                  value={dateFrom}
-                  onChange={(e) => setDateFrom(e.target.value)}
-                  className="px-2 py-1.5 text-xs border border-gray-200 rounded-md bg-white text-gray-600 focus:outline-none"
-                />
+              <div style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "0.875rem", fontWeight: 500, color: "var(--gray-900)" }}>
+                From
+                <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} style={{ padding: "9px 12px", border: "1.5px solid var(--card-border)", borderRadius: "9px", fontSize: "0.875rem", fontFamily: "inherit", color: "var(--gray-900)", outline: "none", background: "var(--card-bg)" }} />
+                To
+                <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} style={{ padding: "9px 12px", border: "1.5px solid var(--card-border)", borderRadius: "9px", fontSize: "0.875rem", fontFamily: "inherit", color: "var(--gray-900)", outline: "none", background: "var(--card-bg)" }} />
+                {(dateFrom || dateTo) && <button onClick={() => { setDateFrom(""); setDateTo(""); }} style={{ background: "none", border: "none", color: "var(--gray-400)", cursor: "pointer", fontSize: "0.8rem", fontFamily: "inherit" }}>Clear</button>}
               </div>
-              <div className="flex items-center gap-1.5">
-                <span className="text-xs text-gray-400">To</span>
-                <input
-                  type="date"
-                  value={dateTo}
-                  onChange={(e) => setDateTo(e.target.value)}
-                  className="px-2 py-1.5 text-xs border border-gray-200 rounded-md bg-white text-gray-600 focus:outline-none"
-                />
-              </div>
-              {(dateFrom || dateTo) && (
-                <button
-                  onClick={() => { setDateFrom(""); setDateTo(""); }}
-                  className="text-xs text-gray-400 hover:text-gray-600"
-                >
-                  Clear
-                </button>
-              )}
-
-              <div className="w-px bg-gray-200 mx-1 self-stretch" />
-
-              {/* Available only */}
-              <button
-                onClick={() => setAvailableOnly(!availableOnly)}
-                className={`px-3 py-1.5 text-xs rounded-md transition-colors ${
-                  availableOnly
-                    ? "bg-emerald-700 text-white"
-                    : "bg-white border border-gray-200 text-gray-500 hover:border-gray-300"
-                }`}
-              >
+              <label style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "0.875rem", fontWeight: 500, color: "var(--gray-900)", cursor: "pointer" }}>
+                <div onClick={() => setAvailableOnly(!availableOnly)} style={{ width: "38px", height: "22px", borderRadius: "99px", background: availableOnly ? "var(--blue)" : "var(--gray-200)", position: "relative", cursor: "pointer", transition: "background .15s" }}>
+                  <div style={{ width: "16px", height: "16px", background: "#fff", borderRadius: "50%", position: "absolute", top: "3px", left: availableOnly ? "19px" : "3px", transition: "left .15s" }} />
+                </div>
                 Available Only
-              </button>
+              </label>
             </div>
 
             {upcomingSlots.length === 0 && pastSlots.length === 0 ? (
-              <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
-                <p className="text-gray-400">No slots match your filters.</p>
+              <div style={{ ...card, padding: "48px", textAlign: "center" }}>
+                <p style={{ color: "var(--gray-400)" }}>No slots match your filters.</p>
               </div>
             ) : (
-              <div className="space-y-4">
-                {upcomingSlots.map((slot) => renderSlot(slot, false))}
+              <>
+                {Object.entries(upcomingByDate).map(([dateLabel, slots]) => (
+                  <div key={dateLabel}>
+                    <div style={{ fontSize: "0.78rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", color: "var(--gray-600)", margin: "28px 0 12px" }}>{dateLabel}</div>
+                    {slots.map((slot) => renderSlot(slot, false))}
+                  </div>
+                ))}
                 {pastSlots.length > 0 && (
                   <>
-                    <p className="text-xs font-medium text-gray-400 uppercase tracking-wider pt-2">Past Slots</p>
+                    <div style={{ display: "flex", alignItems: "center", gap: "12px", margin: "32px 0 16px", fontSize: "0.72rem", textTransform: "uppercase", letterSpacing: "0.1em", fontWeight: 700, color: "var(--gray-400)" }}>
+                      <span style={{ flex: 1, height: "1px", background: "var(--card-border)" }} />
+                      Past Slots
+                      <span style={{ flex: 1, height: "1px", background: "var(--card-border)" }} />
+                    </div>
                     {pastSlots.map((slot) => renderSlot(slot, true))}
                   </>
                 )}
-              </div>
+              </>
             )}
           </div>
         )}
@@ -1096,15 +1149,9 @@ export default function AdminDashboard() {
                       {user.volunteer ? (
                         <div className="flex gap-3 text-xs text-gray-500">
                           <span title="Hours volunteered">⏱ {user.volunteer.hoursVolunteered}h</span>
-                          <span title="No-shows" className={user.volunteer.noShows > 0 ? "text-red-500" : ""}>
-                            NS {user.volunteer.noShows}
-                          </span>
-                          <span title="Cancellations within 24 hours" className={user.volunteer.cancellationsWithin24h > 0 ? "text-amber-600" : ""}>
-                            24h {user.volunteer.cancellationsWithin24h}
-                          </span>
-                          <span title="Cancellations within 2 hours" className={user.volunteer.cancellationsWithin2h > 0 ? "text-red-500" : ""}>
-                            2h {user.volunteer.cancellationsWithin2h}
-                          </span>
+                          <span title="No-shows" style={{ color: user.volunteer.noShows > 0 ? "#DC2626" : "inherit" }}>NS {user.volunteer.noShows}</span>
+                          <span title="Cancellations within 24h" style={{ color: user.volunteer.cancellationsWithin24h > 0 ? "#D97706" : "inherit" }}>24h {user.volunteer.cancellationsWithin24h}</span>
+                          <span title="Cancellations within 2h" style={{ color: user.volunteer.cancellationsWithin2h > 0 ? "#DC2626" : "inherit" }}>2h {user.volunteer.cancellationsWithin2h}</span>
                         </div>
                       ) : (
                         <span className="text-xs text-gray-300">—</span>
@@ -1178,59 +1225,40 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        {/* Clinics */}
+        {/* ── Clinics ── */}
         {tab === "clinics" && (
           <div>
-            <div className="flex justify-end mb-4">
-              <button
-                onClick={() => setShowClinicForm(!showClinicForm)}
-                className="px-4 py-2 text-sm bg-[#4A90D9] text-white hover:bg-[#357ABD] rounded-full transition-colors"
-              >
+            <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "16px" }}>
+              <button onClick={() => setShowClinicForm(!showClinicForm)} style={{ ...btnPrimary, background: showClinicForm ? "var(--gray-600)" : "var(--blue)" }}>
                 {showClinicForm ? "Cancel" : "+ Add Clinic"}
               </button>
             </div>
 
             {showClinicForm && (
-              <div className="bg-white rounded-xl border border-gray-200 p-6 mb-4">
-                <h3 className="text-sm font-medium text-gray-700 mb-4">New Clinic</h3>
-                <div className="grid grid-cols-2 gap-4">
-                  <input
-                    placeholder="Clinic Name"
-                    value={clinicForm.name}
-                    onChange={(e) => setClinicForm({ ...clinicForm, name: e.target.value })}
-                    className="px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-300"
-                  />
-                  <input
-                    placeholder="Address"
-                    value={clinicForm.address}
-                    onChange={(e) => setClinicForm({ ...clinicForm, address: e.target.value })}
-                    className="px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-300"
-                  />
-                  <input
-                    placeholder="Contact Name"
-                    value={clinicForm.contactName}
-                    onChange={(e) => setClinicForm({ ...clinicForm, contactName: e.target.value })}
-                    className="px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-300"
-                  />
-                  <input
-                    placeholder="Contact Email"
-                    value={clinicForm.contactEmail}
-                    onChange={(e) => setClinicForm({ ...clinicForm, contactEmail: e.target.value })}
-                    className="px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-300"
-                  />
+              <div style={{ ...card, padding: "24px", marginBottom: "20px" }}>
+                <h3 style={{ fontSize: "1.05rem", fontWeight: 700, color: "var(--navy)", marginBottom: "16px" }}>New Clinic</h3>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px", marginBottom: "14px" }}>
+                  {[
+                    { placeholder: "Clinic Name", field: "name" },
+                    { placeholder: "Address", field: "address" },
+                    { placeholder: "Contact Name", field: "contactName" },
+                    { placeholder: "Contact Email", field: "contactEmail" },
+                  ].map(({ placeholder, field }) => (
+                    <input
+                      key={field}
+                      placeholder={placeholder}
+                      value={clinicForm[field as keyof typeof clinicForm]}
+                      onChange={(e) => setClinicForm({ ...clinicForm, [field]: e.target.value })}
+                      style={inputStyle}
+                    />
+                  ))}
                 </div>
-                {clinicFormError && (
-                  <p className="mt-3 text-sm text-red-600 bg-red-50 border border-red-100 rounded-md px-3 py-2">
-                    {clinicFormError}
-                  </p>
-                )}
-                <button
-                  disabled={actionLoading === "clinic-form" || !clinicForm.name || !clinicForm.contactEmail}
-                  onClick={createClinic}
-                  className="mt-4 px-4 py-2 text-sm bg-[#4A90D9] text-white hover:bg-[#357ABD] rounded-full transition-colors disabled:opacity-50"
-                >
-                  {actionLoading === "clinic-form" ? "Creating..." : "Create Clinic"}
-                </button>
+                {clinicFormError && <p style={{ padding: "10px 14px", background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: "9px", fontSize: "0.875rem", color: "#DC2626", marginBottom: "12px" }}>{clinicFormError}</p>}
+                <div style={{ display: "flex", justifyContent: "flex-end" }}>
+                  <button disabled={actionLoading === "clinic-form" || !clinicForm.name || !clinicForm.contactEmail} onClick={createClinic} style={{ ...btnPrimary, opacity: actionLoading === "clinic-form" || !clinicForm.name || !clinicForm.contactEmail ? 0.5 : 1 }}>
+                    {actionLoading === "clinic-form" ? "Creating…" : "Create Clinic"}
+                  </button>
+                </div>
               </div>
             )}
 
@@ -1284,14 +1312,18 @@ export default function AdminDashboard() {
                         </button>
                       </div>
                     </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                      <span style={{ fontSize: "0.82rem", color: "var(--gray-400)" }}>{clinic._count?.slots || 0} slots</span>
+                      <button disabled={actionLoading === `delete-clinic-${clinic.id}`} onClick={() => deleteClinic(clinic.id, clinic.name)} style={{ fontSize: "0.78rem", padding: "5px 12px", background: "#FEF2F2", color: "#DC2626", border: "1px solid #FECACA", borderRadius: "7px", fontFamily: "inherit", cursor: "pointer", opacity: actionLoading === `delete-clinic-${clinic.id}` ? 0.5 : 1 }}>Delete</button>
+                    </div>
                   </div>
-                ))}
-              </div>
+                </div>
+              ))
             )}
           </div>
         )}
 
-        {/* My Profile */}
+        {/* ── My Profile ── */}
         {tab === "profile" && (
           <div className="max-w-lg space-y-5">
             {/* Hours stat */}
@@ -1865,62 +1897,41 @@ export default function AdminDashboard() {
             )}
           </div>
         )}
-      </div>
+      </main>
 
-      {/* Admin Delete Slots Modal */}
+      {/* ── Modals ── */}
+
+      {/* Delete Slots Modal */}
       {adminDeleteModal && (() => {
         const selectedSlotsList = upcomingSlots.filter((s) => adminSelectedSlotIds.has(s.id));
         const isSingle = selectedSlotsList.length === 1;
-        const confirmText = isSingle
-          ? `${selectedSlotsList[0].clinic.name} ${selectedSlotsList[0].date.slice(0, 10)}`
-          : "DELETE";
-
+        const confirmText = isSingle ? `${selectedSlotsList[0].clinic.name} ${selectedSlotsList[0].date.slice(0, 10)}` : "DELETE";
         return (
-          <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-xl shadow-xl w-full max-w-md">
-              <div className="px-6 py-4 border-b border-gray-100">
-                <h3 className="text-sm font-semibold text-black">Delete {selectedSlotsList.length} Slot{selectedSlotsList.length !== 1 ? "s" : ""}</h3>
-                <p className="text-xs text-gray-400 mt-0.5">This will cancel the slot and notify any signed-up volunteers.</p>
+          <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.4)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 50, padding: "16px" }}>
+            <div style={{ background: "#fff", borderRadius: "16px", boxShadow: "0 20px 60px rgba(0,0,0,.2)", width: "100%", maxWidth: "480px" }}>
+              <div style={{ padding: "20px 24px", borderBottom: "1.5px solid var(--card-border)" }}>
+                <h3 style={{ fontSize: "1rem", fontWeight: 700, color: "var(--navy)" }}>Delete {selectedSlotsList.length} Slot{selectedSlotsList.length !== 1 ? "s" : ""}</h3>
+                <p style={{ fontSize: "0.82rem", color: "var(--gray-600)", marginTop: "4px" }}>This will cancel the slot and notify any signed-up volunteers.</p>
               </div>
-              <div className="px-6 py-4">
-                <div className="max-h-40 overflow-y-auto space-y-1 mb-4">
+              <div style={{ padding: "20px 24px" }}>
+                <div style={{ maxHeight: "160px", overflowY: "auto", marginBottom: "16px" }}>
                   {selectedSlotsList.map((s) => (
-                    <div key={s.id} className="text-xs text-gray-600 py-1 border-b border-gray-50 last:border-0">
-                      <span className="font-medium">{s.clinic.name}</span> · {formatDate(s.date)} · {formatHour(s.startTime)}–{formatHour(s.endTime)} · {LANG_LABELS[s.language]}
-                      {s.signups.length > 0 && (
-                        <span className="ml-1 text-amber-600">({s.signups.length} volunteer{s.signups.length !== 1 ? "s" : ""} affected)</span>
-                      )}
+                    <div key={s.id} style={{ fontSize: "0.82rem", color: "var(--gray-600)", padding: "6px 0", borderBottom: "1px solid var(--card-border)" }}>
+                      <span style={{ fontWeight: 600 }}>{s.clinic.name}</span> · {formatDate(s.date)} · {formatHour(s.startTime)}–{formatHour(s.endTime)} · {LANG_LABELS[s.language]}
+                      {s.signups.length > 0 && <span style={{ color: "#D97706", marginLeft: "6px" }}>({s.signups.length} volunteer{s.signups.length !== 1 ? "s" : ""} affected)</span>}
                     </div>
                   ))}
                 </div>
-                <div className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 mb-4">
-                  <p className="text-xs text-amber-800">
-                    {isSingle
-                      ? <>To confirm, type the clinic name and date: <strong>{confirmText}</strong></>
-                      : <>To confirm, type: <strong>DELETE</strong></>}
+                <div style={{ background: "#FFFBEB", border: "1px solid #FDE68A", borderRadius: "9px", padding: "12px 16px", marginBottom: "14px" }}>
+                  <p style={{ fontSize: "0.82rem", color: "#92400E" }}>
+                    {isSingle ? <>To confirm, type the clinic name and date: <strong>{confirmText}</strong></> : <>To confirm, type: <strong>DELETE</strong></>}
                   </p>
                 </div>
-                <input
-                  autoFocus
-                  type="text"
-                  placeholder={confirmText}
-                  value={adminDeleteInput}
-                  onChange={(e) => setAdminDeleteInput(e.target.value)}
-                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-300 mb-4"
-                />
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => { setAdminDeleteModal(false); setAdminDeleteInput(""); }}
-                    className="flex-1 px-4 py-2 text-sm border border-gray-200 text-gray-600 rounded-lg hover:bg-gray-50 transition-colors"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    disabled={adminDeleteInput.trim() !== confirmText || actionLoading === "admin-batch-delete"}
-                    onClick={confirmAdminDeleteSlots}
-                    className="flex-1 px-4 py-2 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-40"
-                  >
-                    {actionLoading === "admin-batch-delete" ? "Deleting..." : "Confirm Delete"}
+                <input autoFocus type="text" placeholder={confirmText} value={adminDeleteInput} onChange={(e) => setAdminDeleteInput(e.target.value)} style={{ ...inputStyle, marginBottom: "16px" }} />
+                <div style={{ display: "flex", gap: "10px" }}>
+                  <button onClick={() => { setAdminDeleteModal(false); setAdminDeleteInput(""); }} style={{ flex: 1, padding: "10px", background: "none", border: "1.5px solid var(--card-border)", borderRadius: "9px", fontFamily: "inherit", fontSize: "0.875rem", color: "var(--gray-600)", cursor: "pointer" }}>Cancel</button>
+                  <button disabled={adminDeleteInput.trim() !== confirmText || actionLoading === "admin-batch-delete"} onClick={confirmAdminDeleteSlots} style={{ flex: 1, padding: "10px", background: "#DC2626", color: "#fff", border: "none", borderRadius: "9px", fontFamily: "inherit", fontSize: "0.875rem", fontWeight: 600, cursor: "pointer", opacity: adminDeleteInput.trim() !== confirmText || actionLoading === "admin-batch-delete" ? 0.4 : 1 }}>
+                    {actionLoading === "admin-batch-delete" ? "Deleting…" : "Confirm Delete"}
                   </button>
                 </div>
               </div>
@@ -1929,32 +1940,21 @@ export default function AdminDashboard() {
         );
       })()}
 
-      {/* Assign Volunteer to Shift Modal */}
+      {/* Assign Volunteer Modal */}
       {volunteerAssignTarget && (() => {
-        const activeVolunteers = users.filter(
-          (u) =>
-            (u.role === "VOLUNTEER" || u.role === "ADMIN" || u.role === "SUPER_ADMIN") &&
-            u.status === "ACTIVE"
-        );
+        const activeVolunteers = users.filter((u) => (u.role === "VOLUNTEER" || u.role === "ADMIN" || u.role === "SUPER_ADMIN") && u.status === "ACTIVE");
         const searchLower = assignSearch.toLowerCase();
-        const filtered = activeVolunteers.filter(
-          (u) =>
-            (u.name?.toLowerCase().includes(searchLower) ?? false) ||
-            u.email.toLowerCase().includes(searchLower)
-        );
+        const filteredVols = activeVolunteers.filter((u) => (u.name?.toLowerCase().includes(searchLower) ?? false) || u.email.toLowerCase().includes(searchLower));
         const targetSlot = adminSlots.find((s) => s.id === volunteerAssignTarget.slotId);
-
         return (
-          <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-xl shadow-xl w-full max-w-md">
-              {/* Header */}
-              <div className="px-6 py-4 border-b border-gray-100">
-                <h3 className="text-sm font-semibold text-black">Assign a Volunteer</h3>
-                <p className="text-xs text-gray-400 mt-0.5">
-                  {LANG_LABELS[volunteerAssignTarget.language]} &middot; {formatDate(volunteerAssignTarget.date)} &middot; {formatHour(volunteerAssignTarget.hour)}–{formatHour(volunteerAssignTarget.hour + 1)} &middot; {volunteerAssignTarget.clinicName}
+          <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.4)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 50, padding: "16px" }}>
+            <div style={{ background: "#fff", borderRadius: "16px", boxShadow: "0 20px 60px rgba(0,0,0,.2)", width: "100%", maxWidth: "480px" }}>
+              <div style={{ padding: "20px 24px", borderBottom: "1.5px solid var(--card-border)" }}>
+                <h3 style={{ fontSize: "1rem", fontWeight: 700, color: "var(--navy)" }}>Assign a Volunteer</h3>
+                <p style={{ fontSize: "0.82rem", color: "var(--gray-600)", marginTop: "4px" }}>
+                  {LANG_LABELS[volunteerAssignTarget.language]} · {formatDate(volunteerAssignTarget.date)} · {formatHour(volunteerAssignTarget.hour)}–{formatHour(volunteerAssignTarget.hour + 1)} · {volunteerAssignTarget.clinicName}
                 </p>
               </div>
-
               {!assignSelected ? (
                 /* Step 1: search and select */
                 <div className="px-6 py-4">
@@ -2005,52 +2005,28 @@ export default function AdminDashboard() {
                       );
                     })}
                   </div>
-                  <button
-                    onClick={closeAssignModal}
-                    className="mt-4 text-xs text-gray-400 hover:text-gray-600"
-                  >
-                    Cancel
-                  </button>
+                  <button onClick={closeAssignModal} style={{ marginTop: "12px", background: "none", border: "none", color: "var(--gray-400)", fontFamily: "inherit", fontSize: "0.82rem", cursor: "pointer" }}>Cancel</button>
                 </div>
               ) : (
-                /* Step 2: confirm */
-                <div className="px-6 py-4">
-                  <div className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 mb-4">
-                    <p className="text-xs font-semibold text-amber-800 mb-2">Confirm Assignment</p>
-                    <p className="text-sm text-amber-900">
-                      Assign <strong>{assignSelected.name}</strong> to this shift?
-                    </p>
-                    <p className="text-xs text-amber-700 mt-0.5">{assignSelected.email}</p>
-                    <div className="mt-2 pt-2 border-t border-amber-200 text-xs text-amber-700 space-y-0.5">
+                <div style={{ padding: "20px 24px" }}>
+                  <div style={{ background: "#FFFBEB", border: "1px solid #FDE68A", borderRadius: "10px", padding: "14px 16px", marginBottom: "16px" }}>
+                    <p style={{ fontSize: "0.82rem", fontWeight: 700, color: "#92400E", marginBottom: "6px" }}>Confirm Assignment</p>
+                    <p style={{ fontSize: "0.875rem", color: "#78350F" }}>Assign <strong>{assignSelected.name}</strong> to this shift?</p>
+                    <p style={{ fontSize: "0.78rem", color: "#92400E", marginTop: "2px" }}>{assignSelected.email}</p>
+                    <div style={{ marginTop: "8px", paddingTop: "8px", borderTop: "1px solid #FDE68A", fontSize: "0.78rem", color: "#92400E" }}>
                       <p>{LANG_LABELS[volunteerAssignTarget.language]} · {volunteerAssignTarget.clinicName}</p>
                       <p>{formatDate(volunteerAssignTarget.date)} · {formatHour(volunteerAssignTarget.hour)}–{formatHour(volunteerAssignTarget.hour + 1)}</p>
-                      <p className="mt-1 text-amber-600">They will receive a calendar invite.</p>
+                      <p style={{ marginTop: "4px" }}>They will receive a calendar invite.</p>
                     </div>
                   </div>
-                  {assignError && (
-                    <p className="text-xs text-red-600 mb-3">{assignError}</p>
-                  )}
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => { setAssignSelected(null); setAssignError(""); }}
-                      className="flex-1 px-4 py-2 text-sm border border-gray-200 text-gray-600 rounded-lg hover:bg-gray-50 transition-colors"
-                    >
-                      ← Back
-                    </button>
-                    <button
-                      disabled={assignLoading}
-                      onClick={assignVolunteer}
-                      className="flex-1 px-4 py-2 text-sm bg-[#4A90D9] text-white rounded-full hover:bg-[#357ABD] transition-colors disabled:opacity-50"
-                    >
-                      {assignLoading ? "Assigning..." : "Confirm Assignment"}
+                  {assignError && <p style={{ fontSize: "0.82rem", color: "#DC2626", marginBottom: "12px" }}>{assignError}</p>}
+                  <div style={{ display: "flex", gap: "10px" }}>
+                    <button onClick={() => { setAssignSelected(null); setAssignError(""); }} style={{ flex: 1, padding: "10px", background: "none", border: "1.5px solid var(--card-border)", borderRadius: "9px", fontFamily: "inherit", fontSize: "0.875rem", color: "var(--gray-600)", cursor: "pointer" }}>← Back</button>
+                    <button disabled={assignLoading} onClick={assignVolunteer} style={{ ...btnPrimary, flex: 1, textAlign: "center", opacity: assignLoading ? 0.5 : 1 }}>
+                      {assignLoading ? "Assigning…" : "Confirm Assignment"}
                     </button>
                   </div>
-                  <button
-                    onClick={closeAssignModal}
-                    className="mt-3 text-xs text-gray-400 hover:text-gray-600 w-full text-center"
-                  >
-                    Cancel
-                  </button>
+                  <button onClick={closeAssignModal} style={{ marginTop: "12px", background: "none", border: "none", color: "var(--gray-400)", fontFamily: "inherit", fontSize: "0.82rem", cursor: "pointer", width: "100%", textAlign: "center" }}>Cancel</button>
                 </div>
               )}
             </div>
@@ -2060,27 +2036,15 @@ export default function AdminDashboard() {
 
       {/* PIN Reveal Modal */}
       {pinReveal && (
-        <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-6 w-full max-w-sm shadow-xl">
-            <h3 className="text-sm font-semibold text-black mb-1">New PIN for {pinReveal.clinicName}</h3>
-            <p className="text-xs text-gray-400 mb-4">
-              Copy this PIN now — it cannot be shown again. Share it with the clinic directly.
-            </p>
-            <div className="flex items-center gap-3 bg-gray-50 border border-gray-200 rounded-lg px-4 py-3 mb-4">
-              <span className="text-2xl font-mono font-bold tracking-[0.3em] text-black">{pinReveal.pin}</span>
-              <button
-                onClick={() => navigator.clipboard.writeText(pinReveal.pin)}
-                className="ml-auto text-xs px-2 py-1 bg-gray-200 hover:bg-gray-300 text-gray-600 rounded transition-colors"
-              >
-                Copy
-              </button>
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.3)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 50 }}>
+          <div style={{ background: "#fff", borderRadius: "16px", padding: "28px 24px", width: "100%", maxWidth: "360px", boxShadow: "0 20px 60px rgba(0,0,0,.2)" }}>
+            <h3 style={{ fontSize: "1rem", fontWeight: 700, color: "var(--navy)", marginBottom: "6px" }}>New PIN for {pinReveal.clinicName}</h3>
+            <p style={{ fontSize: "0.82rem", color: "var(--gray-600)", marginBottom: "16px" }}>Copy this PIN now — it cannot be shown again.</p>
+            <div style={{ display: "flex", alignItems: "center", gap: "12px", background: "var(--page-bg)", border: "1.5px solid var(--card-border)", borderRadius: "10px", padding: "14px 18px", marginBottom: "16px" }}>
+              <span style={{ fontSize: "1.8rem", fontFamily: "monospace", fontWeight: 700, letterSpacing: "0.3em", color: "var(--navy)" }}>{pinReveal.pin}</span>
+              <button onClick={() => navigator.clipboard.writeText(pinReveal.pin)} style={{ marginLeft: "auto", fontSize: "0.78rem", padding: "5px 12px", background: "var(--gray-200)", color: "var(--gray-600)", border: "none", borderRadius: "6px", fontFamily: "inherit", cursor: "pointer" }}>Copy</button>
             </div>
-            <button
-              onClick={() => setPinReveal(null)}
-              className="w-full px-4 py-2 text-sm bg-[#4A90D9] text-white hover:bg-[#357ABD] rounded-lg transition-colors"
-            >
-              Done
-            </button>
+            <button onClick={() => setPinReveal(null)} style={{ ...btnPrimary, width: "100%", textAlign: "center" }}>Done</button>
           </div>
         </div>
       )}
@@ -2126,31 +2090,17 @@ export default function AdminDashboard() {
 
       {/* Assign Clinic Modal */}
       {assignModal && (
-        <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-6 w-full max-w-sm shadow-xl">
-            <h3 className="text-sm font-medium text-gray-700 mb-3">
-              Assign {assignModal.userName} to a clinic
-            </h3>
-            <div className="space-y-2">
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.3)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 50 }}>
+          <div style={{ background: "#fff", borderRadius: "16px", padding: "24px", width: "100%", maxWidth: "360px", boxShadow: "0 20px 60px rgba(0,0,0,.2)" }}>
+            <h3 style={{ fontSize: "0.95rem", fontWeight: 700, color: "var(--navy)", marginBottom: "14px" }}>Assign {assignModal.userName} to a clinic</h3>
+            <div style={{ display: "flex", flexDirection: "column", gap: "8px", marginBottom: "14px" }}>
               {clinics.map((clinic) => (
-                <button
-                  key={clinic.id}
-                  onClick={async () => {
-                    await updateUser(assignModal.userId, { clinicId: clinic.id });
-                    setAssignModal(null);
-                  }}
-                  className="w-full text-left px-3 py-2 text-sm border border-gray-200 rounded-md hover:bg-gray-50 transition-colors"
-                >
+                <button key={clinic.id} onClick={async () => { await updateUser(assignModal.userId, { clinicId: clinic.id }); setAssignModal(null); }} style={{ textAlign: "left", padding: "10px 14px", fontSize: "0.875rem", border: "1.5px solid var(--card-border)", borderRadius: "9px", background: "var(--card-bg)", color: "var(--gray-900)", fontFamily: "inherit", cursor: "pointer" }}>
                   {clinic.name}
                 </button>
               ))}
             </div>
-            <button
-              onClick={() => setAssignModal(null)}
-              className="mt-4 text-xs text-gray-400 hover:text-gray-600"
-            >
-              Cancel
-            </button>
+            <button onClick={() => setAssignModal(null)} style={{ background: "none", border: "none", color: "var(--gray-400)", fontFamily: "inherit", fontSize: "0.82rem", cursor: "pointer" }}>Cancel</button>
           </div>
         </div>
       )}
