@@ -113,7 +113,7 @@ function MapsLinks({ address }: { address: string }) {
       >
         G Maps
       </a>
-      <span className="text-stone-300">·</span>
+      <span className="text-gray-300">·</span>
       <a
         href={`https://maps.apple.com/?q=${q}`}
         target="_blank"
@@ -634,8 +634,8 @@ export default function AdminDashboard() {
 
   if (status === "loading" || loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-stone-50">
-        <p className="text-stone-400">Loading...</p>
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <p className="text-gray-400">Loading...</p>
       </div>
     );
   }
@@ -682,7 +682,7 @@ export default function AdminDashboard() {
     const canSignUp = adminProfile?.languages.includes(slot.language) ?? false;
 
     return (
-      <div key={slot.id} className={`bg-white rounded-xl border border-stone-200 p-5 ${isPast ? "opacity-50" : ""}`}>
+      <div key={slot.id} className={`bg-white rounded-xl border border-gray-200 p-5 ${isPast ? "opacity-50" : ""}`}>
         <div className="flex items-start justify-between mb-3">
           <div className="flex items-center gap-3 flex-wrap">
             {!isPast && (
@@ -690,28 +690,28 @@ export default function AdminDashboard() {
                 type="checkbox"
                 checked={adminSelectedSlotIds.has(slot.id)}
                 onChange={() => toggleSelectAdminSlot(slot.id)}
-                className="w-4 h-4 accent-stone-700 cursor-pointer"
+                className="w-4 h-4 accent-gray-700 cursor-pointer"
                 onClick={(e) => e.stopPropagation()}
               />
             )}
             <span className={`text-xs px-2 py-1 rounded-full font-medium ${LANG_COLORS[slot.language]}`}>
               {LANG_LABELS[slot.language]}
             </span>
-            <span className="text-sm font-medium text-stone-800">{formatDate(slot.date)}</span>
-            <span className="text-sm text-stone-500">{formatHour(slot.startTime)} – {formatHour(slot.endTime)}</span>
-            {isPast && <span className="text-xs px-2 py-0.5 rounded-full bg-stone-100 text-stone-400">Past</span>}
+            <span className="text-sm font-medium text-black">{formatDate(slot.date)}</span>
+            <span className="text-sm text-gray-500">{formatHour(slot.startTime)} – {formatHour(slot.endTime)}</span>
+            {isPast && <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-400">Past</span>}
           </div>
           <div className="text-right">
-            <p className="text-sm font-medium text-stone-800">{slot.clinic.name}</p>
+            <p className="text-sm font-medium text-black">{slot.clinic.name}</p>
             {slot.clinic.address && (
-              <p className="text-xs text-stone-400">
+              <p className="text-xs text-gray-400">
                 {slot.clinic.address}
                 <MapsLinks address={slot.clinic.address} />
               </p>
             )}
           </div>
         </div>
-        {slot.notes && <p className="text-xs text-stone-400 italic mb-3">{slot.notes}</p>}
+        {slot.notes && <p className="text-xs text-gray-400 italic mb-3">{slot.notes}</p>}
         <div className="space-y-2">
           {subBlocks.map((hour) => {
             const hoursSignups = slot.signups.filter((s) => s.subBlockHour === hour);
@@ -721,11 +721,11 @@ export default function AdminDashboard() {
             const signupKey = `signup-${slot.id}-${hour}`;
 
             return (
-              <div key={hour} className="rounded-md bg-stone-50 px-3 py-2 space-y-1.5">
+              <div key={hour} className="rounded-md bg-gray-50 px-3 py-2 space-y-1.5">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <span className="text-xs text-stone-600 w-28">{formatHour(hour)} – {formatHour(hour + 1)}</span>
-                    <span className="text-xs text-stone-400">{filled}/{slot.interpreterCount} filled</span>
+                    <span className="text-xs text-gray-600 w-28">{formatHour(hour)} – {formatHour(hour + 1)}</span>
+                    <span className="text-xs text-gray-400">{filled}/{slot.interpreterCount} filled</span>
                   </div>
                   <div className="flex items-center gap-2">
                     {!isPast && (
@@ -742,7 +742,7 @@ export default function AdminDashboard() {
                       </button>
                     )}
                     {isPast ? (
-                      <span className="text-xs px-2 py-1 bg-stone-100 text-stone-400 rounded-md">Past</span>
+                      <span className="text-xs px-2 py-1 bg-gray-100 text-gray-400 rounded-md">Past</span>
                     ) : mySignup ? (
                       <button
                         disabled={actionLoading === mySignup.id}
@@ -753,7 +753,7 @@ export default function AdminDashboard() {
                         {actionLoading === mySignup.id ? "..." : "Signed Up ✓"}
                       </button>
                     ) : isFull ? (
-                      <span className="text-xs px-2 py-1 bg-stone-100 text-stone-400 rounded-md">Full</span>
+                      <span className="text-xs px-2 py-1 bg-gray-100 text-gray-400 rounded-md">Full</span>
                     ) : (
                       <button
                         disabled={actionLoading === signupKey || !canSignUp}
@@ -772,8 +772,8 @@ export default function AdminDashboard() {
                   .map((s) => (
                     <div key={s.id} className="flex items-center justify-between pl-1">
                       <div className="flex items-center gap-2">
-                        <span className="text-xs text-stone-500">{s.volunteer.user.name ?? s.volunteer.user.email}</span>
-                        <span className="text-xs text-stone-300">{s.volunteer.user.email}</span>
+                        <span className="text-xs text-gray-500">{s.volunteer.user.name ?? s.volunteer.user.email}</span>
+                        <span className="text-xs text-gray-300">{s.volunteer.user.email}</span>
                       </div>
                       {!isPast && (
                         <button
@@ -795,24 +795,24 @@ export default function AdminDashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-stone-50">
+    <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <header className="bg-white border-b border-stone-200">
+      <header className="bg-white border-b border-gray-200">
         <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div>
-              <h1 className="text-lg font-semibold text-stone-800 tracking-tight">Georgetown Medical Interpreters</h1>
-              <p className="text-xs text-stone-400">Admin Dashboard</p>
+              <h1 className="text-lg font-semibold text-black tracking-tight">Georgetown Medical Interpreters</h1>
+              <p className="text-xs text-gray-400">Admin Dashboard</p>
             </div>
             <button
               onClick={() => setTab("suggestions")}
-              className="text-sm px-3 py-1.5 bg-stone-100 hover:bg-stone-200 text-stone-600 rounded-md transition-colors"
+              className="text-sm px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-md transition-colors"
             >
               Contact Us
             </button>
           </div>
           <div className="flex items-center gap-3">
-            <span className="text-sm text-stone-500">{session?.user?.email}</span>
+            <span className="text-sm text-gray-500">{session?.user?.email}</span>
             {session?.user?.role === "SUPER_ADMIN" && (
               <span className="text-xs px-2 py-0.5 rounded-full bg-violet-100 text-violet-700 font-medium">
                 Super Admin
@@ -820,7 +820,7 @@ export default function AdminDashboard() {
             )}
             <button
               onClick={() => router.push("/dashboard/volunteer")}
-              className="text-sm px-3 py-1.5 bg-stone-100 hover:bg-stone-200 text-stone-600 rounded-md transition-colors flex items-center gap-1.5"
+              className="text-sm px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-md transition-colors flex items-center gap-1.5"
             >
               <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -830,7 +830,7 @@ export default function AdminDashboard() {
             </button>
             <button
               onClick={() => signOut({ callbackUrl: "/login" })}
-              className="text-sm px-3 py-1.5 bg-stone-100 hover:bg-stone-200 text-stone-600 rounded-md transition-colors"
+              className="text-sm px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-md transition-colors"
             >
               Sign Out
             </button>
@@ -840,7 +840,7 @@ export default function AdminDashboard() {
 
       {/* Tabs */}
       <div className="max-w-6xl mx-auto px-6 pt-6">
-        <div className="flex gap-1 bg-stone-200/50 p-1 rounded-xl w-fit">
+        <div className="flex gap-1 bg-gray-200/50 p-1 rounded-xl w-fit">
           {[
             { key: "slots" as Tab, label: "Browse Slots", count: 0 },
             { key: "users" as Tab, label: "All Users", count: users.length, pendingCount: pendingUsers.length },
@@ -863,7 +863,7 @@ export default function AdminDashboard() {
               className={`px-4 py-2 text-sm rounded-md transition-colors ${
                 tab === t.key
                   ? "bg-[#041E42] text-white shadow-sm font-medium"
-                  : "text-stone-500 hover:text-stone-700"
+                  : "text-gray-500 hover:text-gray-700"
               }`}
             >
               {t.label}
@@ -872,7 +872,7 @@ export default function AdminDashboard() {
                   {(t as { pendingCount: number }).pendingCount}
                 </span>
               ) : t.count > 0 ? (
-                <span className="ml-2 text-xs px-1.5 py-0.5 rounded-full bg-stone-100 text-stone-500">
+                <span className="ml-2 text-xs px-1.5 py-0.5 rounded-full bg-gray-100 text-gray-500">
                   {t.count}
                 </span>
               ) : null}
@@ -927,56 +927,56 @@ export default function AdminDashboard() {
                   className={`px-3 py-1.5 text-xs rounded-md transition-colors ${
                     langFilter === lang
                       ? "bg-[#041E42] text-white"
-                      : "bg-white border border-stone-200 text-stone-500 hover:border-stone-300"
+                      : "bg-white border border-gray-200 text-gray-500 hover:border-gray-300"
                   }`}
                 >
                   {lang === "ALL" ? "All Languages" : LANG_LABELS[lang]}
                 </button>
               ))}
 
-              <div className="w-px bg-stone-200 mx-1 self-stretch" />
+              <div className="w-px bg-gray-200 mx-1 self-stretch" />
 
               {/* Clinic */}
               <select
                 value={clinicFilter}
                 onChange={(e) => setClinicFilter(e.target.value)}
-                className="px-2 py-1.5 text-xs border border-stone-200 rounded-md bg-white text-stone-600 focus:outline-none"
+                className="px-2 py-1.5 text-xs border border-gray-200 rounded-md bg-white text-gray-600 focus:outline-none"
               >
                 <option value="ALL">All Clinics</option>
                 {uniqueClinics.map((c) => <option key={c} value={c}>{c}</option>)}
               </select>
 
-              <div className="w-px bg-stone-200 mx-1 self-stretch" />
+              <div className="w-px bg-gray-200 mx-1 self-stretch" />
 
               {/* Date range */}
               <div className="flex items-center gap-1.5">
-                <span className="text-xs text-stone-400">From</span>
+                <span className="text-xs text-gray-400">From</span>
                 <input
                   type="date"
                   value={dateFrom}
                   onChange={(e) => setDateFrom(e.target.value)}
-                  className="px-2 py-1.5 text-xs border border-stone-200 rounded-md bg-white text-stone-600 focus:outline-none"
+                  className="px-2 py-1.5 text-xs border border-gray-200 rounded-md bg-white text-gray-600 focus:outline-none"
                 />
               </div>
               <div className="flex items-center gap-1.5">
-                <span className="text-xs text-stone-400">To</span>
+                <span className="text-xs text-gray-400">To</span>
                 <input
                   type="date"
                   value={dateTo}
                   onChange={(e) => setDateTo(e.target.value)}
-                  className="px-2 py-1.5 text-xs border border-stone-200 rounded-md bg-white text-stone-600 focus:outline-none"
+                  className="px-2 py-1.5 text-xs border border-gray-200 rounded-md bg-white text-gray-600 focus:outline-none"
                 />
               </div>
               {(dateFrom || dateTo) && (
                 <button
                   onClick={() => { setDateFrom(""); setDateTo(""); }}
-                  className="text-xs text-stone-400 hover:text-stone-600"
+                  className="text-xs text-gray-400 hover:text-gray-600"
                 >
                   Clear
                 </button>
               )}
 
-              <div className="w-px bg-stone-200 mx-1 self-stretch" />
+              <div className="w-px bg-gray-200 mx-1 self-stretch" />
 
               {/* Available only */}
               <button
@@ -984,7 +984,7 @@ export default function AdminDashboard() {
                 className={`px-3 py-1.5 text-xs rounded-md transition-colors ${
                   availableOnly
                     ? "bg-emerald-700 text-white"
-                    : "bg-white border border-stone-200 text-stone-500 hover:border-stone-300"
+                    : "bg-white border border-gray-200 text-gray-500 hover:border-gray-300"
                 }`}
               >
                 Available Only
@@ -992,15 +992,15 @@ export default function AdminDashboard() {
             </div>
 
             {upcomingSlots.length === 0 && pastSlots.length === 0 ? (
-              <div className="bg-white rounded-xl border border-stone-200 p-12 text-center">
-                <p className="text-stone-400">No slots match your filters.</p>
+              <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
+                <p className="text-gray-400">No slots match your filters.</p>
               </div>
             ) : (
               <div className="space-y-4">
                 {upcomingSlots.map((slot) => renderSlot(slot, false))}
                 {pastSlots.length > 0 && (
                   <>
-                    <p className="text-xs font-medium text-stone-400 uppercase tracking-wider pt-2">Past Slots</p>
+                    <p className="text-xs font-medium text-gray-400 uppercase tracking-wider pt-2">Past Slots</p>
                     {pastSlots.map((slot) => renderSlot(slot, true))}
                   </>
                 )}
@@ -1011,15 +1011,15 @@ export default function AdminDashboard() {
 
         {/* All Users */}
         {tab === "users" && (
-          <div className="bg-white rounded-xl border border-stone-200 overflow-hidden">
+          <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
             <table className="w-full">
               <thead>
-                <tr className="border-b border-stone-100">
-                  <th className="text-left text-xs font-medium text-stone-400 uppercase tracking-wider px-5 py-3">Name</th>
-                  <th className="text-left text-xs font-medium text-stone-400 uppercase tracking-wider px-5 py-3">Email</th>
-                  <th className="text-left text-xs font-medium text-stone-400 uppercase tracking-wider px-5 py-3">Role</th>
-                  <th className="text-left text-xs font-medium text-stone-400 uppercase tracking-wider px-5 py-3">Volunteer Stats</th>
-                  <th className="text-right text-xs font-medium text-stone-400 uppercase tracking-wider px-5 py-3">Actions</th>
+                <tr className="border-b border-gray-100">
+                  <th className="text-left text-xs font-medium text-gray-400 uppercase tracking-wider px-5 py-3">Name</th>
+                  <th className="text-left text-xs font-medium text-gray-400 uppercase tracking-wider px-5 py-3">Email</th>
+                  <th className="text-left text-xs font-medium text-gray-400 uppercase tracking-wider px-5 py-3">Role</th>
+                  <th className="text-left text-xs font-medium text-gray-400 uppercase tracking-wider px-5 py-3">Volunteer Stats</th>
+                  <th className="text-right text-xs font-medium text-gray-400 uppercase tracking-wider px-5 py-3">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -1031,9 +1031,9 @@ export default function AdminDashboard() {
                   });
                   return sortedUsers;
                 })().map((user) => (
-                  <tr key={user.id} className={`border-b border-stone-50 last:border-0 ${user.status === "PENDING_APPROVAL" ? "bg-amber-50/30" : ""}`}>
-                    <td className="px-5 py-3.5 text-sm text-stone-800">{user.name}</td>
-                    <td className="px-5 py-3.5 text-sm text-stone-500">{user.email}</td>
+                  <tr key={user.id} className={`border-b border-gray-50 last:border-0 ${user.status === "PENDING_APPROVAL" ? "bg-amber-50/30" : ""}`}>
+                    <td className="px-5 py-3.5 text-sm text-black">{user.name}</td>
+                    <td className="px-5 py-3.5 text-sm text-gray-500">{user.email}</td>
                     <td className="px-5 py-3.5">
                       <div className="flex flex-wrap gap-1">
                         {/* Primary role chip */}
@@ -1043,7 +1043,7 @@ export default function AdminDashboard() {
                           user.role === "INSTRUCTOR" ? "bg-indigo-50 text-indigo-700 border border-indigo-100" :
                           user.role === "CLINIC" ? "bg-[#EBF3FC] text-[#041E42] border border-[#4A90D9]/20" :
                           user.role === "VOLUNTEER" ? "bg-emerald-50 text-emerald-700 border border-emerald-100" :
-                          "bg-stone-100 text-stone-500 border border-stone-200"
+                          "bg-gray-100 text-gray-500 border border-gray-200"
                         }`}>
                           {user.role === "SUPER_ADMIN" ? "Super Admin" :
                            user.role.charAt(0) + user.role.slice(1).toLowerCase()}
@@ -1086,7 +1086,7 @@ export default function AdminDashboard() {
                       </div>
                       {/* Clearance log line below chips */}
                       {user.volunteer?.clearanceLogs?.[0] && (
-                        <p className="text-xs text-stone-400 mt-1">
+                        <p className="text-xs text-gray-400 mt-1">
                           by {user.volunteer.clearanceLogs[0].clearedBy.name ?? user.volunteer.clearanceLogs[0].clearedBy.email}{" "}
                           · {new Date(user.volunteer.clearanceLogs[0].createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
                         </p>
@@ -1094,7 +1094,7 @@ export default function AdminDashboard() {
                     </td>
                     <td className="px-5 py-3.5">
                       {user.volunteer ? (
-                        <div className="flex gap-3 text-xs text-stone-500">
+                        <div className="flex gap-3 text-xs text-gray-500">
                           <span title="Hours volunteered">⏱ {user.volunteer.hoursVolunteered}h</span>
                           <span title="No-shows" className={user.volunteer.noShows > 0 ? "text-red-500" : ""}>
                             NS {user.volunteer.noShows}
@@ -1107,7 +1107,7 @@ export default function AdminDashboard() {
                           </span>
                         </div>
                       ) : (
-                        <span className="text-xs text-stone-300">—</span>
+                        <span className="text-xs text-gray-300">—</span>
                       )}
                     </td>
                     <td className="px-5 py-3.5 text-right">
@@ -1133,7 +1133,7 @@ export default function AdminDashboard() {
                           user.role !== "SUPER_ADMIN" && (user.role !== "ADMIN" || session?.user?.role === "SUPER_ADMIN") && (
                             <div className="flex gap-1">
                               <select
-                                className="text-xs border border-stone-200 rounded px-2 py-1 text-stone-600"
+                                className="text-xs border border-gray-200 rounded px-2 py-1 text-gray-600"
                                 value={user.role}
                                 onChange={(e) => updateUser(user.id, { role: e.target.value })}
                               >
@@ -1191,32 +1191,32 @@ export default function AdminDashboard() {
             </div>
 
             {showClinicForm && (
-              <div className="bg-white rounded-xl border border-stone-200 p-6 mb-4">
-                <h3 className="text-sm font-medium text-stone-700 mb-4">New Clinic</h3>
+              <div className="bg-white rounded-xl border border-gray-200 p-6 mb-4">
+                <h3 className="text-sm font-medium text-gray-700 mb-4">New Clinic</h3>
                 <div className="grid grid-cols-2 gap-4">
                   <input
                     placeholder="Clinic Name"
                     value={clinicForm.name}
                     onChange={(e) => setClinicForm({ ...clinicForm, name: e.target.value })}
-                    className="px-3 py-2 text-sm border border-stone-200 rounded-md focus:outline-none focus:ring-2 focus:ring-stone-300"
+                    className="px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-300"
                   />
                   <input
                     placeholder="Address"
                     value={clinicForm.address}
                     onChange={(e) => setClinicForm({ ...clinicForm, address: e.target.value })}
-                    className="px-3 py-2 text-sm border border-stone-200 rounded-md focus:outline-none focus:ring-2 focus:ring-stone-300"
+                    className="px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-300"
                   />
                   <input
                     placeholder="Contact Name"
                     value={clinicForm.contactName}
                     onChange={(e) => setClinicForm({ ...clinicForm, contactName: e.target.value })}
-                    className="px-3 py-2 text-sm border border-stone-200 rounded-md focus:outline-none focus:ring-2 focus:ring-stone-300"
+                    className="px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-300"
                   />
                   <input
                     placeholder="Contact Email"
                     value={clinicForm.contactEmail}
                     onChange={(e) => setClinicForm({ ...clinicForm, contactEmail: e.target.value })}
-                    className="px-3 py-2 text-sm border border-stone-200 rounded-md focus:outline-none focus:ring-2 focus:ring-stone-300"
+                    className="px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-300"
                   />
                 </div>
                 {clinicFormError && (
@@ -1235,32 +1235,32 @@ export default function AdminDashboard() {
             )}
 
             {clinics.length === 0 && !showClinicForm ? (
-              <div className="bg-white rounded-xl border border-stone-200 p-12 text-center">
-                <p className="text-stone-400">No clinics yet</p>
+              <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
+                <p className="text-gray-400">No clinics yet</p>
               </div>
             ) : (
               <div className="space-y-3">
                 {clinics.map((clinic) => (
-                  <div key={clinic.id} className="bg-white rounded-xl border border-stone-200 p-5">
+                  <div key={clinic.id} className="bg-white rounded-xl border border-gray-200 p-5">
                     <div className="flex items-start justify-between">
                       <div>
-                        <h3 className="font-medium text-stone-800">{clinic.name}</h3>
-                        <p className="text-sm text-stone-500 mt-0.5">
+                        <h3 className="font-medium text-black">{clinic.name}</h3>
+                        <p className="text-sm text-gray-500 mt-0.5">
                           {clinic.address}
                           {clinic.address && <MapsLinks address={clinic.address} />}
                         </p>
-                        <p className="text-xs text-stone-400 mt-1">{clinic.contactName} · {clinic.contactEmail}</p>
+                        <p className="text-xs text-gray-400 mt-1">{clinic.contactName} · {clinic.contactEmail}</p>
                         <div className="mt-3 flex items-center gap-3 flex-wrap">
-                          <div className="flex items-center gap-1.5 bg-stone-50 border border-stone-200 rounded-md px-2 py-1">
-                            <span className="text-xs text-stone-400">PIN</span>
-                            <span className="text-xs font-mono font-semibold text-stone-400 tracking-widest">••••••</span>
+                          <div className="flex items-center gap-1.5 bg-gray-50 border border-gray-200 rounded-md px-2 py-1">
+                            <span className="text-xs text-gray-400">PIN</span>
+                            <span className="text-xs font-mono font-semibold text-gray-400 tracking-widest">••••••</span>
                           </div>
                           <button
                             onClick={() => {
                               const url = `${window.location.origin}/clinic-login/${clinic.loginToken}`;
                               navigator.clipboard.writeText(url);
                             }}
-                            className="text-xs px-2 py-1 bg-stone-50 border border-stone-200 hover:bg-stone-100 text-stone-600 rounded-md transition-colors"
+                            className="text-xs px-2 py-1 bg-gray-50 border border-gray-200 hover:bg-gray-100 text-gray-600 rounded-md transition-colors"
                           >
                             Copy Login URL
                           </button>
@@ -1274,7 +1274,7 @@ export default function AdminDashboard() {
                         </div>
                       </div>
                       <div className="flex items-center gap-3">
-                        <span className="text-xs text-stone-400">{clinic._count?.slots || 0} slots</span>
+                        <span className="text-xs text-gray-400">{clinic._count?.slots || 0} slots</span>
                         <button
                           disabled={actionLoading === `delete-clinic-${clinic.id}`}
                           onClick={() => deleteClinic(clinic.id, clinic.name)}
@@ -1295,17 +1295,17 @@ export default function AdminDashboard() {
         {tab === "profile" && (
           <div className="max-w-lg space-y-5">
             {/* Hours stat */}
-            <div className="bg-white rounded-xl border border-stone-200 p-5 flex items-center gap-4">
+            <div className="bg-white rounded-xl border border-gray-200 p-5 flex items-center gap-4">
               <div className="text-center">
-                <p className="text-3xl font-semibold text-stone-800">{adminProfile?.hoursVolunteered ?? 0}</p>
-                <p className="text-xs text-stone-400 mt-1">Hours Volunteered</p>
+                <p className="text-3xl font-semibold text-black">{adminProfile?.hoursVolunteered ?? 0}</p>
+                <p className="text-xs text-gray-400 mt-1">Hours Volunteered</p>
               </div>
             </div>
 
             {/* Language selection */}
-            <div className="bg-white rounded-xl border border-stone-200 p-6">
-              <h3 className="text-sm font-medium text-stone-700 mb-1">Languages</h3>
-              <p className="text-xs text-stone-400 mb-4">Click to toggle. Filled black = you speak it, white = you don&apos;t. Only matching slots will let you sign up.</p>
+            <div className="bg-white rounded-xl border border-gray-200 p-6">
+              <h3 className="text-sm font-medium text-gray-700 mb-1">Languages</h3>
+              <p className="text-xs text-gray-400 mb-4">Click to toggle. Filled black = you speak it, white = you don&apos;t. Only matching slots will let you sign up.</p>
               <div className="flex gap-3 flex-wrap mb-6">
                 {Object.entries(LANG_LABELS).map(([code, label]) => (
                   <button
@@ -1314,7 +1314,7 @@ export default function AdminDashboard() {
                     className={`px-4 py-2 text-sm rounded-md border transition-colors ${
                       profileForm.languages.includes(code)
                         ? "border-[#041E42] bg-[#041E42] text-white"
-                        : "border-stone-200 text-stone-600 hover:border-stone-400"
+                        : "border-gray-200 text-gray-600 hover:border-gray-400"
                     }`}
                   >
                     {label}
@@ -1341,15 +1341,15 @@ export default function AdminDashboard() {
         {/* Languages */}
         {tab === "languages" && (
           <div className="max-w-2xl space-y-5">
-            <div className="bg-white rounded-xl border border-stone-200 p-6">
-              <h3 className="text-sm font-medium text-stone-700 mb-1">Add Language</h3>
-              <p className="text-xs text-stone-400 mb-4">Inactive languages are hidden from dropdowns but shown here.</p>
+            <div className="bg-white rounded-xl border border-gray-200 p-6">
+              <h3 className="text-sm font-medium text-gray-700 mb-1">Add Language</h3>
+              <p className="text-xs text-gray-400 mb-4">Inactive languages are hidden from dropdowns but shown here.</p>
               <div className="flex gap-3">
                 <input
                   placeholder="Name (e.g. French)"
                   value={langForm.name}
                   onChange={(e) => setLangForm({ ...langForm, name: e.target.value })}
-                  className="flex-1 px-3 py-2 text-sm border border-stone-200 rounded-md focus:outline-none focus:ring-2 focus:ring-stone-300"
+                  className="flex-1 px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-300"
                 />
                 <button
                   disabled={!langForm.name}
@@ -1365,26 +1365,26 @@ export default function AdminDashboard() {
             </div>
 
             {languages.length === 0 ? (
-              <div className="bg-white rounded-xl border border-stone-200 p-12 text-center">
-                <p className="text-stone-400">No languages configured yet.</p>
+              <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
+                <p className="text-gray-400">No languages configured yet.</p>
               </div>
             ) : (
-              <div className="bg-white rounded-xl border border-stone-200 divide-y divide-stone-100">
+              <div className="bg-white rounded-xl border border-gray-200 divide-y divide-gray-100">
                 {languages.map((lang) => (
                   <div key={lang.id} className="flex items-center justify-between px-5 py-3 gap-3">
                     <div className="flex items-center gap-3">
-                      <span className="text-sm text-stone-800">{lang.name}</span>
-                      <span className="text-xs text-stone-400">{lang.volunteerCount ?? 0} volunteer{(lang.volunteerCount ?? 0) !== 1 ? "s" : ""}</span>
+                      <span className="text-sm text-black">{lang.name}</span>
+                      <span className="text-xs text-gray-400">{lang.volunteerCount ?? 0} volunteer{(lang.volunteerCount ?? 0) !== 1 ? "s" : ""}</span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className={`text-xs px-2 py-0.5 rounded-full ${lang.isActive ? "bg-emerald-50 text-emerald-700" : "bg-stone-100 text-stone-400"}`}>
+                      <span className={`text-xs px-2 py-0.5 rounded-full ${lang.isActive ? "bg-emerald-50 text-emerald-700" : "bg-gray-100 text-gray-400"}`}>
                         {lang.isActive ? "Active" : "Inactive"}
                       </span>
                       <button
                         onClick={() => toggleLanguageActive(lang.id, !lang.isActive, lang.name)}
                         className={`text-xs px-2 py-1 rounded-md transition-colors ${
                           lang.isActive
-                            ? "bg-stone-100 text-stone-600 hover:bg-stone-200"
+                            ? "bg-gray-100 text-gray-600 hover:bg-gray-200"
                             : "bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
                         }`}
                       >
@@ -1402,56 +1402,56 @@ export default function AdminDashboard() {
         {tab === "metrics" && (
           <div className="space-y-6">
             {!metrics ? (
-              <div className="bg-white rounded-xl border border-stone-200 p-12 text-center">
-                <p className="text-stone-400">Loading metrics...</p>
+              <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
+                <p className="text-gray-400">Loading metrics...</p>
               </div>
             ) : (
               <>
                 <div className="grid grid-cols-3 gap-4">
-                  <div className="bg-white rounded-xl border border-stone-200 p-5 text-center">
-                    <p className="text-3xl font-semibold text-stone-800">{metrics.totalHours}</p>
-                    <p className="text-xs text-stone-400 mt-1">Total Hours</p>
+                  <div className="bg-white rounded-xl border border-gray-200 p-5 text-center">
+                    <p className="text-3xl font-semibold text-black">{metrics.totalHours}</p>
+                    <p className="text-xs text-gray-400 mt-1">Total Hours</p>
                   </div>
-                  <div className="bg-white rounded-xl border border-stone-200 p-5 text-center">
-                    <p className="text-3xl font-semibold text-stone-800">{metrics.volunteerCount}</p>
-                    <p className="text-xs text-stone-400 mt-1">Active Volunteers</p>
+                  <div className="bg-white rounded-xl border border-gray-200 p-5 text-center">
+                    <p className="text-3xl font-semibold text-black">{metrics.volunteerCount}</p>
+                    <p className="text-xs text-gray-400 mt-1">Active Volunteers</p>
                   </div>
-                  <div className="bg-white rounded-xl border border-stone-200 p-5 text-center">
-                    <p className="text-3xl font-semibold text-stone-800">{metrics.activeSlotCount}</p>
-                    <p className="text-xs text-stone-400 mt-1">Active Slots</p>
+                  <div className="bg-white rounded-xl border border-gray-200 p-5 text-center">
+                    <p className="text-3xl font-semibold text-black">{metrics.activeSlotCount}</p>
+                    <p className="text-xs text-gray-400 mt-1">Active Slots</p>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
-                  <div className="bg-white rounded-xl border border-stone-200 p-5">
-                    <h3 className="text-sm font-medium text-stone-700 mb-3">Hours by Language</h3>
+                  <div className="bg-white rounded-xl border border-gray-200 p-5">
+                    <h3 className="text-sm font-medium text-gray-700 mb-3">Hours by Language</h3>
                     {metrics.hoursByLanguage.length === 0 ? (
-                      <p className="text-xs text-stone-400">No data yet.</p>
+                      <p className="text-xs text-gray-400">No data yet.</p>
                     ) : (
                       <div className="space-y-2">
                         {metrics.hoursByLanguage.map((item) => (
                           <div key={item.code} className="flex items-center justify-between">
                             <div className="flex items-center gap-2">
-                              <span className="text-xs font-mono font-semibold px-1.5 py-0.5 bg-stone-100 text-stone-600 rounded">{item.code}</span>
-                              <span className="text-sm text-stone-700">{item.name}</span>
+                              <span className="text-xs font-mono font-semibold px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded">{item.code}</span>
+                              <span className="text-sm text-gray-700">{item.name}</span>
                             </div>
-                            <span className="text-sm font-medium text-stone-800">{item.hours}h</span>
+                            <span className="text-sm font-medium text-black">{item.hours}h</span>
                           </div>
                         ))}
                       </div>
                     )}
                   </div>
 
-                  <div className="bg-white rounded-xl border border-stone-200 p-5">
-                    <h3 className="text-sm font-medium text-stone-700 mb-3">Hours by Clinic</h3>
+                  <div className="bg-white rounded-xl border border-gray-200 p-5">
+                    <h3 className="text-sm font-medium text-gray-700 mb-3">Hours by Clinic</h3>
                     {metrics.hoursByClinic.length === 0 ? (
-                      <p className="text-xs text-stone-400">No data yet.</p>
+                      <p className="text-xs text-gray-400">No data yet.</p>
                     ) : (
                       <div className="space-y-2">
                         {metrics.hoursByClinic.map((item) => (
                           <div key={item.clinicId} className="flex items-center justify-between">
-                            <span className="text-sm text-stone-700">{item.clinicName}</span>
-                            <span className="text-sm font-medium text-stone-800">{item.hours}h</span>
+                            <span className="text-sm text-gray-700">{item.clinicName}</span>
+                            <span className="text-sm font-medium text-black">{item.hours}h</span>
                           </div>
                         ))}
                       </div>
@@ -1459,34 +1459,34 @@ export default function AdminDashboard() {
                   </div>
                 </div>
 
-                <p className="text-xs text-stone-400 text-center">Graphs coming soon</p>
+                <p className="text-xs text-gray-400 text-center">Graphs coming soon</p>
 
                 {/* Feedback Overview */}
-                <div className="bg-white rounded-xl border border-stone-200 p-5">
-                  <h3 className="text-sm font-medium text-stone-700 mb-3">Feedback Overview</h3>
+                <div className="bg-white rounded-xl border border-gray-200 p-5">
+                  <h3 className="text-sm font-medium text-gray-700 mb-3">Feedback Overview</h3>
                   <div className="grid grid-cols-3 gap-4 mb-4">
                     <div className="text-center">
-                      <p className="text-2xl font-semibold text-stone-800">{metrics.feedbackCount ?? 0}</p>
-                      <p className="text-xs text-stone-400 mt-1">Total Feedback</p>
+                      <p className="text-2xl font-semibold text-black">{metrics.feedbackCount ?? 0}</p>
+                      <p className="text-xs text-gray-400 mt-1">Total Feedback</p>
                     </div>
                     <div className="text-center">
-                      <p className="text-2xl font-semibold text-stone-800">
+                      <p className="text-2xl font-semibold text-black">
                         {metrics.avgVolunteerRating != null ? `${metrics.avgVolunteerRating}★` : "—"}
                       </p>
-                      <p className="text-xs text-stone-400 mt-1">Avg Volunteer Rating</p>
+                      <p className="text-xs text-gray-400 mt-1">Avg Volunteer Rating</p>
                     </div>
                     <div className="text-center">
-                      <p className="text-2xl font-semibold text-stone-800">
+                      <p className="text-2xl font-semibold text-black">
                         {metrics.avgClinicRating != null ? `${metrics.avgClinicRating}★` : "—"}
                       </p>
-                      <p className="text-xs text-stone-400 mt-1">Avg Clinic Rating</p>
+                      <p className="text-xs text-gray-400 mt-1">Avg Clinic Rating</p>
                     </div>
                   </div>
                   {allFeedback.length > 0 && (
                     <div className="space-y-2">
-                      <p className="text-xs font-medium text-stone-400 uppercase tracking-wider mb-2">Recent Feedback</p>
+                      <p className="text-xs font-medium text-gray-400 uppercase tracking-wider mb-2">Recent Feedback</p>
                       {allFeedback.slice(0, 10).map((fb) => (
-                        <div key={fb.id} className="border border-stone-100 rounded-xl px-4 py-3">
+                        <div key={fb.id} className="border border-gray-100 rounded-xl px-4 py-3">
                           <div className="flex items-center justify-between mb-1">
                             <div className="flex items-center gap-2">
                               <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${fb.authorRole === "CLINIC" ? "bg-[#EBF3FC] text-[#041E42]" : "bg-emerald-50 text-emerald-700"}`}>
@@ -1498,10 +1498,10 @@ export default function AdminDashboard() {
                                 </span>
                               )}
                             </div>
-                            <span className="text-xs text-stone-400">{new Date(fb.createdAt).toLocaleDateString()}</span>
+                            <span className="text-xs text-gray-400">{new Date(fb.createdAt).toLocaleDateString()}</span>
                           </div>
-                          <p className="text-xs text-stone-600 mb-1">{fb.note}</p>
-                          <p className="text-xs text-stone-400">
+                          <p className="text-xs text-gray-600 mb-1">{fb.note}</p>
+                          <p className="text-xs text-gray-400">
                             {fb.signup.slot.clinic.name} · {fb.signup.volunteer.user.name ?? fb.signup.volunteer.user.email}
                           </p>
                         </div>
@@ -1509,7 +1509,7 @@ export default function AdminDashboard() {
                     </div>
                   )}
                   {allFeedback.length === 0 && (
-                    <p className="text-xs text-stone-400 text-center py-4">No feedback yet.</p>
+                    <p className="text-xs text-gray-400 text-center py-4">No feedback yet.</p>
                   )}
                 </div>
               </>
@@ -1530,35 +1530,35 @@ export default function AdminDashboard() {
             </div>
 
             {showTrainingForm && (
-              <div className="bg-white rounded-xl border border-stone-200 p-6 space-y-4">
-                <h3 className="text-sm font-medium text-stone-700">New Training Material</h3>
+              <div className="bg-white rounded-xl border border-gray-200 p-6 space-y-4">
+                <h3 className="text-sm font-medium text-gray-700">New Training Material</h3>
                 <input
                   placeholder="Title"
                   value={trainingForm.title}
                   onChange={(e) => setTrainingForm({ ...trainingForm, title: e.target.value })}
-                  className="w-full px-3 py-2 text-sm border border-stone-200 rounded-md focus:outline-none focus:ring-2 focus:ring-stone-300"
+                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-300"
                 />
                 <textarea
                   placeholder="Description (optional)"
                   value={trainingForm.description}
                   onChange={(e) => setTrainingForm({ ...trainingForm, description: e.target.value })}
                   rows={2}
-                  className="w-full px-3 py-2 text-sm border border-stone-200 rounded-md focus:outline-none focus:ring-2 focus:ring-stone-300 resize-none"
+                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-300 resize-none"
                 />
                 {/* Link only — file upload requires Supabase Storage setup */}
                 <input
                   placeholder="URL (https://docs.google.com/... or any link)"
                   value={trainingForm.url}
                   onChange={(e) => setTrainingForm({ ...trainingForm, url: e.target.value, type: "LINK" })}
-                  className="w-full px-3 py-2 text-sm border border-stone-200 rounded-md focus:outline-none focus:ring-2 focus:ring-stone-300"
+                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-300"
                 />
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="text-xs text-stone-500 mb-1 block">Language</label>
+                    <label className="text-xs text-gray-500 mb-1 block">Language</label>
                     <select
                       value={trainingForm.languageCode}
                       onChange={(e) => setTrainingForm({ ...trainingForm, languageCode: e.target.value })}
-                      className="w-full px-3 py-2 text-sm border border-stone-200 rounded-md focus:outline-none bg-white"
+                      className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none bg-white"
                     >
                       <option value="">All Languages</option>
                       {languages.filter((l) => l.isActive).map((l) => (
@@ -1567,13 +1567,13 @@ export default function AdminDashboard() {
                     </select>
                   </div>
                   <div>
-                    <label className="text-xs text-stone-500 mb-1 block">Category</label>
+                    <label className="text-xs text-gray-500 mb-1 block">Category</label>
                     <input
                       placeholder="General"
                       value={trainingForm.category}
                       list="training-categories"
                       onChange={(e) => setTrainingForm({ ...trainingForm, category: e.target.value })}
-                      className="w-full px-3 py-2 text-sm border border-stone-200 rounded-md focus:outline-none focus:ring-2 focus:ring-stone-300"
+                      className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-300"
                     />
                     <datalist id="training-categories">
                       {["General", "Medical Terminology", "Ethics", "Language-Specific", "Administrative"].map((c) => (
@@ -1596,18 +1596,18 @@ export default function AdminDashboard() {
             )}
 
             {trainingMaterials.length === 0 ? (
-              <div className="bg-white rounded-xl border border-stone-200 p-12 text-center">
-                <p className="text-stone-400">No training materials yet.</p>
+              <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
+                <p className="text-gray-400">No training materials yet.</p>
               </div>
             ) : (
               <div className="space-y-3">
                 {trainingMaterials.map((m) => (
-                  <div key={m.id} className="bg-white rounded-xl border border-stone-200 p-5">
+                  <div key={m.id} className="bg-white rounded-xl border border-gray-200 p-5">
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2 flex-wrap mb-1">
-                          <span className="font-medium text-stone-800 text-sm">{m.title}</span>
-                          <span className="text-xs px-1.5 py-0.5 rounded bg-stone-100 text-stone-600">{m.category}</span>
+                          <span className="font-medium text-black text-sm">{m.title}</span>
+                          <span className="text-xs px-1.5 py-0.5 rounded bg-gray-100 text-gray-600">{m.category}</span>
                           {m.languageCode && (
                             <span className="text-xs px-1.5 py-0.5 rounded bg-[#EBF3FC] text-[#041E42]">{m.languageCode}</span>
                           )}
@@ -1615,9 +1615,9 @@ export default function AdminDashboard() {
                             {m.type}
                           </span>
                         </div>
-                        {m.description && <p className="text-xs text-stone-500 mb-2">{m.description}</p>}
+                        {m.description && <p className="text-xs text-gray-500 mb-2">{m.description}</p>}
                         {m.type === "FILE" ? (
-                          <a href={m.url} target="_blank" rel="noopener noreferrer" className="text-xs text-stone-600 hover:text-stone-800 underline">
+                          <a href={m.url} target="_blank" rel="noopener noreferrer" className="text-xs text-gray-600 hover:text-black underline">
                             {m.fileName ?? "Download"}
                           </a>
                         ) : (
@@ -1625,7 +1625,7 @@ export default function AdminDashboard() {
                             {m.url}
                           </a>
                         )}
-                        <p className="text-xs text-stone-400 mt-2">
+                        <p className="text-xs text-gray-400 mt-2">
                           by {m.uploadedBy.name ?? m.uploadedBy.email} · {new Date(m.createdAt).toLocaleDateString()}
                         </p>
                       </div>
@@ -1647,9 +1647,9 @@ export default function AdminDashboard() {
         {/* Access Control — SUPER_ADMIN only */}
         {tab === "access" && session?.user?.role === "SUPER_ADMIN" && (
           <div className="max-w-lg space-y-5">
-            <div className="bg-white rounded-xl border border-stone-200 p-6">
-              <h3 className="text-sm font-medium text-stone-700 mb-1">Add Email Rule</h3>
-              <p className="text-xs text-stone-400 mb-4">
+            <div className="bg-white rounded-xl border border-gray-200 p-6">
+              <h3 className="text-sm font-medium text-gray-700 mb-1">Add Email Rule</h3>
+              <p className="text-xs text-gray-400 mb-4">
                 <strong>Allow</strong> lets a non-Georgetown email sign in. <strong>Block</strong> prevents any email from signing in, including Georgetown addresses.
               </p>
               <div className="space-y-3">
@@ -1658,7 +1658,7 @@ export default function AdminDashboard() {
                   placeholder="user@example.com"
                   value={ruleEmail}
                   onChange={(e) => setRuleEmail(e.target.value)}
-                  className="w-full px-3 py-2 text-sm border border-stone-200 rounded-md focus:outline-none focus:ring-2 focus:ring-stone-300"
+                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-300"
                 />
                 <div className="flex gap-3">
                   {(["ALLOW", "BLOCK"] as const).map((t) => (
@@ -1670,7 +1670,7 @@ export default function AdminDashboard() {
                           ? t === "ALLOW"
                             ? "bg-emerald-700 text-white border-emerald-700"
                             : "bg-red-600 text-white border-red-600"
-                          : "border-stone-200 text-stone-600 hover:border-stone-400"
+                          : "border-gray-200 text-gray-600 hover:border-gray-400"
                       }`}
                     >
                       {t === "ALLOW" ? "Allow" : "Block"}
@@ -1682,7 +1682,7 @@ export default function AdminDashboard() {
                   placeholder="Note (optional)"
                   value={ruleNote}
                   onChange={(e) => setRuleNote(e.target.value)}
-                  className="w-full px-3 py-2 text-sm border border-stone-200 rounded-md focus:outline-none focus:ring-2 focus:ring-stone-300"
+                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-300"
                 />
                 <button
                   disabled={!ruleEmail.trim() || actionLoading === "email-rule"}
@@ -1695,7 +1695,7 @@ export default function AdminDashboard() {
             </div>
 
             {emailRules.length > 0 && (
-              <div className="bg-white rounded-xl border border-stone-200 divide-y divide-stone-100">
+              <div className="bg-white rounded-xl border border-gray-200 divide-y divide-gray-100">
                 {emailRules.map((rule) => (
                   <div key={rule.id} className="flex items-center justify-between px-5 py-3 gap-3">
                     <div className="flex items-center gap-3 min-w-0">
@@ -1704,13 +1704,13 @@ export default function AdminDashboard() {
                       }`}>
                         {rule.type}
                       </span>
-                      <span className="text-sm text-stone-800 truncate">{rule.email}</span>
-                      {rule.note && <span className="text-xs text-stone-400 truncate">{rule.note}</span>}
+                      <span className="text-sm text-black truncate">{rule.email}</span>
+                      {rule.note && <span className="text-xs text-gray-400 truncate">{rule.note}</span>}
                     </div>
                     <button
                       disabled={actionLoading === `rule-${rule.id}`}
                       onClick={() => removeEmailRule(rule.id)}
-                      className="shrink-0 text-xs px-2 py-1 bg-stone-100 hover:bg-stone-200 text-stone-500 rounded transition-colors disabled:opacity-50"
+                      className="shrink-0 text-xs px-2 py-1 bg-gray-100 hover:bg-gray-200 text-gray-500 rounded transition-colors disabled:opacity-50"
                     >
                       Remove
                     </button>
@@ -1720,8 +1720,8 @@ export default function AdminDashboard() {
             )}
 
             {emailRules.length === 0 && (
-              <div className="bg-white rounded-xl border border-stone-200 p-8 text-center">
-                <p className="text-stone-400 text-sm">No rules yet. All Georgetown emails can sign in by default.</p>
+              <div className="bg-white rounded-xl border border-gray-200 p-8 text-center">
+                <p className="text-gray-400 text-sm">No rules yet. All Georgetown emails can sign in by default.</p>
               </div>
             )}
           </div>
@@ -1730,28 +1730,28 @@ export default function AdminDashboard() {
         {/* Feature Flags — SUPER_ADMIN only */}
         {tab === "flags" && session?.user?.role === "SUPER_ADMIN" && (
           <div className="max-w-2xl space-y-4">
-            <p className="text-xs text-stone-400 bg-amber-50 border border-amber-100 rounded-md px-4 py-2">
+            <p className="text-xs text-gray-400 bg-amber-50 border border-amber-100 rounded-md px-4 py-2">
               Disabled features are hidden from all non-admin users.
             </p>
             {featureFlags.length === 0 ? (
-              <div className="bg-white rounded-xl border border-stone-200 p-8 text-center">
-                <p className="text-stone-400 text-sm">Loading...</p>
+              <div className="bg-white rounded-xl border border-gray-200 p-8 text-center">
+                <p className="text-gray-400 text-sm">Loading...</p>
               </div>
             ) : (
-              <div className="bg-white rounded-xl border border-stone-200 divide-y divide-stone-100">
+              <div className="bg-white rounded-xl border border-gray-200 divide-y divide-gray-100">
                 {featureFlags.map((flag) => (
                   <div key={flag.id} className="flex items-center justify-between px-5 py-4 gap-4">
                     <div className="min-w-0">
-                      <p className="text-sm font-medium text-stone-800">{flag.label}</p>
-                      <p className="text-xs text-stone-400 font-mono">{flag.key}</p>
-                      {flag.description && <p className="text-xs text-stone-500 mt-0.5">{flag.description}</p>}
+                      <p className="text-sm font-medium text-black">{flag.label}</p>
+                      <p className="text-xs text-gray-400 font-mono">{flag.key}</p>
+                      {flag.description && <p className="text-xs text-gray-500 mt-0.5">{flag.description}</p>}
                     </div>
                     <button
                       role="switch"
                       aria-checked={flag.enabled}
                       onClick={() => toggleFlag(flag.key, !flag.enabled)}
                       className={`relative inline-flex h-5 w-9 flex-shrink-0 rounded-full border-2 border-transparent transition-colors focus:outline-none ${
-                        flag.enabled ? "bg-[#041E42]" : "bg-stone-200"
+                        flag.enabled ? "bg-[#041E42]" : "bg-gray-200"
                       }`}
                     >
                       <span className={`inline-block h-4 w-4 rounded-full bg-white shadow transition-transform ${flag.enabled ? "translate-x-4" : "translate-x-0"}`} />
@@ -1762,16 +1762,16 @@ export default function AdminDashboard() {
             )}
 
             {/* Test Email section */}
-            <div className="bg-white rounded-xl border border-stone-200 p-6">
-              <h3 className="text-sm font-medium text-stone-700 mb-1">Test Email</h3>
-              <p className="text-xs text-stone-400 mb-4">Send a test email to verify email delivery is working.</p>
+            <div className="bg-white rounded-xl border border-gray-200 p-6">
+              <h3 className="text-sm font-medium text-gray-700 mb-1">Test Email</h3>
+              <p className="text-xs text-gray-400 mb-4">Send a test email to verify email delivery is working.</p>
               <div className="flex gap-3">
                 <input
                   type="email"
                   placeholder="recipient@example.com"
                   value={testEmailTo}
                   onChange={(e) => setTestEmailTo(e.target.value)}
-                  className="flex-1 px-3 py-2 text-sm border border-stone-200 rounded-md focus:outline-none focus:ring-2 focus:ring-stone-300"
+                  className="flex-1 px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-300"
                 />
                 <button
                   disabled={!testEmailTo.trim() || testEmailStatus === "sending"}
@@ -1791,13 +1791,13 @@ export default function AdminDashboard() {
         {tab === "suggestions" && (
           <div className="space-y-4">
             {suggestions.length === 0 ? (
-              <div className="bg-white rounded-xl border border-stone-200 p-12 text-center">
-                <p className="text-stone-400">No messages yet.</p>
+              <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
+                <p className="text-gray-400">No messages yet.</p>
               </div>
             ) : (
               <div className="space-y-3">
                 {suggestions.map((s) => (
-                  <div key={s.id} className="bg-white rounded-xl border border-stone-200 p-5">
+                  <div key={s.id} className="bg-white rounded-xl border border-gray-200 p-5">
                     <div className="flex items-start justify-between gap-4">
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2 flex-wrap mb-1">
@@ -1805,15 +1805,15 @@ export default function AdminDashboard() {
                             s.type === "BUG" ? "bg-red-50 text-red-700" :
                             s.type === "FEATURE" ? "bg-[#EBF3FC] text-[#041E42]" :
                             s.type === "CONTACT" ? "bg-teal-50 text-teal-700" :
-                            "bg-stone-100 text-stone-600"
+                            "bg-gray-100 text-gray-600"
                           }`}>
                             {s.type === "BUG" ? "Bug" : s.type === "FEATURE" ? "Feature" : s.type === "CONTACT" ? "Contact" : "General"}
                           </span>
-                          <span className="font-medium text-stone-800 text-sm">{s.subject}</span>
-                          <span className="text-xs text-stone-400">{new Date(s.createdAt).toLocaleDateString()}</span>
+                          <span className="font-medium text-black text-sm">{s.subject}</span>
+                          <span className="text-xs text-gray-400">{new Date(s.createdAt).toLocaleDateString()}</span>
                         </div>
-                        <p className="text-sm text-stone-600 mb-2">{s.message}</p>
-                        <p className="text-xs text-stone-400">
+                        <p className="text-sm text-gray-600 mb-2">{s.message}</p>
+                        <p className="text-xs text-gray-400">
                           {s.submittedBy ? (s.submittedBy.name ?? s.submittedBy.email) : "Anonymous"}
                         </p>
                         {/* Admin note */}
@@ -1826,21 +1826,21 @@ export default function AdminDashboard() {
                               void updateSuggestionNote(s.id, e.target.value);
                             }
                           }}
-                          className="mt-2 w-full px-2 py-1 text-xs border border-stone-100 rounded focus:outline-none focus:ring-1 focus:ring-stone-300 text-stone-600 bg-stone-50"
+                          className="mt-2 w-full px-2 py-1 text-xs border border-gray-100 rounded focus:outline-none focus:ring-1 focus:ring-gray-300 text-gray-600 bg-gray-50"
                         />
                       </div>
                       <div className="shrink-0 flex flex-col items-end gap-2">
                         <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
                           s.status === "OPEN" ? "bg-amber-50 text-amber-700" :
                           s.status === "NOTED" ? "bg-[#EBF3FC] text-[#041E42]" :
-                          "bg-stone-100 text-stone-500"
+                          "bg-gray-100 text-gray-500"
                         }`}>
                           {s.status}
                         </span>
                         <select
                           value={s.status}
                           onChange={(e) => void updateSuggestionStatus(s.id, e.target.value)}
-                          className="text-xs border border-stone-200 rounded px-2 py-1 text-stone-600 bg-white focus:outline-none"
+                          className="text-xs border border-gray-200 rounded px-2 py-1 text-gray-600 bg-white focus:outline-none"
                         >
                           <option value="OPEN">OPEN</option>
                           <option value="NOTED">NOTED</option>
@@ -1878,14 +1878,14 @@ export default function AdminDashboard() {
         return (
           <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-xl shadow-xl w-full max-w-md">
-              <div className="px-6 py-4 border-b border-stone-100">
-                <h3 className="text-sm font-semibold text-stone-800">Delete {selectedSlotsList.length} Slot{selectedSlotsList.length !== 1 ? "s" : ""}</h3>
-                <p className="text-xs text-stone-400 mt-0.5">This will cancel the slot and notify any signed-up volunteers.</p>
+              <div className="px-6 py-4 border-b border-gray-100">
+                <h3 className="text-sm font-semibold text-black">Delete {selectedSlotsList.length} Slot{selectedSlotsList.length !== 1 ? "s" : ""}</h3>
+                <p className="text-xs text-gray-400 mt-0.5">This will cancel the slot and notify any signed-up volunteers.</p>
               </div>
               <div className="px-6 py-4">
                 <div className="max-h-40 overflow-y-auto space-y-1 mb-4">
                   {selectedSlotsList.map((s) => (
-                    <div key={s.id} className="text-xs text-stone-600 py-1 border-b border-stone-50 last:border-0">
+                    <div key={s.id} className="text-xs text-gray-600 py-1 border-b border-gray-50 last:border-0">
                       <span className="font-medium">{s.clinic.name}</span> · {formatDate(s.date)} · {formatHour(s.startTime)}–{formatHour(s.endTime)} · {LANG_LABELS[s.language]}
                       {s.signups.length > 0 && (
                         <span className="ml-1 text-amber-600">({s.signups.length} volunteer{s.signups.length !== 1 ? "s" : ""} affected)</span>
@@ -1906,12 +1906,12 @@ export default function AdminDashboard() {
                   placeholder={confirmText}
                   value={adminDeleteInput}
                   onChange={(e) => setAdminDeleteInput(e.target.value)}
-                  className="w-full px-3 py-2 text-sm border border-stone-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-300 mb-4"
+                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-300 mb-4"
                 />
                 <div className="flex gap-2">
                   <button
                     onClick={() => { setAdminDeleteModal(false); setAdminDeleteInput(""); }}
-                    className="flex-1 px-4 py-2 text-sm border border-stone-200 text-stone-600 rounded-lg hover:bg-stone-50 transition-colors"
+                    className="flex-1 px-4 py-2 text-sm border border-gray-200 text-gray-600 rounded-lg hover:bg-gray-50 transition-colors"
                   >
                     Cancel
                   </button>
@@ -1948,9 +1948,9 @@ export default function AdminDashboard() {
           <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-xl shadow-xl w-full max-w-md">
               {/* Header */}
-              <div className="px-6 py-4 border-b border-stone-100">
-                <h3 className="text-sm font-semibold text-stone-800">Assign a Volunteer</h3>
-                <p className="text-xs text-stone-400 mt-0.5">
+              <div className="px-6 py-4 border-b border-gray-100">
+                <h3 className="text-sm font-semibold text-black">Assign a Volunteer</h3>
+                <p className="text-xs text-gray-400 mt-0.5">
                   {LANG_LABELS[volunteerAssignTarget.language]} &middot; {formatDate(volunteerAssignTarget.date)} &middot; {formatHour(volunteerAssignTarget.hour)}–{formatHour(volunteerAssignTarget.hour + 1)} &middot; {volunteerAssignTarget.clinicName}
                 </p>
               </div>
@@ -1964,11 +1964,11 @@ export default function AdminDashboard() {
                     placeholder="Search by name or email..."
                     value={assignSearch}
                     onChange={(e) => setAssignSearch(e.target.value)}
-                    className="w-full px-3 py-2 text-sm border border-stone-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-stone-300 mb-3"
+                    className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-300 mb-3"
                   />
                   <div className="max-h-64 overflow-y-auto space-y-1">
                     {filtered.length === 0 && (
-                      <p className="text-xs text-stone-400 text-center py-6">No volunteers found.</p>
+                      <p className="text-xs text-gray-400 text-center py-6">No volunteers found.</p>
                     )}
                     {filtered.map((u) => {
                       const alreadySigned = targetSlot?.signups.some(
@@ -1983,19 +1983,19 @@ export default function AdminDashboard() {
                           onClick={() =>
                             setAssignSelected({ userId: u.id, name: u.name ?? u.email, email: u.email })
                           }
-                          className="w-full text-left px-3 py-2.5 rounded-lg hover:bg-stone-50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed border border-transparent hover:border-stone-200"
+                          className="w-full text-left px-3 py-2.5 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed border border-transparent hover:border-gray-200"
                         >
                           <div className="flex items-center justify-between gap-3">
                             <div className="min-w-0">
-                              <p className="text-sm font-medium text-stone-800 truncate">{u.name ?? "—"}</p>
-                              <p className="text-xs text-stone-400 truncate">{u.email}</p>
+                              <p className="text-sm font-medium text-black truncate">{u.name ?? "—"}</p>
+                              <p className="text-xs text-gray-400 truncate">{u.email}</p>
                             </div>
                             <div className="flex items-center gap-1.5 shrink-0">
                               {alreadySigned && (
                                 <span className="text-xs px-2 py-0.5 bg-emerald-50 text-emerald-600 rounded-full">Signed up</span>
                               )}
                               {u.volunteer?.languages?.map((l) => (
-                                <span key={l} className={`text-xs px-1.5 py-0.5 rounded-full ${LANG_COLORS[l] ?? "bg-stone-100 text-stone-500"}`}>
+                                <span key={l} className={`text-xs px-1.5 py-0.5 rounded-full ${LANG_COLORS[l] ?? "bg-gray-100 text-gray-500"}`}>
                                   {LANG_LABELS[l] ?? l}
                                 </span>
                               ))}
@@ -2007,7 +2007,7 @@ export default function AdminDashboard() {
                   </div>
                   <button
                     onClick={closeAssignModal}
-                    className="mt-4 text-xs text-stone-400 hover:text-stone-600"
+                    className="mt-4 text-xs text-gray-400 hover:text-gray-600"
                   >
                     Cancel
                   </button>
@@ -2033,7 +2033,7 @@ export default function AdminDashboard() {
                   <div className="flex gap-2">
                     <button
                       onClick={() => { setAssignSelected(null); setAssignError(""); }}
-                      className="flex-1 px-4 py-2 text-sm border border-stone-200 text-stone-600 rounded-lg hover:bg-stone-50 transition-colors"
+                      className="flex-1 px-4 py-2 text-sm border border-gray-200 text-gray-600 rounded-lg hover:bg-gray-50 transition-colors"
                     >
                       ← Back
                     </button>
@@ -2047,7 +2047,7 @@ export default function AdminDashboard() {
                   </div>
                   <button
                     onClick={closeAssignModal}
-                    className="mt-3 text-xs text-stone-400 hover:text-stone-600 w-full text-center"
+                    className="mt-3 text-xs text-gray-400 hover:text-gray-600 w-full text-center"
                   >
                     Cancel
                   </button>
@@ -2062,15 +2062,15 @@ export default function AdminDashboard() {
       {pinReveal && (
         <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
           <div className="bg-white rounded-xl p-6 w-full max-w-sm shadow-xl">
-            <h3 className="text-sm font-semibold text-stone-800 mb-1">New PIN for {pinReveal.clinicName}</h3>
-            <p className="text-xs text-stone-400 mb-4">
+            <h3 className="text-sm font-semibold text-black mb-1">New PIN for {pinReveal.clinicName}</h3>
+            <p className="text-xs text-gray-400 mb-4">
               Copy this PIN now — it cannot be shown again. Share it with the clinic directly.
             </p>
-            <div className="flex items-center gap-3 bg-stone-50 border border-stone-200 rounded-lg px-4 py-3 mb-4">
-              <span className="text-2xl font-mono font-bold tracking-[0.3em] text-stone-800">{pinReveal.pin}</span>
+            <div className="flex items-center gap-3 bg-gray-50 border border-gray-200 rounded-lg px-4 py-3 mb-4">
+              <span className="text-2xl font-mono font-bold tracking-[0.3em] text-black">{pinReveal.pin}</span>
               <button
                 onClick={() => navigator.clipboard.writeText(pinReveal.pin)}
-                className="ml-auto text-xs px-2 py-1 bg-stone-200 hover:bg-stone-300 text-stone-600 rounded transition-colors"
+                className="ml-auto text-xs px-2 py-1 bg-gray-200 hover:bg-gray-300 text-gray-600 rounded transition-colors"
               >
                 Copy
               </button>
@@ -2089,17 +2089,17 @@ export default function AdminDashboard() {
       {langDeactivateConflict && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl shadow-xl w-full max-w-md">
-            <div className="px-6 py-4 border-b border-stone-100">
-              <h3 className="text-sm font-semibold text-stone-800">Deactivate {langDeactivateConflict.langName}?</h3>
-              <p className="text-xs text-stone-400 mt-0.5">This will affect upcoming clinic postings.</p>
+            <div className="px-6 py-4 border-b border-gray-100">
+              <h3 className="text-sm font-semibold text-black">Deactivate {langDeactivateConflict.langName}?</h3>
+              <p className="text-xs text-gray-400 mt-0.5">This will affect upcoming clinic postings.</p>
             </div>
             <div className="px-6 py-4">
-              <p className="text-sm text-stone-600 mb-3">
+              <p className="text-sm text-gray-600 mb-3">
                 The following upcoming slots use <strong>{langDeactivateConflict.langName}</strong> and will be <strong>deleted</strong> if you proceed. Clinics will be notified.
               </p>
               <div className="max-h-40 overflow-y-auto space-y-1 mb-4">
                 {langDeactivateConflict.conflicts.map((c) => (
-                  <div key={c.id} className="text-xs text-stone-600 py-1 border-b border-stone-50 last:border-0">
+                  <div key={c.id} className="text-xs text-gray-600 py-1 border-b border-gray-50 last:border-0">
                     <span className="font-medium">{c.clinicName}</span> · {new Date(c.date.slice(0,10) + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
                   </div>
                 ))}
@@ -2107,7 +2107,7 @@ export default function AdminDashboard() {
               <div className="flex gap-2">
                 <button
                   onClick={() => setLangDeactivateConflict(null)}
-                  className="flex-1 px-4 py-2 text-sm border border-stone-200 text-stone-600 rounded-lg hover:bg-stone-50"
+                  className="flex-1 px-4 py-2 text-sm border border-gray-200 text-gray-600 rounded-lg hover:bg-gray-50"
                 >
                   Cancel
                 </button>
@@ -2128,7 +2128,7 @@ export default function AdminDashboard() {
       {assignModal && (
         <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
           <div className="bg-white rounded-xl p-6 w-full max-w-sm shadow-xl">
-            <h3 className="text-sm font-medium text-stone-700 mb-3">
+            <h3 className="text-sm font-medium text-gray-700 mb-3">
               Assign {assignModal.userName} to a clinic
             </h3>
             <div className="space-y-2">
@@ -2139,7 +2139,7 @@ export default function AdminDashboard() {
                     await updateUser(assignModal.userId, { clinicId: clinic.id });
                     setAssignModal(null);
                   }}
-                  className="w-full text-left px-3 py-2 text-sm border border-stone-200 rounded-md hover:bg-stone-50 transition-colors"
+                  className="w-full text-left px-3 py-2 text-sm border border-gray-200 rounded-md hover:bg-gray-50 transition-colors"
                 >
                   {clinic.name}
                 </button>
@@ -2147,7 +2147,7 @@ export default function AdminDashboard() {
             </div>
             <button
               onClick={() => setAssignModal(null)}
-              className="mt-4 text-xs text-stone-400 hover:text-stone-600"
+              className="mt-4 text-xs text-gray-400 hover:text-gray-600"
             >
               Cancel
             </button>

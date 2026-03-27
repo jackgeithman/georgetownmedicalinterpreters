@@ -44,11 +44,11 @@ const LANG_LABELS: Record<string, string> = {
 };
 
 const RATING_OPTIONS = [
-  { value: 1, label: "Needs Improvement", active: "bg-red-100 text-red-700 border-red-300", idle: "bg-white text-stone-500 border-stone-200 hover:border-red-200 hover:text-red-600" },
-  { value: 2, label: "Okay",              active: "bg-orange-100 text-orange-700 border-orange-300", idle: "bg-white text-stone-500 border-stone-200 hover:border-orange-200 hover:text-orange-600" },
-  { value: 3, label: "Good",              active: "bg-yellow-100 text-yellow-700 border-yellow-300", idle: "bg-white text-stone-500 border-stone-200 hover:border-yellow-200 hover:text-yellow-600" },
-  { value: 4, label: "Excellent",         active: "bg-green-100 text-green-700 border-green-300",  idle: "bg-white text-stone-500 border-stone-200 hover:border-green-200 hover:text-green-600" },
-  { value: 5, label: "Exceptional", active: "bg-emerald-100 text-emerald-700 border-emerald-300", idle: "bg-white text-stone-500 border-stone-200 hover:border-emerald-200 hover:text-emerald-600" },
+  { value: 1, label: "Needs Improvement", active: "bg-red-100 text-red-700 border-red-300", idle: "bg-white text-gray-500 border-gray-200 hover:border-red-200 hover:text-red-600" },
+  { value: 2, label: "Okay",              active: "bg-orange-100 text-orange-700 border-orange-300", idle: "bg-white text-gray-500 border-gray-200 hover:border-orange-200 hover:text-orange-600" },
+  { value: 3, label: "Good",              active: "bg-yellow-100 text-yellow-700 border-yellow-300", idle: "bg-white text-gray-500 border-gray-200 hover:border-yellow-200 hover:text-yellow-600" },
+  { value: 4, label: "Excellent",         active: "bg-green-100 text-green-700 border-green-300",  idle: "bg-white text-gray-500 border-gray-200 hover:border-green-200 hover:text-green-600" },
+  { value: 5, label: "Exceptional", active: "bg-emerald-100 text-emerald-700 border-emerald-300", idle: "bg-white text-gray-500 border-gray-200 hover:border-emerald-200 hover:text-emerald-600" },
 ];
 
 const LANG_COLORS: Record<string, string> = {
@@ -70,7 +70,7 @@ function MapsLinks({ address }: { address: string }) {
       >
         G Maps
       </a>
-      <span className="text-stone-300">·</span>
+      <span className="text-gray-300">·</span>
       <a
         href={`https://maps.apple.com/?q=${q}`}
         target="_blank"
@@ -320,18 +320,18 @@ export default function ClinicDashboard() {
 
   if (status === "loading" || loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-stone-50">
-        <p className="text-stone-400">Loading...</p>
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <p className="text-gray-400">Loading...</p>
       </div>
     );
   }
 
   if (!session?.user?.clinicId) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-stone-50">
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
-          <p className="text-stone-600 font-medium">No clinic assigned</p>
-          <p className="text-stone-400 text-sm mt-1">
+          <p className="text-gray-600 font-medium">No clinic assigned</p>
+          <p className="text-gray-400 text-sm mt-1">
             Contact your admin to be assigned to a clinic.
           </p>
         </div>
@@ -342,23 +342,23 @@ export default function ClinicDashboard() {
   const displaySlots = tab === "upcoming" ? upcoming : past;
 
   return (
-    <div className="min-h-screen bg-stone-50">
+    <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <header className="bg-white border-b border-stone-200">
+      <header className="bg-white border-b border-gray-200">
         <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div>
-              <h1 className="text-lg font-semibold text-stone-800 tracking-tight">Georgetown Medical Interpreters</h1>
-              <p className="text-xs text-stone-400">
+              <h1 className="text-lg font-semibold text-black tracking-tight">Georgetown Medical Interpreters</h1>
+              <p className="text-xs text-gray-400">
                 Clinic Dashboard
                 {session?.user?.name && (
-                  <span className="ml-1 text-stone-500">— {session.user.name}</span>
+                  <span className="ml-1 text-gray-500">— {session.user.name}</span>
                 )}
               </p>
             </div>
             <a
               href="mailto:georgetownmedicalinterpreters@gmail.com"
-              className="text-sm px-3 py-1.5 bg-stone-100 hover:bg-stone-200 text-stone-600 rounded-md transition-colors"
+              className="text-sm px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-md transition-colors"
             >
               Contact Us
             </a>
@@ -366,7 +366,7 @@ export default function ClinicDashboard() {
           <div className="flex items-center gap-3">
             <button
               onClick={() => signOut({ callbackUrl: "/login" })}
-              className="text-sm px-3 py-1.5 bg-stone-100 hover:bg-stone-200 text-stone-600 rounded-md transition-colors"
+              className="text-sm px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-md transition-colors"
             >
               Sign Out
             </button>
@@ -376,7 +376,7 @@ export default function ClinicDashboard() {
 
       {/* Tabs */}
       <div className="max-w-6xl mx-auto px-6 pt-6 flex items-center justify-between">
-        <div className="flex gap-1 bg-stone-200/50 p-1 rounded-xl w-fit">
+        <div className="flex gap-1 bg-gray-200/50 p-1 rounded-xl w-fit">
           {[
             { key: "upcoming" as Tab, label: "Upcoming", count: upcoming.length },
             { key: "past" as Tab, label: "Past", count: past.length, pendingFeedback: pendingFeedbackCount },
@@ -388,12 +388,12 @@ export default function ClinicDashboard() {
               className={`relative px-4 py-2 text-sm rounded-md transition-colors ${
                 tab === t.key
                   ? "bg-[#041E42] text-white shadow-sm font-medium"
-                  : "text-stone-500 hover:text-stone-700"
+                  : "text-gray-500 hover:text-gray-700"
               }`}
             >
               {t.label}
               {t.count > 0 && (
-                <span className="ml-2 text-xs px-1.5 py-0.5 rounded-full bg-stone-100 text-stone-500">
+                <span className="ml-2 text-xs px-1.5 py-0.5 rounded-full bg-gray-100 text-gray-500">
                   {t.count}
                 </span>
               )}
@@ -407,7 +407,7 @@ export default function ClinicDashboard() {
         </div>
         {tab === "upcoming" && !showPostForm && (
           <div className="flex items-center gap-3">
-            <span className="text-xs text-stone-400">{upcoming.length}/100 slots</span>
+            <span className="text-xs text-gray-400">{upcoming.length}/100 slots</span>
             <button
               onClick={() => setShowPostForm(true)}
               disabled={upcoming.length >= 100}
@@ -421,7 +421,7 @@ export default function ClinicDashboard() {
         {tab === "upcoming" && showPostForm && (
           <button
             onClick={() => setShowPostForm(false)}
-            className="px-4 py-2 text-sm bg-stone-100 hover:bg-stone-200 text-stone-600 rounded-md transition-colors"
+            className="px-4 py-2 text-sm bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-md transition-colors"
           >
             Cancel
           </button>
@@ -432,15 +432,15 @@ export default function ClinicDashboard() {
       <div className="max-w-6xl mx-auto px-6 py-6 space-y-4">
         {/* Post Slot Form */}
         {showPostForm && tab === "upcoming" && (
-          <div className="bg-white rounded-xl border border-stone-200 p-6">
-            <h3 className="text-sm font-medium text-stone-700 mb-4">New Slot</h3>
+          <div className="bg-white rounded-xl border border-gray-200 p-6">
+            <h3 className="text-sm font-medium text-gray-700 mb-4">New Slot</h3>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs text-stone-500 mb-1">Language</label>
+                <label className="block text-xs text-gray-500 mb-1">Language</label>
                 <select
                   value={form.language}
                   onChange={(e) => setForm({ ...form, language: e.target.value })}
-                  className="w-full px-3 py-2 text-sm border border-stone-200 rounded-md focus:outline-none focus:ring-2 focus:ring-stone-300"
+                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-300"
                 >
                   {(activeLanguages.length > 0 ? activeLanguages : Object.entries(LANG_LABELS).map(([code, name]) => ({ code, name }))).map(({ code, name }) => (
                     <option key={code} value={code}>{name}</option>
@@ -448,20 +448,20 @@ export default function ClinicDashboard() {
                 </select>
               </div>
               <div>
-                <label className="block text-xs text-stone-500 mb-1">Date</label>
+                <label className="block text-xs text-gray-500 mb-1">Date</label>
                 <input
                   type="date"
                   value={form.date}
                   onChange={(e) => setForm({ ...form, date: e.target.value })}
-                  className="w-full px-3 py-2 text-sm border border-stone-200 rounded-md focus:outline-none focus:ring-2 focus:ring-stone-300"
+                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-300"
                 />
               </div>
               <div>
-                <label className="block text-xs text-stone-500 mb-1">Start Time</label>
+                <label className="block text-xs text-gray-500 mb-1">Start Time</label>
                 <select
                   value={form.startTime}
                   onChange={(e) => setForm({ ...form, startTime: Number(e.target.value) })}
-                  className="w-full px-3 py-2 text-sm border border-stone-200 rounded-md focus:outline-none focus:ring-2 focus:ring-stone-300"
+                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-300"
                 >
                   {HOUR_OPTIONS.map((h) => (
                     <option key={h} value={h}>{formatHour(h)}</option>
@@ -469,11 +469,11 @@ export default function ClinicDashboard() {
                 </select>
               </div>
               <div>
-                <label className="block text-xs text-stone-500 mb-1">End Time</label>
+                <label className="block text-xs text-gray-500 mb-1">End Time</label>
                 <select
                   value={form.endTime}
                   onChange={(e) => setForm({ ...form, endTime: Number(e.target.value) })}
-                  className="w-full px-3 py-2 text-sm border border-stone-200 rounded-md focus:outline-none focus:ring-2 focus:ring-stone-300"
+                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-300"
                 >
                   {HOUR_OPTIONS.map((h) => (
                     <option key={h} value={h}>{formatHour(h)}</option>
@@ -481,50 +481,50 @@ export default function ClinicDashboard() {
                 </select>
               </div>
               <div>
-                <label className="block text-xs text-stone-500 mb-1">Interpreters per Hour</label>
+                <label className="block text-xs text-gray-500 mb-1">Interpreters per Hour</label>
                 <input
                   type="number"
                   min={1}
                   max={10}
                   value={form.interpreterCount}
                   onChange={(e) => setForm({ ...form, interpreterCount: Number(e.target.value) })}
-                  className="w-full px-3 py-2 text-sm border border-stone-200 rounded-md focus:outline-none focus:ring-2 focus:ring-stone-300"
+                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-300"
                 />
               </div>
               <div>
-                <label className="block text-xs text-stone-500 mb-1">Notes (optional)</label>
+                <label className="block text-xs text-gray-500 mb-1">Notes (optional)</label>
                 <input
                   placeholder="Any notes for volunteers..."
                   value={form.notes}
                   onChange={(e) => setForm({ ...form, notes: e.target.value })}
-                  className="w-full px-3 py-2 text-sm border border-stone-200 rounded-md focus:outline-none focus:ring-2 focus:ring-stone-300"
+                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-300"
                 />
               </div>
             </div>
 
             {/* Recurring toggle */}
-            <div className="mt-4 border-t border-stone-100 pt-4">
+            <div className="mt-4 border-t border-gray-100 pt-4">
               <label className="flex items-center gap-2 cursor-pointer w-fit">
                 <input
                   type="checkbox"
                   checked={form.isRecurring}
                   onChange={(e) => setForm({ ...form, isRecurring: e.target.checked, recurrenceEndDate: "" })}
-                  className="w-4 h-4 accent-stone-700"
+                  className="w-4 h-4 accent-gray-700"
                 />
-                <span className="text-sm text-stone-700">Repeat weekly</span>
+                <span className="text-sm text-gray-700">Repeat weekly</span>
               </label>
               {form.isRecurring && (
                 <div className="mt-3 flex items-center gap-3">
-                  <label className="text-xs text-stone-500">Repeat until</label>
+                  <label className="text-xs text-gray-500">Repeat until</label>
                   <input
                     type="date"
                     value={form.recurrenceEndDate}
                     min={form.date || undefined}
                     onChange={(e) => setForm({ ...form, recurrenceEndDate: e.target.value })}
-                    className="px-3 py-2 text-sm border border-stone-200 rounded-md focus:outline-none focus:ring-2 focus:ring-stone-300"
+                    className="px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-300"
                   />
                   {form.date && form.recurrenceEndDate && form.recurrenceEndDate >= form.date && (
-                    <span className="text-xs text-stone-400">
+                    <span className="text-xs text-gray-400">
                       {Math.floor(
                         (new Date(form.recurrenceEndDate + "T12:00:00").getTime() -
                           new Date(form.date + "T12:00:00").getTime()) /
@@ -580,8 +580,8 @@ export default function ClinicDashboard() {
 
         {/* Slot List */}
         {tab !== "settings" && (displaySlots.length === 0 ? (
-          <div className="bg-white rounded-xl border border-stone-200 p-12 text-center">
-            <p className="text-stone-400">
+          <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
+            <p className="text-gray-400">
               {tab === "upcoming" ? "No upcoming slots. Post one to get started." : "No past slots."}
             </p>
           </div>
@@ -594,7 +594,7 @@ export default function ClinicDashboard() {
             const isPast = !isUpcoming(slot);
 
             return (
-              <div key={slot.id} className="bg-white rounded-xl border border-stone-200 p-5">
+              <div key={slot.id} className="bg-white rounded-xl border border-gray-200 p-5">
                 {/* Slot Header */}
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex items-center gap-3 flex-wrap">
@@ -603,18 +603,18 @@ export default function ClinicDashboard() {
                         type="checkbox"
                         checked={selectedSlotIds.has(slot.id)}
                         onChange={() => toggleSelectSlot(slot.id)}
-                        className="w-4 h-4 accent-stone-700 cursor-pointer"
+                        className="w-4 h-4 accent-gray-700 cursor-pointer"
                         onClick={(e) => e.stopPropagation()}
                       />
                     )}
                     <span className={`text-xs px-2 py-1 rounded-full font-medium ${LANG_COLORS[slot.language]}`}>
                       {LANG_LABELS[slot.language]}
                     </span>
-                    <span className="text-sm font-medium text-stone-800">{formatDate(slot.date)}</span>
-                    <span className="text-sm text-stone-500">
+                    <span className="text-sm font-medium text-black">{formatDate(slot.date)}</span>
+                    <span className="text-sm text-gray-500">
                       {formatHour(slot.startTime)} – {formatHour(slot.endTime)}
                     </span>
-                    <span className="text-xs text-stone-400">
+                    <span className="text-xs text-gray-400">
                       {slot.interpreterCount} interpreter{slot.interpreterCount !== 1 ? "s" : ""}/hour
                     </span>
                     {slot.isRecurring && (
@@ -627,7 +627,7 @@ export default function ClinicDashboard() {
                     <div className="flex gap-2 shrink-0">
                       <button
                         onClick={() => { setEditSlot({ ...slot }); setEditScope("single"); }}
-                        className="text-xs px-3 py-1.5 bg-stone-100 hover:bg-stone-200 text-stone-600 rounded-md transition-colors"
+                        className="text-xs px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-md transition-colors"
                       >
                         Edit
                       </button>
@@ -641,23 +641,23 @@ export default function ClinicDashboard() {
                     </div>
                   )}
                   {slot.status === "CANCELLED" && (
-                    <span className="text-xs px-2 py-1 bg-stone-100 text-stone-400 rounded-full">Cancelled</span>
+                    <span className="text-xs px-2 py-1 bg-gray-100 text-gray-400 rounded-full">Cancelled</span>
                   )}
                 </div>
                 {slot.notes && (
-                  <p className="text-xs text-stone-400 mb-3 italic">{slot.notes}</p>
+                  <p className="text-xs text-gray-400 mb-3 italic">{slot.notes}</p>
                 )}
 
                 {/* Sub-blocks */}
-                <div className="border border-stone-100 rounded-lg overflow-hidden">
+                <div className="border border-gray-100 rounded-lg overflow-hidden">
                   <table className="w-full text-sm">
                     <thead>
-                      <tr className="bg-stone-50 border-b border-stone-100">
-                        <th className="text-left text-xs text-stone-400 font-medium px-4 py-2">Hour</th>
-                        <th className="text-left text-xs text-stone-400 font-medium px-4 py-2">Volunteer</th>
-                        <th className="text-left text-xs text-stone-400 font-medium px-4 py-2">Status</th>
+                      <tr className="bg-gray-50 border-b border-gray-100">
+                        <th className="text-left text-xs text-gray-400 font-medium px-4 py-2">Hour</th>
+                        <th className="text-left text-xs text-gray-400 font-medium px-4 py-2">Volunteer</th>
+                        <th className="text-left text-xs text-gray-400 font-medium px-4 py-2">Status</th>
                         {isPast && (
-                          <th className="text-right text-xs text-stone-400 font-medium px-4 py-2">Action</th>
+                          <th className="text-right text-xs text-gray-400 font-medium px-4 py-2">Action</th>
                         )}
                       </tr>
                     </thead>
@@ -670,13 +670,13 @@ export default function ClinicDashboard() {
                         return (
                           <Fragment key={hour}>
                             {hourSignups.map((signup) => (
-                              <tr key={signup.id} className="border-b border-stone-50 last:border-0">
-                                <td className="px-4 py-2.5 text-stone-600 text-xs">
+                              <tr key={signup.id} className="border-b border-gray-50 last:border-0">
+                                <td className="px-4 py-2.5 text-gray-600 text-xs">
                                   {formatHour(hour)} – {formatHour(hour + 1)}
                                 </td>
-                                <td className="px-4 py-2.5 text-stone-800 text-xs">
+                                <td className="px-4 py-2.5 text-black text-xs">
                                   {signup.volunteer.user.name}
-                                  <span className="ml-1 text-stone-400">{signup.volunteer.user.email}</span>
+                                  <span className="ml-1 text-gray-400">{signup.volunteer.user.email}</span>
                                 </td>
                                 <td className="px-4 py-2.5">
                                   <span className={`text-xs px-2 py-0.5 rounded-full ${
@@ -684,7 +684,7 @@ export default function ClinicDashboard() {
                                       ? "bg-emerald-50 text-emerald-700"
                                       : signup.status === "NO_SHOW"
                                       ? "bg-red-50 text-red-600"
-                                      : "bg-stone-100 text-stone-500"
+                                      : "bg-gray-100 text-gray-500"
                                   }`}>
                                     {signup.status === "ACTIVE" ? "Confirmed" : signup.status.replace("_", " ")}
                                   </span>
@@ -708,13 +708,13 @@ export default function ClinicDashboard() {
                               </tr>
                             ))}
                             {Array.from({ length: empty }).map((_, i) => (
-                              <tr key={`empty-${hour}-${i}`} className="border-b border-stone-50 last:border-0">
-                                <td className="px-4 py-2.5 text-stone-600 text-xs">
+                              <tr key={`empty-${hour}-${i}`} className="border-b border-gray-50 last:border-0">
+                                <td className="px-4 py-2.5 text-gray-600 text-xs">
                                   {formatHour(hour)} – {formatHour(hour + 1)}
                                 </td>
-                                <td className="px-4 py-2.5 text-stone-300 text-xs italic">Open</td>
+                                <td className="px-4 py-2.5 text-gray-300 text-xs italic">Open</td>
                                 <td className="px-4 py-2.5">
-                                  <span className="text-xs px-2 py-0.5 rounded-full bg-stone-50 text-stone-300">
+                                  <span className="text-xs px-2 py-0.5 rounded-full bg-gray-50 text-gray-300">
                                     Available
                                   </span>
                                 </td>
@@ -739,22 +739,22 @@ export default function ClinicDashboard() {
                     <p className="px-5 pb-4 text-xs text-emerald-600">✓ All volunteers rated</p>
                   );
                   return (
-                    <div className="border-t border-stone-100 px-5 py-4 space-y-4">
-                      <p className="text-xs font-medium text-stone-500">Rate volunteers from this shift</p>
+                    <div className="border-t border-gray-100 px-5 py-4 space-y-4">
+                      <p className="text-xs font-medium text-gray-500">Rate volunteers from this shift</p>
                       {uniqueVols.map((s) => {
                         const feedbackKey = `${slot.id}-${s.volunteer.id}`;
                         const form = feedbackForms[feedbackKey] ?? { rating: 0, note: "" };
                         if (feedbackGiven.has(feedbackKey)) {
                           return (
                             <div key={s.volunteer.id} className="flex items-center gap-2">
-                              <span className="text-xs font-medium text-stone-700">{s.volunteer.user.name ?? s.volunteer.user.email}</span>
+                              <span className="text-xs font-medium text-gray-700">{s.volunteer.user.name ?? s.volunteer.user.email}</span>
                               <span className="text-xs text-emerald-600">✓ Rated</span>
                             </div>
                           );
                         }
                         return (
                           <div key={s.volunteer.id}>
-                            <p className="text-xs font-medium text-stone-700 mb-1.5">{s.volunteer.user.name ?? s.volunteer.user.email}</p>
+                            <p className="text-xs font-medium text-gray-700 mb-1.5">{s.volunteer.user.name ?? s.volunteer.user.email}</p>
                             <div className="flex flex-wrap gap-1.5 mb-2">
                               {RATING_OPTIONS.map((opt) => (
                                 <button
@@ -773,7 +773,7 @@ export default function ClinicDashboard() {
                                   value={form.note}
                                   onChange={(e) => setFeedbackForms((prev) => ({ ...prev, [feedbackKey]: { ...form, note: e.target.value } }))}
                                   rows={2}
-                                  className="flex-1 px-2.5 py-1.5 text-xs border border-stone-200 rounded-md focus:outline-none focus:ring-1 focus:ring-stone-300 resize-none"
+                                  className="flex-1 px-2.5 py-1.5 text-xs border border-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-300 resize-none"
                                 />
                                 <button
                                   disabled={submittingFeedbackFor === feedbackKey}
@@ -797,12 +797,12 @@ export default function ClinicDashboard() {
         {/* Notification Settings */}
         {tab === "settings" && (
           <div className="max-w-lg space-y-6">
-            <div className="bg-white rounded-xl border border-stone-200 p-6">
+            <div className="bg-white rounded-xl border border-gray-200 p-6">
               <div className="flex items-center justify-between mb-1">
-                <h3 className="text-sm font-medium text-stone-700">Email Notifications</h3>
+                <h3 className="text-sm font-medium text-gray-700">Email Notifications</h3>
                 {notifSaved && <span className="text-xs text-emerald-600">Saved ✓</span>}
               </div>
-              <p className="text-xs text-stone-400 mb-5">Changes save instantly.</p>
+              <p className="text-xs text-gray-400 mb-5">Changes save instantly.</p>
 
               <div className="space-y-4">
                 {/* Daily summary */}
@@ -812,14 +812,14 @@ export default function ClinicDashboard() {
                     aria-checked={notifPrefs.dailySummary}
                     onClick={() => saveNotifPrefs({ ...notifPrefs, dailySummary: !notifPrefs.dailySummary })}
                     className={`mt-0.5 relative inline-flex h-5 w-9 flex-shrink-0 rounded-full border-2 border-transparent transition-colors focus:outline-none ${
-                      notifPrefs.dailySummary ? "bg-[#041E42]" : "bg-stone-200"
+                      notifPrefs.dailySummary ? "bg-[#041E42]" : "bg-gray-200"
                     }`}
                   >
                     <span className={`inline-block h-4 w-4 rounded-full bg-white shadow transition-transform ${notifPrefs.dailySummary ? "translate-x-4" : "translate-x-0"}`} />
                   </button>
                   <div>
-                    <p className="text-sm text-stone-700">Daily summary email</p>
-                    <p className="text-xs text-stone-400">Sent each morning with all your upcoming slots and their current roster</p>
+                    <p className="text-sm text-gray-700">Daily summary email</p>
+                    <p className="text-xs text-gray-400">Sent each morning with all your upcoming slots and their current roster</p>
                   </div>
                 </label>
 
@@ -830,21 +830,21 @@ export default function ClinicDashboard() {
                     aria-checked={notifPrefs.unfilledAlert24h}
                     onClick={() => saveNotifPrefs({ ...notifPrefs, unfilledAlert24h: !notifPrefs.unfilledAlert24h })}
                     className={`mt-0.5 relative inline-flex h-5 w-9 flex-shrink-0 rounded-full border-2 border-transparent transition-colors focus:outline-none ${
-                      notifPrefs.unfilledAlert24h ? "bg-[#041E42]" : "bg-stone-200"
+                      notifPrefs.unfilledAlert24h ? "bg-[#041E42]" : "bg-gray-200"
                     }`}
                   >
                     <span className={`inline-block h-4 w-4 rounded-full bg-white shadow transition-transform ${notifPrefs.unfilledAlert24h ? "translate-x-4" : "translate-x-0"}`} />
                   </button>
                   <div>
-                    <p className="text-sm text-stone-700">Unfilled slot alert (24 hrs before)</p>
-                    <p className="text-xs text-stone-400">Email if any sub-block is still open within 24 hours of the appointment</p>
+                    <p className="text-sm text-gray-700">Unfilled slot alert (24 hrs before)</p>
+                    <p className="text-xs text-gray-400">Email if any sub-block is still open within 24 hours of the appointment</p>
                   </div>
                 </label>
 
                 {/* Volunteer cancel window */}
-                <div className="pt-2 border-t border-stone-100">
-                  <p className="text-sm text-stone-700 mb-1">Volunteer cancellation alert</p>
-                  <p className="text-xs text-stone-400 mb-3">Get notified when a volunteer cancels within a certain window of the appointment</p>
+                <div className="pt-2 border-t border-gray-100">
+                  <p className="text-sm text-gray-700 mb-1">Volunteer cancellation alert</p>
+                  <p className="text-xs text-gray-400 mb-3">Get notified when a volunteer cancels within a certain window of the appointment</p>
                   <div className="flex flex-wrap gap-2">
                     {([null, 2, 4, 12, 24] as (number | null)[]).map((v) => (
                       <button
@@ -853,7 +853,7 @@ export default function ClinicDashboard() {
                         className={`px-3 py-1.5 text-xs rounded-md border transition-colors ${
                           notifPrefs.volunteerCancelWindow === v
                             ? "bg-[#041E42] text-white border-[#041E42]"
-                            : "bg-white text-stone-500 border-stone-200 hover:border-stone-300"
+                            : "bg-white text-gray-500 border-gray-200 hover:border-gray-300"
                         }`}
                       >
                         {v === null ? "Don't notify" : `Within ${v}h`}
@@ -871,11 +871,11 @@ export default function ClinicDashboard() {
       {editSlot && (
         <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
           <div className="bg-white rounded-xl p-6 w-full max-w-md shadow-xl">
-            <h3 className="text-sm font-medium text-stone-700 mb-4">Edit Slot</h3>
+            <h3 className="text-sm font-medium text-gray-700 mb-4">Edit Slot</h3>
 
             {/* Scope selector for recurring slots */}
             {editSlot.isRecurring && editSlot.recurrenceGroupId && (
-              <div className="mb-4 border border-stone-200 rounded-lg overflow-hidden">
+              <div className="mb-4 border border-gray-200 rounded-lg overflow-hidden">
                 {(["single", "this_and_future"] as const).map((scope) => (
                   <button
                     key={scope}
@@ -883,7 +883,7 @@ export default function ClinicDashboard() {
                     className={`w-full text-left px-4 py-2.5 text-sm transition-colors ${
                       editScope === scope
                         ? "bg-[#041E42] text-white"
-                        : "bg-white text-stone-600 hover:bg-stone-50"
+                        : "bg-white text-gray-600 hover:bg-gray-50"
                     }`}
                   >
                     {scope === "single" ? "This date only" : "This and all future dates"}
@@ -894,11 +894,11 @@ export default function ClinicDashboard() {
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs text-stone-500 mb-1">Language</label>
+                <label className="block text-xs text-gray-500 mb-1">Language</label>
                 <select
                   value={editSlot.language}
                   onChange={(e) => setEditSlot({ ...editSlot, language: e.target.value })}
-                  className="w-full px-3 py-2 text-sm border border-stone-200 rounded-md focus:outline-none focus:ring-2 focus:ring-stone-300"
+                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-300"
                 >
                   {(activeLanguages.length > 0 ? activeLanguages : Object.entries(LANG_LABELS).map(([code, name]) => ({ code, name }))).map(({ code, name }) => (
                     <option key={code} value={code}>{name}</option>
@@ -906,20 +906,20 @@ export default function ClinicDashboard() {
                 </select>
               </div>
               <div>
-                <label className="block text-xs text-stone-500 mb-1">Date</label>
+                <label className="block text-xs text-gray-500 mb-1">Date</label>
                 <input
                   type="date"
                   value={editSlot.date.split("T")[0]}
                   onChange={(e) => setEditSlot({ ...editSlot, date: e.target.value })}
-                  className="w-full px-3 py-2 text-sm border border-stone-200 rounded-md focus:outline-none focus:ring-2 focus:ring-stone-300"
+                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-300"
                 />
               </div>
               <div>
-                <label className="block text-xs text-stone-500 mb-1">Start Time</label>
+                <label className="block text-xs text-gray-500 mb-1">Start Time</label>
                 <select
                   value={editSlot.startTime}
                   onChange={(e) => setEditSlot({ ...editSlot, startTime: Number(e.target.value) })}
-                  className="w-full px-3 py-2 text-sm border border-stone-200 rounded-md focus:outline-none focus:ring-2 focus:ring-stone-300"
+                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-300"
                 >
                   {HOUR_OPTIONS.map((h) => (
                     <option key={h} value={h}>{formatHour(h)}</option>
@@ -927,11 +927,11 @@ export default function ClinicDashboard() {
                 </select>
               </div>
               <div>
-                <label className="block text-xs text-stone-500 mb-1">End Time</label>
+                <label className="block text-xs text-gray-500 mb-1">End Time</label>
                 <select
                   value={editSlot.endTime}
                   onChange={(e) => setEditSlot({ ...editSlot, endTime: Number(e.target.value) })}
-                  className="w-full px-3 py-2 text-sm border border-stone-200 rounded-md focus:outline-none focus:ring-2 focus:ring-stone-300"
+                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-300"
                 >
                   {HOUR_OPTIONS.map((h) => (
                     <option key={h} value={h}>{formatHour(h)}</option>
@@ -939,22 +939,22 @@ export default function ClinicDashboard() {
                 </select>
               </div>
               <div>
-                <label className="block text-xs text-stone-500 mb-1">Interpreters per Hour</label>
+                <label className="block text-xs text-gray-500 mb-1">Interpreters per Hour</label>
                 <input
                   type="number"
                   min={1}
                   max={10}
                   value={editSlot.interpreterCount}
                   onChange={(e) => setEditSlot({ ...editSlot, interpreterCount: Number(e.target.value) })}
-                  className="w-full px-3 py-2 text-sm border border-stone-200 rounded-md focus:outline-none focus:ring-2 focus:ring-stone-300"
+                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-300"
                 />
               </div>
               <div>
-                <label className="block text-xs text-stone-500 mb-1">Notes</label>
+                <label className="block text-xs text-gray-500 mb-1">Notes</label>
                 <input
                   value={editSlot.notes ?? ""}
                   onChange={(e) => setEditSlot({ ...editSlot, notes: e.target.value })}
-                  className="w-full px-3 py-2 text-sm border border-stone-200 rounded-md focus:outline-none focus:ring-2 focus:ring-stone-300"
+                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-300"
                 />
               </div>
             </div>
@@ -968,7 +968,7 @@ export default function ClinicDashboard() {
               </button>
               <button
                 onClick={() => setEditSlot(null)}
-                className="px-4 py-2 text-sm bg-stone-100 hover:bg-stone-200 text-stone-600 rounded-md transition-colors"
+                className="px-4 py-2 text-sm bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-md transition-colors"
               >
                 Cancel
               </button>
@@ -988,8 +988,8 @@ export default function ClinicDashboard() {
                 </svg>
               </div>
               <div>
-                <h3 className="text-sm font-semibold text-stone-800">Volunteers will be removed</h3>
-                <p className="text-sm text-stone-500 mt-1">
+                <h3 className="text-sm font-semibold text-black">Volunteers will be removed</h3>
+                <p className="text-sm text-gray-500 mt-1">
                   {editWarning.cancelCount} volunteer signup{editWarning.cancelCount !== 1 ? "s" : ""}{" "}
                   conflict{editWarning.cancelCount === 1 ? "s" : ""} with your changes and will be cancelled
                   if you proceed.
@@ -1006,7 +1006,7 @@ export default function ClinicDashboard() {
               </button>
               <button
                 onClick={() => setEditWarning(null)}
-                className="w-full px-4 py-2.5 text-sm bg-stone-100 hover:bg-stone-200 text-stone-700 font-medium rounded-lg transition-colors"
+                className="w-full px-4 py-2.5 text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium rounded-lg transition-colors"
               >
                 Go Back &amp; Edit
               </button>
@@ -1019,8 +1019,8 @@ export default function ClinicDashboard() {
       {cancelConfirm && (
         <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
           <div className="bg-white rounded-xl p-6 w-full max-w-sm shadow-xl">
-            <h3 className="text-sm font-medium text-stone-700 mb-2">Cancel Slot</h3>
-            <p className="text-xs text-stone-500 mb-4">
+            <h3 className="text-sm font-medium text-gray-700 mb-2">Cancel Slot</h3>
+            <p className="text-xs text-gray-500 mb-4">
               All volunteer signups for the cancelled slot(s) will be removed.
             </p>
             {cancelConfirm.isRecurring ? (
@@ -1028,10 +1028,10 @@ export default function ClinicDashboard() {
                 <button
                   disabled={!!actionLoading}
                   onClick={() => cancelSlot(cancelConfirm.slotId, "single")}
-                  className="w-full text-left px-4 py-3 text-sm border border-stone-200 rounded-lg hover:bg-stone-50 transition-colors disabled:opacity-50"
+                  className="w-full text-left px-4 py-3 text-sm border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
                 >
-                  <span className="font-medium text-stone-700">This date only</span>
-                  <p className="text-xs text-stone-400 mt-0.5">Cancel just this occurrence</p>
+                  <span className="font-medium text-gray-700">This date only</span>
+                  <p className="text-xs text-gray-400 mt-0.5">Cancel just this occurrence</p>
                 </button>
                 <button
                   disabled={!!actionLoading}
@@ -1055,7 +1055,7 @@ export default function ClinicDashboard() {
             )}
             <button
               onClick={() => setCancelConfirm(null)}
-              className="w-full px-4 py-2 text-sm bg-stone-100 hover:bg-stone-200 text-stone-600 rounded-md transition-colors"
+              className="w-full px-4 py-2 text-sm bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-md transition-colors"
             >
               Keep Slot
             </button>
