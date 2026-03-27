@@ -298,9 +298,9 @@ export default function ClinicDashboard() {
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "28px" }}>
           <div style={{ display: "flex", gap: "4px", background: "var(--card-bg)", padding: "5px", borderRadius: "12px", boxShadow: "0 1px 3px rgba(0,0,0,.08)", border: "1px solid var(--card-border)" }}>
             {[{ key: "upcoming" as Tab, label: "Upcoming", count: upcoming.length }, { key: "past" as Tab, label: "Past", count: past.length }, { key: "settings" as Tab, label: "Notifications" }].map((t) => (
-              <button key={t.key} onClick={() => setTab(t.key)} style={{ padding: "9px 20px", borderRadius: "9px", fontSize: "0.9rem", fontWeight: 500, cursor: "pointer", border: "none", fontFamily: "inherit", transition: "all .15s", background: tab === t.key ? "var(--blue)" : "none", color: tab === t.key ? "#fff" : "var(--gray-600)", whiteSpace: "nowrap" }}>
+              <button key={t.key} onClick={() => setTab(t.key)} style={{ padding: "9px 20px", borderRadius: "9px", fontSize: "0.9rem", fontWeight: 500, cursor: "pointer", border: "none", fontFamily: "inherit", transition: "all .15s", background: tab === t.key ? "var(--blue)" : "none", color: tab === t.key ? "#fff" : "var(--gray-900)", whiteSpace: "nowrap" }}>
                 {t.label}
-                {t.count !== undefined && t.count > 0 && <span style={{ background: tab === t.key ? "rgba(255,255,255,.3)" : "var(--gray-200)", color: tab === t.key ? "#fff" : "var(--gray-600)", fontSize: "0.7rem", fontWeight: 700, padding: "1px 7px", borderRadius: "99px", marginLeft: "5px" }}>{t.count}</span>}
+                {t.count !== undefined && t.count > 0 && <span style={{ background: tab === t.key ? "rgba(255,255,255,.3)" : "var(--gray-200)", color: tab === t.key ? "#fff" : "var(--gray-900)", fontSize: "0.7rem", fontWeight: 700, padding: "1px 7px", borderRadius: "99px", marginLeft: "5px" }}>{t.count}</span>}
               </button>
             ))}
           </div>
@@ -370,7 +370,7 @@ export default function ClinicDashboard() {
             : tab === "upcoming"
               ? Object.entries(upcomingByDate).map(([label, ds]) => (
                 <div key={label}>
-                  <div style={{ fontSize: "0.78rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", color: "var(--gray-600)", margin: "28px 0 12px" }}>{label}</div>
+                  <div style={{ fontSize: "0.78rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", color: "var(--gray-900)", margin: "28px 0 12px" }}>{label}</div>
                   {ds.map((slot) => <SlotCard key={slot.id} slot={slot} isPast={false} selectedSlotIds={selectedSlotIds} actionLoading={actionLoading} onToggleSelect={toggleSelectSlot} onEdit={(s) => { setEditSlot({ ...s }); setEditScope("single"); }} onCancel={(s) => setCancelConfirm({ slotId: s.id, isRecurring: s.isRecurring && !!s.recurrenceGroupId })} onNoShow={reportNoShow} />)}
                 </div>
               ))

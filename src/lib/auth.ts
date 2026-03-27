@@ -83,12 +83,12 @@ export const authOptions: NextAuthOptions = {
 
         if (existing) {
           if (user.email === SUPER_ADMIN_EMAIL && existing.role !== "SUPER_ADMIN") {
-            await prisma.user.update({ where: { email: user.email }, data: { role: "SUPER_ADMIN" } });
+            await prisma.user.update({ where: { email: user.email }, data: { role: "SUPER_ADMIN", roles: { push: "SUPER_ADMIN" } } });
           }
         } else {
           if (user.email === SUPER_ADMIN_EMAIL) {
             await prisma.user.create({
-              data: { email: user.email, name: user.name ?? user.email, role: "SUPER_ADMIN", status: "ACTIVE" },
+              data: { email: user.email, name: user.name ?? user.email, role: "SUPER_ADMIN", roles: ["SUPER_ADMIN"], status: "ACTIVE" },
             });
           } else {
             const adminCount = await prisma.user.count({
@@ -99,6 +99,7 @@ export const authOptions: NextAuthOptions = {
                 email: user.email,
                 name: user.name ?? user.email,
                 role: adminCount === 0 ? "ADMIN" : "PENDING",
+                roles: adminCount === 0 ? ["ADMIN"] : ["PENDING"],
                 status: adminCount === 0 ? "ACTIVE" : "PENDING_APPROVAL",
               },
             });
@@ -136,6 +137,7 @@ export const authOptions: NextAuthOptions = {
         });
         if (dbUser) {
           session.user.role = dbUser.role;
+          session.user.roles = dbUser.roles ?? [];
           session.user.status = dbUser.status;
           session.user.id = dbUser.id;
           session.user.clinicId = dbUser.clinicId;
