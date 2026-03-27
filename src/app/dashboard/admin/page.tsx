@@ -64,7 +64,34 @@ type AdminProfile = {
 };
 
 type EmailRule = { id: string; email: string; type: "ALLOW" | "BLOCK"; note: string | null };
-type Tab = "slots" | "pending" | "users" | "clinics" | "profile" | "access";
+type LanguageConfig = { id: string; code: string; name: string; isActive: boolean; createdAt: string };
+type TrainingMaterial = { id: string; title: string; description: string | null; type: string; url: string; fileName: string | null; languageCode: string | null; category: string; uploadedBy: { name: string | null; email: string }; createdAt: string };
+type Metrics = { totalHours: number; hoursByLanguage: { code: string; name: string; hours: number }[]; hoursByClinic: { clinicId: string; clinicName: string; hours: number }[]; volunteerCount: number; activeSlotCount: number; feedbackCount?: number; avgVolunteerRating?: number | null; avgClinicRating?: number | null };
+type FeatureFlag = { id: string; key: string; label: string; description: string | null; enabled: boolean };
+type Tab = "slots" | "pending" | "users" | "clinics" | "profile" | "access" | "languages" | "metrics" | "training" | "flags" | "suggestions";
+
+type AdminFeedback = {
+  id: string;
+  authorRole: string;
+  rating: number | null;
+  note: string;
+  createdAt: string;
+  signup: {
+    slot: { date: string; language: string; clinic: { name: string } };
+    volunteer: { user: { name: string | null; email: string } };
+  };
+};
+
+type Suggestion = {
+  id: string;
+  type: string;
+  subject: string;
+  message: string;
+  status: string;
+  adminNote: string | null;
+  createdAt: string;
+  submittedBy: { name: string | null; email: string } | null;
+};
 
 const LANG_LABELS: Record<string, string> = { ES: "Spanish", ZH: "Chinese", KO: "Korean" };
 const LANG_COLORS: Record<string, string> = {
@@ -72,6 +99,33 @@ const LANG_COLORS: Record<string, string> = {
   ZH: "bg-red-50 text-red-700",
   KO: "bg-blue-50 text-blue-700",
 };
+
+function MapsLinks({ address }: { address: string }) {
+  const q = encodeURIComponent(address);
+  return (
+    <span className="inline-flex gap-1.5 ml-1.5 items-center">
+      <a
+        href={`https://www.google.com/maps/search/?api=1&query=${q}`}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="text-xs text-blue-500 hover:text-blue-700 underline"
+        title="Google Maps"
+      >
+        G Maps
+      </a>
+      <span className="text-stone-300">·</span>
+      <a
+        href={`https://maps.apple.com/?q=${q}`}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="text-xs text-blue-500 hover:text-blue-700 underline"
+        title="Apple Maps"
+      >
+        Apple Maps
+      </a>
+    </span>
+  );
+}
 
 function formatHour(h: number) {
   if (h === 0) return "12 AM";
@@ -122,6 +176,21 @@ export default function AdminDashboard() {
   const [ruleEmail, setRuleEmail] = useState("");
   const [ruleType, setRuleType] = useState<"ALLOW" | "BLOCK">("ALLOW");
   const [ruleNote, setRuleNote] = useState("");
+  const [languages, setLanguages] = useState<LanguageConfig[]>([]);
+  const [langForm, setLangForm] = useState({ code: "", name: "" });
+  const [langFormError, setLangFormError] = useState("");
+  const [metrics, setMetrics] = useState<Metrics | null>(null);
+  const [trainingMaterials, setTrainingMaterials] = useState<TrainingMaterial[]>([]);
+  const [trainingForm, setTrainingForm] = useState({ title: "", description: "", type: "LINK" as "LINK" | "FILE", url: "", languageCode: "", category: "General" });
+  const [trainingFile, setTrainingFile] = useState<File | null>(null);
+  const [trainingFormError, setTrainingFormError] = useState("");
+  const [trainingSubmitting, setTrainingSubmitting] = useState(false);
+  const [showTrainingForm, setShowTrainingForm] = useState(false);
+  const [featureFlags, setFeatureFlags] = useState<FeatureFlag[]>([]);
+  const [allFeedback, setAllFeedback] = useState<AdminFeedback[]>([]);
+  const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
+  const [testEmailTo, setTestEmailTo] = useState("");
+  const [testEmailStatus, setTestEmailStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
 
   useEffect(() => {
     if (status === "unauthenticated") router.push("/login");
@@ -134,10 +203,18 @@ export default function AdminDashboard() {
       fetch("/api/admin/clinics"),
       fetch("/api/admin/slots"),
       fetch("/api/volunteer/profile"),
+      fetch("/api/admin/languages"),
+      fetch("/api/admin/metrics"),
+      fetch("/api/training"),
+      fetch("/api/admin/feedback"),
+      fetch("/api/suggestions"),
     ];
-    if (isSuperAdmin) fetches.push(fetch("/api/admin/email-rules"));
+    if (isSuperAdmin) {
+      fetches.push(fetch("/api/admin/email-rules"));
+      fetches.push(fetch("/api/admin/feature-flags"));
+    }
 
-    const [usersRes, clinicsRes, slotsRes, profileRes, rulesRes] = await Promise.all(fetches);
+    const [usersRes, clinicsRes, slotsRes, profileRes, langsRes, metricsRes, trainingRes, feedbackRes, suggestionsRes, rulesRes, flagsRes] = await Promise.all(fetches);
     if (usersRes.ok) setUsers(await usersRes.json());
     if (clinicsRes.ok) setClinics(await clinicsRes.json());
     if (slotsRes.ok) setAdminSlots(await slotsRes.json());
@@ -146,7 +223,13 @@ export default function AdminDashboard() {
       setAdminProfile(p);
       setProfileForm({ languages: p.languages ?? [] });
     }
+    if (langsRes?.ok) setLanguages(await langsRes.json());
+    if (metricsRes?.ok) setMetrics(await metricsRes.json());
+    if (trainingRes?.ok) setTrainingMaterials(await trainingRes.json());
+    if (feedbackRes?.ok) setAllFeedback(await feedbackRes.json());
+    if (suggestionsRes?.ok) setSuggestions(await suggestionsRes.json());
     if (rulesRes?.ok) setEmailRules(await rulesRes.json());
+    if (flagsRes?.ok) setFeatureFlags(await flagsRes.json());
     setLoading(false);
   }, []);
 
@@ -365,6 +448,151 @@ export default function AdminDashboard() {
     setActionLoading(null);
   };
 
+  const createLanguage = async () => {
+    setLangFormError("");
+    const res = await fetch("/api/admin/languages", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ code: langForm.code.trim().toUpperCase(), name: langForm.name.trim() }),
+    });
+    if (res.ok) {
+      const lang = await res.json();
+      setLanguages((prev) => [...prev, lang].sort((a, b) => a.name.localeCompare(b.name)));
+      setLangForm({ code: "", name: "" });
+    } else {
+      const data = await res.json().catch(() => ({}));
+      setLangFormError(data.error ?? "Could not add language.");
+    }
+  };
+
+  const toggleLanguageActive = async (id: string, isActive: boolean) => {
+    const res = await fetch(`/api/admin/languages/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ isActive }),
+    });
+    if (res.ok) {
+      const updated = await res.json();
+      setLanguages((prev) => prev.map((l) => (l.id === id ? updated : l)));
+    }
+  };
+
+  const submitTraining = async () => {
+    setTrainingFormError("");
+    setTrainingSubmitting(true);
+    try {
+      let url = trainingForm.url;
+      let fileName: string | null = null;
+
+      if (trainingForm.type === "FILE") {
+        if (!trainingFile) {
+          setTrainingFormError("Please select a file.");
+          setTrainingSubmitting(false);
+          return;
+        }
+        const fd = new FormData();
+        fd.append("file", trainingFile);
+        const uploadRes = await fetch("/api/training/upload", { method: "POST", body: fd });
+        if (!uploadRes.ok) {
+          const err = await uploadRes.json().catch(() => ({}));
+          setTrainingFormError(err.error ?? "File upload failed.");
+          setTrainingSubmitting(false);
+          return;
+        }
+        const uploadData = await uploadRes.json();
+        url = uploadData.url;
+        fileName = uploadData.fileName;
+      }
+
+      const res = await fetch("/api/training", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: trainingForm.title,
+          description: trainingForm.description || null,
+          type: trainingForm.type,
+          url,
+          fileName,
+          languageCode: trainingForm.languageCode || null,
+          category: trainingForm.category || "General",
+        }),
+      });
+      if (res.ok) {
+        const material = await res.json();
+        setTrainingMaterials((prev) => [material, ...prev]);
+        setTrainingForm({ title: "", description: "", type: "LINK", url: "", languageCode: "", category: "General" });
+        setTrainingFile(null);
+        setShowTrainingForm(false);
+      } else {
+        const err = await res.json().catch(() => ({}));
+        setTrainingFormError(err.error ?? "Could not add material.");
+      }
+    } finally {
+      setTrainingSubmitting(false);
+    }
+  };
+
+  const deleteTraining = async (id: string) => {
+    if (!confirm("Delete this training material?")) return;
+    const res = await fetch(`/api/training/${id}`, { method: "DELETE" });
+    if (res.ok) {
+      setTrainingMaterials((prev) => prev.filter((m) => m.id !== id));
+    }
+  };
+
+  const toggleFlag = async (key: string, enabled: boolean) => {
+    const res = await fetch("/api/admin/feature-flags", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ key, enabled }),
+    });
+    if (res.ok) {
+      const updated = await res.json();
+      setFeatureFlags((prev) => prev.map((f) => (f.key === key ? updated : f)));
+    }
+  };
+
+  const sendTestEmailFn = async () => {
+    if (!testEmailTo.trim()) return;
+    setTestEmailStatus("sending");
+    const res = await fetch("/api/admin/test-email", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ to: testEmailTo.trim() }),
+    });
+    if (res.ok) {
+      setTestEmailStatus("sent");
+      setTimeout(() => setTestEmailStatus("idle"), 3000);
+    } else {
+      setTestEmailStatus("error");
+      setTimeout(() => setTestEmailStatus("idle"), 3000);
+    }
+  };
+
+  const updateSuggestionStatus = async (id: string, status: string) => {
+    const res = await fetch(`/api/suggestions/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status }),
+    });
+    if (res.ok) {
+      const updated = await res.json();
+      setSuggestions((prev) => prev.map((s) => (s.id === id ? { ...s, ...updated } : s)));
+    }
+  };
+
+  const updateSuggestionNote = async (id: string, adminNote: string) => {
+    const res = await fetch(`/api/suggestions/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ adminNote }),
+    });
+    if (res.ok) {
+      const updated = await res.json();
+      setSuggestions((prev) => prev.map((s) => (s.id === id ? { ...s, ...updated } : s)));
+    }
+  };
+
   const pendingUsers = users.filter((u) => u.status === "PENDING_APPROVAL");
 
   if (status === "loading" || loading) {
@@ -438,7 +666,12 @@ export default function AdminDashboard() {
           </div>
           <div className="text-right">
             <p className="text-sm font-medium text-stone-800">{slot.clinic.name}</p>
-            {slot.clinic.address && <p className="text-xs text-stone-400">{slot.clinic.address}</p>}
+            {slot.clinic.address && (
+              <p className="text-xs text-stone-400">
+                {slot.clinic.address}
+                <MapsLinks address={slot.clinic.address} />
+              </p>
+            )}
           </div>
         </div>
         {slot.notes && <p className="text-xs text-stone-400 italic mb-3">{slot.notes}</p>}
@@ -577,8 +810,15 @@ export default function AdminDashboard() {
             { key: "users" as Tab, label: "All Users", count: users.length },
             { key: "clinics" as Tab, label: "Clinics", count: clinics.length },
             { key: "profile" as Tab, label: "My Profile", count: 0 },
+            { key: "languages" as Tab, label: "Languages", count: 0 },
+            { key: "metrics" as Tab, label: "Metrics", count: 0 },
+            { key: "training" as Tab, label: "Training", count: 0 },
+            { key: "suggestions" as Tab, label: "Suggestions", count: suggestions.filter((s) => s.status === "OPEN").length },
             ...(session?.user?.role === "SUPER_ADMIN"
-              ? [{ key: "access" as Tab, label: "Access Control", count: 0 }]
+              ? [
+                  { key: "access" as Tab, label: "Access Control", count: 0 },
+                  { key: "flags" as Tab, label: "Feature Flags", count: 0 },
+                ]
               : []),
           ].map((t) => (
             <button
@@ -979,7 +1219,10 @@ export default function AdminDashboard() {
                     <div className="flex items-start justify-between">
                       <div>
                         <h3 className="font-medium text-stone-800">{clinic.name}</h3>
-                        <p className="text-sm text-stone-500 mt-0.5">{clinic.address}</p>
+                        <p className="text-sm text-stone-500 mt-0.5">
+                          {clinic.address}
+                          {clinic.address && <MapsLinks address={clinic.address} />}
+                        </p>
                         <p className="text-xs text-stone-400 mt-1">{clinic.contactName} · {clinic.contactEmail}</p>
                         <div className="mt-3 flex items-center gap-3 flex-wrap">
                           <div className="flex items-center gap-1.5 bg-stone-50 border border-stone-200 rounded-md px-2 py-1">
@@ -1069,6 +1312,342 @@ export default function AdminDashboard() {
           </div>
         )}
 
+        {/* Languages */}
+        {tab === "languages" && (
+          <div className="max-w-2xl space-y-5">
+            <div className="bg-white rounded-xl border border-stone-200 p-6">
+              <h3 className="text-sm font-medium text-stone-700 mb-1">Add Language</h3>
+              <p className="text-xs text-stone-400 mb-4">Inactive languages are hidden from dropdowns but shown here.</p>
+              <div className="flex gap-3">
+                <input
+                  placeholder="Code (e.g. FR)"
+                  value={langForm.code}
+                  onChange={(e) => setLangForm({ ...langForm, code: e.target.value.toUpperCase() })}
+                  maxLength={4}
+                  className="w-28 px-3 py-2 text-sm border border-stone-200 rounded-md focus:outline-none focus:ring-2 focus:ring-stone-300 uppercase"
+                />
+                <input
+                  placeholder="Name (e.g. French)"
+                  value={langForm.name}
+                  onChange={(e) => setLangForm({ ...langForm, name: e.target.value })}
+                  className="flex-1 px-3 py-2 text-sm border border-stone-200 rounded-md focus:outline-none focus:ring-2 focus:ring-stone-300"
+                />
+                <button
+                  disabled={!langForm.code || !langForm.name}
+                  onClick={createLanguage}
+                  className="px-4 py-2 text-sm bg-stone-800 text-white hover:bg-stone-700 rounded-md transition-colors disabled:opacity-50"
+                >
+                  Add
+                </button>
+              </div>
+              {langFormError && (
+                <p className="mt-2 text-sm text-red-600 bg-red-50 border border-red-100 rounded-md px-3 py-2">{langFormError}</p>
+              )}
+            </div>
+
+            {languages.length === 0 ? (
+              <div className="bg-white rounded-xl border border-stone-200 p-12 text-center">
+                <p className="text-stone-400">No languages configured yet.</p>
+              </div>
+            ) : (
+              <div className="bg-white rounded-xl border border-stone-200 divide-y divide-stone-100">
+                {languages.map((lang) => (
+                  <div key={lang.id} className="flex items-center justify-between px-5 py-3 gap-3">
+                    <div className="flex items-center gap-3">
+                      <span className="text-xs font-mono font-semibold px-2 py-1 bg-stone-100 text-stone-700 rounded">{lang.code}</span>
+                      <span className="text-sm text-stone-800">{lang.name}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className={`text-xs px-2 py-0.5 rounded-full ${lang.isActive ? "bg-emerald-50 text-emerald-700" : "bg-stone-100 text-stone-400"}`}>
+                        {lang.isActive ? "Active" : "Inactive"}
+                      </span>
+                      <button
+                        onClick={() => toggleLanguageActive(lang.id, !lang.isActive)}
+                        className={`text-xs px-2 py-1 rounded-md transition-colors ${
+                          lang.isActive
+                            ? "bg-stone-100 text-stone-600 hover:bg-stone-200"
+                            : "bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
+                        }`}
+                      >
+                        {lang.isActive ? "Deactivate" : "Activate"}
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Metrics */}
+        {tab === "metrics" && (
+          <div className="space-y-6">
+            {!metrics ? (
+              <div className="bg-white rounded-xl border border-stone-200 p-12 text-center">
+                <p className="text-stone-400">Loading metrics...</p>
+              </div>
+            ) : (
+              <>
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="bg-white rounded-xl border border-stone-200 p-5 text-center">
+                    <p className="text-3xl font-semibold text-stone-800">{metrics.totalHours}</p>
+                    <p className="text-xs text-stone-400 mt-1">Total Hours</p>
+                  </div>
+                  <div className="bg-white rounded-xl border border-stone-200 p-5 text-center">
+                    <p className="text-3xl font-semibold text-stone-800">{metrics.volunteerCount}</p>
+                    <p className="text-xs text-stone-400 mt-1">Active Volunteers</p>
+                  </div>
+                  <div className="bg-white rounded-xl border border-stone-200 p-5 text-center">
+                    <p className="text-3xl font-semibold text-stone-800">{metrics.activeSlotCount}</p>
+                    <p className="text-xs text-stone-400 mt-1">Active Slots</p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="bg-white rounded-xl border border-stone-200 p-5">
+                    <h3 className="text-sm font-medium text-stone-700 mb-3">Hours by Language</h3>
+                    {metrics.hoursByLanguage.length === 0 ? (
+                      <p className="text-xs text-stone-400">No data yet.</p>
+                    ) : (
+                      <div className="space-y-2">
+                        {metrics.hoursByLanguage.map((item) => (
+                          <div key={item.code} className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs font-mono font-semibold px-1.5 py-0.5 bg-stone-100 text-stone-600 rounded">{item.code}</span>
+                              <span className="text-sm text-stone-700">{item.name}</span>
+                            </div>
+                            <span className="text-sm font-medium text-stone-800">{item.hours}h</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="bg-white rounded-xl border border-stone-200 p-5">
+                    <h3 className="text-sm font-medium text-stone-700 mb-3">Hours by Clinic</h3>
+                    {metrics.hoursByClinic.length === 0 ? (
+                      <p className="text-xs text-stone-400">No data yet.</p>
+                    ) : (
+                      <div className="space-y-2">
+                        {metrics.hoursByClinic.map((item) => (
+                          <div key={item.clinicId} className="flex items-center justify-between">
+                            <span className="text-sm text-stone-700">{item.clinicName}</span>
+                            <span className="text-sm font-medium text-stone-800">{item.hours}h</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <p className="text-xs text-stone-400 text-center">Graphs coming soon</p>
+
+                {/* Feedback Overview */}
+                <div className="bg-white rounded-xl border border-stone-200 p-5">
+                  <h3 className="text-sm font-medium text-stone-700 mb-3">Feedback Overview</h3>
+                  <div className="grid grid-cols-3 gap-4 mb-4">
+                    <div className="text-center">
+                      <p className="text-2xl font-semibold text-stone-800">{metrics.feedbackCount ?? 0}</p>
+                      <p className="text-xs text-stone-400 mt-1">Total Feedback</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-2xl font-semibold text-stone-800">
+                        {metrics.avgVolunteerRating != null ? `${metrics.avgVolunteerRating}★` : "—"}
+                      </p>
+                      <p className="text-xs text-stone-400 mt-1">Avg Volunteer Rating</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-2xl font-semibold text-stone-800">
+                        {metrics.avgClinicRating != null ? `${metrics.avgClinicRating}★` : "—"}
+                      </p>
+                      <p className="text-xs text-stone-400 mt-1">Avg Clinic Rating</p>
+                    </div>
+                  </div>
+                  {allFeedback.length > 0 && (
+                    <div className="space-y-2">
+                      <p className="text-xs font-medium text-stone-400 uppercase tracking-wider mb-2">Recent Feedback</p>
+                      {allFeedback.slice(0, 10).map((fb) => (
+                        <div key={fb.id} className="border border-stone-100 rounded-lg px-4 py-3">
+                          <div className="flex items-center justify-between mb-1">
+                            <div className="flex items-center gap-2">
+                              <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${fb.authorRole === "CLINIC" ? "bg-blue-50 text-blue-700" : "bg-emerald-50 text-emerald-700"}`}>
+                                {fb.authorRole}
+                              </span>
+                              {fb.rating != null && (
+                                <span className="text-xs text-amber-500">
+                                  {"★".repeat(fb.rating)}{"☆".repeat(5 - fb.rating)}
+                                </span>
+                              )}
+                            </div>
+                            <span className="text-xs text-stone-400">{new Date(fb.createdAt).toLocaleDateString()}</span>
+                          </div>
+                          <p className="text-xs text-stone-600 mb-1">{fb.note}</p>
+                          <p className="text-xs text-stone-400">
+                            {fb.signup.slot.clinic.name} · {fb.signup.volunteer.user.name ?? fb.signup.volunteer.user.email}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {allFeedback.length === 0 && (
+                    <p className="text-xs text-stone-400 text-center py-4">No feedback yet.</p>
+                  )}
+                </div>
+              </>
+            )}
+          </div>
+        )}
+
+        {/* Training */}
+        {tab === "training" && (
+          <div className="space-y-5">
+            <div className="flex justify-end">
+              <button
+                onClick={() => setShowTrainingForm(!showTrainingForm)}
+                className="px-4 py-2 text-sm bg-stone-800 text-white hover:bg-stone-700 rounded-md transition-colors"
+              >
+                {showTrainingForm ? "Cancel" : "+ Add Material"}
+              </button>
+            </div>
+
+            {showTrainingForm && (
+              <div className="bg-white rounded-xl border border-stone-200 p-6 space-y-4">
+                <h3 className="text-sm font-medium text-stone-700">New Training Material</h3>
+                <input
+                  placeholder="Title"
+                  value={trainingForm.title}
+                  onChange={(e) => setTrainingForm({ ...trainingForm, title: e.target.value })}
+                  className="w-full px-3 py-2 text-sm border border-stone-200 rounded-md focus:outline-none focus:ring-2 focus:ring-stone-300"
+                />
+                <textarea
+                  placeholder="Description (optional)"
+                  value={trainingForm.description}
+                  onChange={(e) => setTrainingForm({ ...trainingForm, description: e.target.value })}
+                  rows={2}
+                  className="w-full px-3 py-2 text-sm border border-stone-200 rounded-md focus:outline-none focus:ring-2 focus:ring-stone-300 resize-none"
+                />
+                <div className="flex gap-2">
+                  {(["LINK", "FILE"] as const).map((t) => (
+                    <button
+                      key={t}
+                      onClick={() => setTrainingForm({ ...trainingForm, type: t })}
+                      className={`flex-1 py-2 text-sm rounded-md border transition-colors ${
+                        trainingForm.type === t
+                          ? "bg-stone-800 text-white border-stone-800"
+                          : "border-stone-200 text-stone-600 hover:border-stone-400"
+                      }`}
+                    >
+                      {t === "LINK" ? "Link" : "File Upload"}
+                    </button>
+                  ))}
+                </div>
+                {trainingForm.type === "LINK" ? (
+                  <input
+                    placeholder="URL (https://...)"
+                    value={trainingForm.url}
+                    onChange={(e) => setTrainingForm({ ...trainingForm, url: e.target.value })}
+                    className="w-full px-3 py-2 text-sm border border-stone-200 rounded-md focus:outline-none focus:ring-2 focus:ring-stone-300"
+                  />
+                ) : (
+                  <input
+                    type="file"
+                    accept=".pdf,.doc,.docx,.pptx,.mp4,.mov"
+                    onChange={(e) => setTrainingFile(e.target.files?.[0] ?? null)}
+                    className="w-full text-sm text-stone-600"
+                  />
+                )}
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs text-stone-500 mb-1 block">Language</label>
+                    <select
+                      value={trainingForm.languageCode}
+                      onChange={(e) => setTrainingForm({ ...trainingForm, languageCode: e.target.value })}
+                      className="w-full px-3 py-2 text-sm border border-stone-200 rounded-md focus:outline-none bg-white"
+                    >
+                      <option value="">All Languages</option>
+                      {languages.filter((l) => l.isActive).map((l) => (
+                        <option key={l.code} value={l.code}>{l.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-xs text-stone-500 mb-1 block">Category</label>
+                    <input
+                      placeholder="General"
+                      value={trainingForm.category}
+                      list="training-categories"
+                      onChange={(e) => setTrainingForm({ ...trainingForm, category: e.target.value })}
+                      className="w-full px-3 py-2 text-sm border border-stone-200 rounded-md focus:outline-none focus:ring-2 focus:ring-stone-300"
+                    />
+                    <datalist id="training-categories">
+                      {["General", "Medical Terminology", "Ethics", "Language-Specific", "Administrative"].map((c) => (
+                        <option key={c} value={c} />
+                      ))}
+                    </datalist>
+                  </div>
+                </div>
+                {trainingFormError && (
+                  <p className="text-sm text-red-600 bg-red-50 border border-red-100 rounded-md px-3 py-2">{trainingFormError}</p>
+                )}
+                <button
+                  disabled={trainingSubmitting || !trainingForm.title || (trainingForm.type === "LINK" && !trainingForm.url)}
+                  onClick={submitTraining}
+                  className="px-4 py-2 text-sm bg-stone-800 text-white hover:bg-stone-700 rounded-md transition-colors disabled:opacity-50"
+                >
+                  {trainingSubmitting ? "Saving..." : "Add Material"}
+                </button>
+              </div>
+            )}
+
+            {trainingMaterials.length === 0 ? (
+              <div className="bg-white rounded-xl border border-stone-200 p-12 text-center">
+                <p className="text-stone-400">No training materials yet.</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {trainingMaterials.map((m) => (
+                  <div key={m.id} className="bg-white rounded-xl border border-stone-200 p-5">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2 flex-wrap mb-1">
+                          <span className="font-medium text-stone-800 text-sm">{m.title}</span>
+                          <span className="text-xs px-1.5 py-0.5 rounded bg-stone-100 text-stone-600">{m.category}</span>
+                          {m.languageCode && (
+                            <span className="text-xs px-1.5 py-0.5 rounded bg-blue-50 text-blue-700">{m.languageCode}</span>
+                          )}
+                          <span className={`text-xs px-1.5 py-0.5 rounded ${m.type === "FILE" ? "bg-amber-50 text-amber-700" : "bg-emerald-50 text-emerald-700"}`}>
+                            {m.type}
+                          </span>
+                        </div>
+                        {m.description && <p className="text-xs text-stone-500 mb-2">{m.description}</p>}
+                        {m.type === "FILE" ? (
+                          <a href={m.url} target="_blank" rel="noopener noreferrer" className="text-xs text-stone-600 hover:text-stone-800 underline">
+                            {m.fileName ?? "Download"}
+                          </a>
+                        ) : (
+                          <a href={m.url} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:text-blue-800 underline break-all">
+                            {m.url}
+                          </a>
+                        )}
+                        <p className="text-xs text-stone-400 mt-2">
+                          by {m.uploadedBy.name ?? m.uploadedBy.email} · {new Date(m.createdAt).toLocaleDateString()}
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => deleteTraining(m.id)}
+                        className="shrink-0 text-xs px-2 py-1 bg-red-50 text-red-500 hover:bg-red-100 rounded transition-colors"
+                        title="Delete"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Access Control — SUPER_ADMIN only */}
         {tab === "access" && session?.user?.role === "SUPER_ADMIN" && (
           <div className="max-w-lg space-y-5">
@@ -1147,6 +1726,133 @@ export default function AdminDashboard() {
             {emailRules.length === 0 && (
               <div className="bg-white rounded-xl border border-stone-200 p-8 text-center">
                 <p className="text-stone-400 text-sm">No rules yet. All Georgetown emails can sign in by default.</p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Feature Flags — SUPER_ADMIN only */}
+        {tab === "flags" && session?.user?.role === "SUPER_ADMIN" && (
+          <div className="max-w-2xl space-y-4">
+            <p className="text-xs text-stone-400 bg-amber-50 border border-amber-100 rounded-md px-4 py-2">
+              Disabled features are hidden from all non-admin users.
+            </p>
+            {featureFlags.length === 0 ? (
+              <div className="bg-white rounded-xl border border-stone-200 p-8 text-center">
+                <p className="text-stone-400 text-sm">Loading...</p>
+              </div>
+            ) : (
+              <div className="bg-white rounded-xl border border-stone-200 divide-y divide-stone-100">
+                {featureFlags.map((flag) => (
+                  <div key={flag.id} className="flex items-center justify-between px-5 py-4 gap-4">
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-stone-800">{flag.label}</p>
+                      <p className="text-xs text-stone-400 font-mono">{flag.key}</p>
+                      {flag.description && <p className="text-xs text-stone-500 mt-0.5">{flag.description}</p>}
+                    </div>
+                    <button
+                      role="switch"
+                      aria-checked={flag.enabled}
+                      onClick={() => toggleFlag(flag.key, !flag.enabled)}
+                      className={`relative inline-flex h-5 w-9 flex-shrink-0 rounded-full border-2 border-transparent transition-colors focus:outline-none ${
+                        flag.enabled ? "bg-stone-800" : "bg-stone-200"
+                      }`}
+                    >
+                      <span className={`inline-block h-4 w-4 rounded-full bg-white shadow transition-transform ${flag.enabled ? "translate-x-4" : "translate-x-0"}`} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Test Email section */}
+            <div className="bg-white rounded-xl border border-stone-200 p-6">
+              <h3 className="text-sm font-medium text-stone-700 mb-1">Test Email</h3>
+              <p className="text-xs text-stone-400 mb-4">Send a test email to verify email delivery is working.</p>
+              <div className="flex gap-3">
+                <input
+                  type="email"
+                  placeholder="recipient@example.com"
+                  value={testEmailTo}
+                  onChange={(e) => setTestEmailTo(e.target.value)}
+                  className="flex-1 px-3 py-2 text-sm border border-stone-200 rounded-md focus:outline-none focus:ring-2 focus:ring-stone-300"
+                />
+                <button
+                  disabled={!testEmailTo.trim() || testEmailStatus === "sending"}
+                  onClick={sendTestEmailFn}
+                  className="px-4 py-2 text-sm bg-stone-800 text-white hover:bg-stone-700 rounded-md transition-colors disabled:opacity-50"
+                >
+                  {testEmailStatus === "sending" ? "Sending..." : "Send Test Email"}
+                </button>
+              </div>
+              {testEmailStatus === "sent" && <p className="mt-2 text-xs text-emerald-600">Test email sent!</p>}
+              {testEmailStatus === "error" && <p className="mt-2 text-xs text-red-500">Failed to send test email.</p>}
+            </div>
+          </div>
+        )}
+
+        {/* Suggestions — admin/super_admin */}
+        {tab === "suggestions" && (
+          <div className="space-y-4">
+            {suggestions.length === 0 ? (
+              <div className="bg-white rounded-xl border border-stone-200 p-12 text-center">
+                <p className="text-stone-400">No suggestions yet.</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {suggestions.map((s) => (
+                  <div key={s.id} className="bg-white rounded-xl border border-stone-200 p-5">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2 flex-wrap mb-1">
+                          <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                            s.type === "BUG" ? "bg-red-50 text-red-700" :
+                            s.type === "FEATURE" ? "bg-blue-50 text-blue-700" :
+                            "bg-stone-100 text-stone-600"
+                          }`}>
+                            {s.type === "FEATURE" ? "Feature" : s.type === "BUG" ? "Bug" : "General"}
+                          </span>
+                          <span className="font-medium text-stone-800 text-sm">{s.subject}</span>
+                          <span className="text-xs text-stone-400">{new Date(s.createdAt).toLocaleDateString()}</span>
+                        </div>
+                        <p className="text-sm text-stone-600 mb-2">{s.message}</p>
+                        <p className="text-xs text-stone-400">
+                          {s.submittedBy ? (s.submittedBy.name ?? s.submittedBy.email) : "Anonymous"}
+                        </p>
+                        {/* Admin note */}
+                        <input
+                          type="text"
+                          placeholder="Admin note..."
+                          defaultValue={s.adminNote ?? ""}
+                          onBlur={(e) => {
+                            if (e.target.value !== (s.adminNote ?? "")) {
+                              void updateSuggestionNote(s.id, e.target.value);
+                            }
+                          }}
+                          className="mt-2 w-full px-2 py-1 text-xs border border-stone-100 rounded focus:outline-none focus:ring-1 focus:ring-stone-300 text-stone-600 bg-stone-50"
+                        />
+                      </div>
+                      <div className="shrink-0 flex flex-col items-end gap-2">
+                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                          s.status === "OPEN" ? "bg-amber-50 text-amber-700" :
+                          s.status === "NOTED" ? "bg-blue-50 text-blue-700" :
+                          "bg-stone-100 text-stone-500"
+                        }`}>
+                          {s.status}
+                        </span>
+                        <select
+                          value={s.status}
+                          onChange={(e) => void updateSuggestionStatus(s.id, e.target.value)}
+                          className="text-xs border border-stone-200 rounded px-2 py-1 text-stone-600 bg-white focus:outline-none"
+                        >
+                          <option value="OPEN">OPEN</option>
+                          <option value="NOTED">NOTED</option>
+                          <option value="CLOSED">CLOSED</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
           </div>

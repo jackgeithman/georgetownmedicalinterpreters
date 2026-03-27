@@ -11,6 +11,7 @@ datasource db {
 enum Role {
   SUPER_ADMIN
   ADMIN
+  INSTRUCTOR
   CLINIC
   VOLUNTEER
   PENDING
@@ -20,13 +21,6 @@ enum UserStatus {
   ACTIVE
   SUSPENDED
   PENDING_APPROVAL
-}
-
-enum Language {
-  ES
-  ZH
-  KO
-  AR
 }
 
 enum SlotStatus {
@@ -67,20 +61,27 @@ enum NotifType {
   ADMIN_PENDING_VOLUNTEER
 }
 
+enum TrainingMaterialType {
+  FILE
+  LINK
+}
+
 model User {
-  id              String            @id @default(uuid())
-  email           String            @unique
-  name            String?
-  emailVerified   DateTime?
-  image           String?
-  role            Role              @default(PENDING)
-  status          UserStatus        @default(PENDING_APPROVAL)
-  clinicId        String?
-  clinic          Clinic?           @relation(fields: [clinicId], references: [id])
-  volunteer       VolunteerProfile?
-  accounts        Account[]
-  clearancesGiven ClearanceLog[]    @relation("ClearancesGiven")
-  createdAt       DateTime          @default(now())
+  id                String              @id @default(uuid())
+  email             String              @unique
+  name              String?
+  emailVerified     DateTime?
+  image             String?
+  role              Role                @default(PENDING)
+  status            UserStatus          @default(PENDING_APPROVAL)
+  clinicId          String?
+  clinic            Clinic?             @relation(fields: [clinicId], references: [id])
+  volunteer         VolunteerProfile?
+  accounts          Account[]
+  clearancesGiven   ClearanceLog[]      @relation("ClearancesGiven")
+  uploadedMaterials TrainingMaterial[]  @relation("UploadedMaterials")
+  suggestions       Suggestion[]        @relation("Suggestions")
+  createdAt         DateTime            @default(now())
 }
 
 model Account {
@@ -128,7 +129,7 @@ model VolunteerProfile {
   id                     String               @id @default(uuid())
   userId                 String               @unique
   user                   User                 @relation(fields: [userId], references: [id])
-  languages              Language[]
+  languages              String[]
   backgroundInfo         String?
   hoursVolunteered       Int                  @default(0)
   cancellationsWithin24h Int                  @default(0)
@@ -155,20 +156,20 @@ model ClearanceLog {
 }
 
 model Slot {
-  id                String         @id @default(uuid())
+  id                String           @id @default(uuid())
   clinicId          String
-  clinic            Clinic         @relation(fields: [clinicId], references: [id])
-  language          Language
+  clinic            Clinic           @relation(fields: [clinicId], references: [id])
+  language          String
   date              DateTime
   startTime         Int
   endTime           Int
   interpreterCount  Int
-  isRecurring       Boolean        @default(false)
+  isRecurring       Boolean          @default(false)
   recurrenceGroupId String?
   notes             String?
-  status            SlotStatus     @default(ACTIVE)
+  status            SlotStatus       @default(ACTIVE)
   signups           SubBlockSignup[]
-  createdAt         DateTime       @default(now())
+  createdAt         DateTime         @default(now())
 }
 
 model SubBlockSignup {
@@ -197,8 +198,21 @@ model Feedback {
   signupId   String
   signup     SubBlockSignup @relation(fields: [signupId], references: [id])
   authorRole FeedbackAuthor
+  rating     Int?           // 1-5 stars
   note       String
   createdAt  DateTime       @default(now())
+}
+
+model Suggestion {
+  id            String   @id @default(uuid())
+  type          String   @default("FEATURE")  // "FEATURE" | "BUG" | "GENERAL"
+  subject       String
+  message       String
+  submittedById String?
+  submittedBy   User?    @relation("Suggestions", fields: [submittedById], references: [id])
+  status        String   @default("OPEN")     // "OPEN" | "NOTED" | "CLOSED"
+  adminNote     String?
+  createdAt     DateTime @default(now())
 }
 
 model VolunteerNotifPrefs {
@@ -229,4 +243,36 @@ model ClinicNotifPrefs {
   unfilledAlert24h      Boolean  @default(true)
   volunteerCancelWindow Int?
   updatedAt             DateTime @updatedAt
+}
+
+model LanguageConfig {
+  id        String   @id @default(uuid())
+  code      String   @unique
+  name      String
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+}
+
+model TrainingMaterial {
+  id           String               @id @default(uuid())
+  title        String
+  description  String?
+  type         TrainingMaterialType
+  url          String
+  fileName     String?
+  languageCode String?
+  category     String               @default("General")
+  uploadedById String
+  uploadedBy   User                 @relation("UploadedMaterials", fields: [uploadedById], references: [id])
+  createdAt    DateTime             @default(now())
+  updatedAt    DateTime             @updatedAt
+}
+
+model FeatureFlag {
+  id          String   @id @default(uuid())
+  key         String   @unique
+  label       String
+  description String?
+  enabled     Boolean  @default(true)
+  updatedAt   DateTime @updatedAt
 }

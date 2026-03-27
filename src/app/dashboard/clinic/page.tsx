@@ -49,6 +49,33 @@ const LANG_COLORS: Record<string, string> = {
   KO: "bg-blue-50 text-blue-700",
 };
 
+function MapsLinks({ address }: { address: string }) {
+  const q = encodeURIComponent(address);
+  return (
+    <span className="inline-flex gap-1.5 ml-1.5 items-center">
+      <a
+        href={`https://www.google.com/maps/search/?api=1&query=${q}`}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="text-xs text-blue-500 hover:text-blue-700 underline"
+        title="Google Maps"
+      >
+        G Maps
+      </a>
+      <span className="text-stone-300">·</span>
+      <a
+        href={`https://maps.apple.com/?q=${q}`}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="text-xs text-blue-500 hover:text-blue-700 underline"
+        title="Apple Maps"
+      >
+        Apple Maps
+      </a>
+    </span>
+  );
+}
+
 function formatHour(h: number): string {
   if (h === 0) return "12 AM";
   if (h < 12) return `${h} AM`;
@@ -103,6 +130,13 @@ export default function ClinicDashboard() {
   });
   const [selectedSlotIds, setSelectedSlotIds] = useState<Set<string>>(new Set());
   const [postError, setPostError] = useState("");
+  // Feedback state
+  const [feedbackModal, setFeedbackModal] = useState<{ signupId: string; volunteerName: string } | null>(null);
+  const [feedbackRating, setFeedbackRating] = useState(0);
+  const [feedbackNote, setFeedbackNote] = useState("");
+  const [feedbackSubmitting, setFeedbackSubmitting] = useState(false);
+  const [feedbackError, setFeedbackError] = useState("");
+  const [feedbackGiven, setFeedbackGiven] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (status === "unauthenticated") router.push("/login");
@@ -240,6 +274,34 @@ export default function ClinicDashboard() {
     });
     if (res.ok) await fetchSlots();
     setActionLoading(null);
+  };
+
+  const submitFeedback = async () => {
+    if (!feedbackModal) return;
+    setFeedbackSubmitting(true);
+    setFeedbackError("");
+    const res = await fetch("/api/feedback", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ signupId: feedbackModal.signupId, rating: feedbackRating, note: feedbackNote }),
+    });
+    if (res.ok) {
+      setFeedbackGiven((prev) => new Set([...prev, feedbackModal.signupId]));
+      setFeedbackModal(null);
+      setFeedbackRating(0);
+      setFeedbackNote("");
+    } else {
+      const err = await res.json().catch(() => ({}));
+      if (res.status === 409) {
+        setFeedbackGiven((prev) => new Set([...prev, feedbackModal.signupId]));
+        setFeedbackModal(null);
+        setFeedbackRating(0);
+        setFeedbackNote("");
+      } else {
+        setFeedbackError(err.error ?? "Could not submit feedback.");
+      }
+    }
+    setFeedbackSubmitting(false);
   };
 
   const upcoming = slots.filter((s) => s.status === "ACTIVE" && isUpcoming(s));
@@ -613,15 +675,32 @@ export default function ClinicDashboard() {
                                 </td>
                                 {isPast && (
                                   <td className="px-4 py-2.5 text-right">
-                                    {signup.status === "ACTIVE" && (
-                                      <button
-                                        disabled={actionLoading === signup.id}
-                                        onClick={() => reportNoShow(slot.id, signup.id)}
-                                        className="text-xs px-2 py-1 bg-amber-50 text-amber-700 hover:bg-amber-100 rounded transition-colors disabled:opacity-50"
-                                      >
-                                        No-Show
-                                      </button>
-                                    )}
+                                    <div className="flex items-center justify-end gap-2">
+                                      {signup.status === "ACTIVE" && (
+                                        <button
+                                          disabled={actionLoading === signup.id}
+                                          onClick={() => reportNoShow(slot.id, signup.id)}
+                                          className="text-xs px-2 py-1 bg-amber-50 text-amber-700 hover:bg-amber-100 rounded transition-colors disabled:opacity-50"
+                                        >
+                                          No-Show
+                                        </button>
+                                      )}
+                                      {feedbackGiven.has(signup.id) ? (
+                                        <span className="text-xs text-emerald-600">✓ Feedback</span>
+                                      ) : (
+                                        <button
+                                          onClick={() => {
+                                            setFeedbackModal({ signupId: signup.id, volunteerName: signup.volunteer.user.name ?? signup.volunteer.user.email });
+                                            setFeedbackRating(0);
+                                            setFeedbackNote("");
+                                            setFeedbackError("");
+                                          }}
+                                          className="text-xs px-2 py-1 bg-blue-50 text-blue-700 hover:bg-blue-100 rounded transition-colors"
+                                        >
+                                          Feedback
+                                        </button>
+                                      )}
+                                    </div>
                                   </td>
                                 )}
                               </tr>
@@ -865,6 +944,55 @@ export default function ClinicDashboard() {
                 className="w-full px-4 py-2.5 text-sm bg-stone-100 hover:bg-stone-200 text-stone-700 font-medium rounded-lg transition-colors"
               >
                 Go Back &amp; Edit
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Feedback Modal */}
+      {feedbackModal && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-sm p-6">
+            <h3 className="text-sm font-semibold text-stone-800 mb-1">How did {feedbackModal.volunteerName} perform?</h3>
+            <p className="text-xs text-stone-400 mb-4">Your feedback helps us improve volunteer quality.</p>
+
+            {/* Star rating */}
+            <div className="flex items-center gap-1 mb-4">
+              {[1, 2, 3, 4, 5].map((star) => (
+                <span
+                  key={star}
+                  onClick={() => setFeedbackRating(star)}
+                  className={`text-2xl cursor-pointer transition-colors ${star <= feedbackRating ? "text-amber-400" : "text-stone-300"}`}
+                >
+                  {star <= feedbackRating ? "★" : "☆"}
+                </span>
+              ))}
+            </div>
+
+            <textarea
+              placeholder="Share your experience — this helps us improve..."
+              value={feedbackNote}
+              onChange={(e) => setFeedbackNote(e.target.value)}
+              rows={3}
+              className="w-full px-3 py-2 text-sm border border-stone-200 rounded-md focus:outline-none focus:ring-2 focus:ring-stone-300 resize-none mb-3"
+            />
+
+            {feedbackError && <p className="text-xs text-red-500 mb-3">{feedbackError}</p>}
+
+            <div className="flex gap-2">
+              <button
+                onClick={() => { setFeedbackModal(null); setFeedbackRating(0); setFeedbackNote(""); setFeedbackError(""); }}
+                className="flex-1 px-4 py-2 text-sm border border-stone-200 text-stone-600 rounded-lg hover:bg-stone-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                disabled={feedbackSubmitting || feedbackRating === 0 || !feedbackNote.trim()}
+                onClick={submitFeedback}
+                className="flex-1 px-4 py-2 text-sm bg-stone-800 text-white rounded-lg hover:bg-stone-700 transition-colors disabled:opacity-50"
+              >
+                {feedbackSubmitting ? "Submitting..." : "Submit"}
               </button>
             </div>
           </div>

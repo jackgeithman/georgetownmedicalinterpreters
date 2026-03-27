@@ -44,7 +44,22 @@ type VolunteerNotifPrefs = {
   unfilledSlotAlert: boolean;
 };
 
-type Tab = "browse" | "signups" | "profile";
+type Tab = "browse" | "signups" | "profile" | "training" | "suggestions";
+
+type FeedbackEntry = { id: string; authorRole: string; rating: number | null; note: string; createdAt: string };
+
+type TrainingMaterial = {
+  id: string;
+  title: string;
+  description: string | null;
+  type: string;
+  url: string;
+  fileName: string | null;
+  languageCode: string | null;
+  category: string;
+  uploadedBy: { name: string | null; email: string };
+  createdAt: string;
+};
 
 const LANG_LABELS: Record<string, string> = {
   ES: "Spanish",
@@ -57,6 +72,33 @@ const LANG_COLORS: Record<string, string> = {
   ZH: "bg-red-50 text-red-700",
   KO: "bg-blue-50 text-blue-700",
 };
+
+function MapsLinks({ address }: { address: string }) {
+  const q = encodeURIComponent(address);
+  return (
+    <span className="inline-flex gap-1.5 ml-1.5 items-center">
+      <a
+        href={`https://www.google.com/maps/search/?api=1&query=${q}`}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="text-xs text-blue-500 hover:text-blue-700 underline"
+        title="Google Maps"
+      >
+        G Maps
+      </a>
+      <span className="text-stone-300">·</span>
+      <a
+        href={`https://maps.apple.com/?q=${q}`}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="text-xs text-blue-500 hover:text-blue-700 underline"
+        title="Apple Maps"
+      >
+        Apple Maps
+      </a>
+    </span>
+  );
+}
 
 function formatHour(h: number): string {
   if (h === 0) return "12 AM";
@@ -96,6 +138,8 @@ export default function VolunteerDashboard() {
     unfilledSlotAlert: false,
   });
   const [notifSaved, setNotifSaved] = useState(false);
+  const [trainingMaterials, setTrainingMaterials] = useState<TrainingMaterial[]>([]);
+  const [trainingLoaded, setTrainingLoaded] = useState(false);
   // Anti-spam: track cancel counts per slotId-hour key
   const [cancelCounts, setCancelCounts] = useState<Record<string, number>>({});
   const [spamModal, setSpamModal] = useState<{ onProceed: (() => void) | null; isBlocked: boolean } | null>(null);
@@ -103,6 +147,20 @@ export default function VolunteerDashboard() {
   const [easterBg, setEasterBg] = useState("transparent");
   const [easterOpen, setEasterOpen] = useState(false);
   const [easterCount, setEasterCount] = useState(0);
+
+  // Feedback state
+  const [feedbackModal, setFeedbackModal] = useState<{ signupId: string; slotInfo: string } | null>(null);
+  const [feedbackRating, setFeedbackRating] = useState(0);
+  const [feedbackNote, setFeedbackNote] = useState("");
+  const [feedbackSubmitting, setFeedbackSubmitting] = useState(false);
+  const [feedbackError, setFeedbackError] = useState("");
+  const [feedbackGiven, setFeedbackGiven] = useState<Set<string>>(new Set());
+
+  // Suggestions state
+  const [suggForm, setSuggForm] = useState({ type: "FEATURE", subject: "", message: "" });
+  const [suggSubmitting, setSuggSubmitting] = useState(false);
+  const [suggSuccess, setSuggSuccess] = useState(false);
+  const [suggError, setSuggError] = useState("");
 
   const isAdmin = session?.user?.role === "ADMIN" || session?.user?.role === "SUPER_ADMIN";
 
@@ -120,7 +178,11 @@ export default function VolunteerDashboard() {
       fetch("/api/volunteer/notif-prefs"),
     ]);
     if (slotsRes.ok) setBrowseSlots(await slotsRes.json());
-    if (signupsRes.ok) setMySignups(await signupsRes.json());
+    let loadedSignups: MySignup[] = [];
+    if (signupsRes.ok) {
+      loadedSignups = await signupsRes.json();
+      setMySignups(loadedSignups);
+    }
     if (profileRes.ok) {
       const p = await profileRes.json();
       setProfile(p);
@@ -128,6 +190,30 @@ export default function VolunteerDashboard() {
     }
     if (notifRes.ok) setNotifPrefs(await notifRes.json());
     setLoading(false);
+
+    // Check feedback status for past signups
+    const now = new Date();
+    const pastSignupIds = loadedSignups
+      .filter((s) => {
+        const end = new Date(s.slot.date.slice(0, 10) + "T" + String(s.slot.endTime).padStart(2, "0") + ":00:00");
+        return end < now;
+      })
+      .map((s) => s.id);
+
+    if (pastSignupIds.length > 0) {
+      const results = await Promise.all(
+        pastSignupIds.map((id) =>
+          fetch(`/api/feedback?signupId=${id}`)
+            .then((r) => r.ok ? r.json() : [])
+            .then((list: FeedbackEntry[]) => ({ id, hasVolunteerFeedback: list.some((f) => f.authorRole === "VOLUNTEER") }))
+        )
+      );
+      const given = new Set<string>();
+      for (const r of results) {
+        if (r.hasVolunteerFeedback) given.add(r.id);
+      }
+      setFeedbackGiven(given);
+    }
   }, []);
 
   const fetchBrowse = useCallback(async () => {
@@ -226,6 +312,53 @@ export default function VolunteerDashboard() {
     setProfileForm({ languages: langs });
   };
 
+  const submitFeedback = async () => {
+    if (!feedbackModal) return;
+    setFeedbackSubmitting(true);
+    setFeedbackError("");
+    const res = await fetch("/api/feedback", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ signupId: feedbackModal.signupId, rating: feedbackRating, note: feedbackNote }),
+    });
+    if (res.ok) {
+      setFeedbackGiven((prev) => new Set([...prev, feedbackModal.signupId]));
+      setFeedbackModal(null);
+      setFeedbackRating(0);
+      setFeedbackNote("");
+    } else {
+      const err = await res.json().catch(() => ({}));
+      if (res.status === 409) {
+        setFeedbackGiven((prev) => new Set([...prev, feedbackModal.signupId]));
+        setFeedbackModal(null);
+        setFeedbackRating(0);
+        setFeedbackNote("");
+      } else {
+        setFeedbackError(err.error ?? "Could not submit feedback.");
+      }
+    }
+    setFeedbackSubmitting(false);
+  };
+
+  const submitSuggestion = async () => {
+    setSuggSubmitting(true);
+    setSuggError("");
+    const res = await fetch("/api/suggestions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(suggForm),
+    });
+    if (res.ok) {
+      setSuggSuccess(true);
+      setSuggForm({ type: "FEATURE", subject: "", message: "" });
+      setTimeout(() => setSuggSuccess(false), 3000);
+    } else {
+      const err = await res.json().catch(() => ({}));
+      setSuggError(err.error ?? "Could not submit suggestion.");
+    }
+    setSuggSubmitting(false);
+  };
+
   if (status === "loading" || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-stone-50">
@@ -285,10 +418,20 @@ export default function VolunteerDashboard() {
             { key: "browse" as Tab, label: "Browse Slots", count: 0 },
             { key: "signups" as Tab, label: "My Signups", count: mySignups.length },
             { key: "profile" as Tab, label: "Profile", count: 0 },
+            { key: "training" as Tab, label: "Training", count: 0 },
+            { key: "suggestions" as Tab, label: "Suggestions", count: 0 },
           ].map((t) => (
             <button
               key={t.key}
-              onClick={() => setTab(t.key)}
+              onClick={() => {
+                setTab(t.key);
+                if (t.key === "training" && !trainingLoaded) {
+                  fetch("/api/training")
+                    .then((r) => r.json())
+                    .then((data) => { setTrainingMaterials(data); setTrainingLoaded(true); })
+                    .catch(() => setTrainingLoaded(true));
+                }
+              }}
               className={`px-4 py-2 text-sm rounded-md transition-colors ${
                 tab === t.key
                   ? "bg-white text-stone-800 shadow-sm font-medium"
@@ -354,7 +497,12 @@ export default function VolunteerDashboard() {
                   </div>
                   <div className="text-right">
                     <p className="text-sm font-medium text-stone-800">{slot.clinic.name}</p>
-                    {slot.clinic.address && <p className="text-xs text-stone-400">{slot.clinic.address}</p>}
+                    {slot.clinic.address && (
+                      <p className="text-xs text-stone-400">
+                        {slot.clinic.address}
+                        <MapsLinks address={slot.clinic.address} />
+                      </p>
+                    )}
                   </div>
                 </div>
                 {slot.notes && <p className="text-xs text-stone-400 italic mb-3">{slot.notes}</p>}
@@ -532,7 +680,10 @@ export default function VolunteerDashboard() {
                         </span>
                         <span className="text-sm text-stone-600">{slot.clinic.name}</span>
                         {slot.clinic.address && (
-                          <span className="text-xs text-stone-400">{slot.clinic.address}</span>
+                          <span className="text-xs text-stone-400">
+                            {slot.clinic.address}
+                            <MapsLinks address={slot.clinic.address} />
+                          </span>
                         )}
                       </div>
                       <div className="space-y-2">
@@ -556,6 +707,31 @@ export default function VolunteerDashboard() {
                             </div>
                           ))}
                       </div>
+                      {/* Feedback button for past signups */}
+                      {(() => {
+                        const end = new Date(slot.date.slice(0, 10) + "T" + String(slot.endTime).padStart(2, "0") + ":00:00");
+                        const isPast = end < new Date();
+                        if (!isPast) return null;
+                        const signupId = sigs[0].id;
+                        if (feedbackGiven.has(signupId)) {
+                          return (
+                            <p className="mt-2 text-xs text-emerald-600">✓ Feedback submitted</p>
+                          );
+                        }
+                        return (
+                          <button
+                            onClick={() => {
+                              setFeedbackModal({ signupId, slotInfo: slot.clinic.name });
+                              setFeedbackRating(0);
+                              setFeedbackNote("");
+                              setFeedbackError("");
+                            }}
+                            className="mt-2 text-xs px-3 py-1.5 bg-amber-50 text-amber-700 hover:bg-amber-100 border border-amber-200 rounded-md transition-colors"
+                          >
+                            Leave Feedback
+                          </button>
+                        );
+                      })()}
                     </div>
                   );
                 })}
@@ -702,7 +878,173 @@ export default function VolunteerDashboard() {
             )}
           </div>
         )}
+
+        {/* Training */}
+        {tab === "training" && (
+          <div className="space-y-4">
+            {!trainingLoaded ? (
+              <div className="bg-white rounded-xl border border-stone-200 p-12 text-center">
+                <p className="text-stone-400">Loading training materials...</p>
+              </div>
+            ) : trainingMaterials.length === 0 ? (
+              <div className="bg-white rounded-xl border border-stone-200 p-12 text-center">
+                <p className="text-stone-400">No training materials available yet.</p>
+              </div>
+            ) : (() => {
+              const categories = Array.from(new Set(trainingMaterials.map((m) => m.category))).sort();
+              return (
+                <div className="space-y-6">
+                  {categories.map((cat) => (
+                    <div key={cat}>
+                      <h3 className="text-xs font-medium text-stone-400 uppercase tracking-wider mb-3">{cat}</h3>
+                      <div className="space-y-3">
+                        {trainingMaterials.filter((m) => m.category === cat).map((m) => (
+                          <div key={m.id} className="bg-white rounded-xl border border-stone-200 p-5">
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="min-w-0 flex-1">
+                                <div className="flex items-center gap-2 flex-wrap mb-1">
+                                  <span className="font-medium text-stone-800 text-sm">{m.title}</span>
+                                  {m.languageCode && (
+                                    <span className="text-xs px-1.5 py-0.5 rounded bg-blue-50 text-blue-700">{m.languageCode}</span>
+                                  )}
+                                  <span className={`text-xs px-1.5 py-0.5 rounded ${m.type === "FILE" ? "bg-amber-50 text-amber-700" : "bg-emerald-50 text-emerald-700"}`}>
+                                    {m.type}
+                                  </span>
+                                </div>
+                                {m.description && <p className="text-xs text-stone-500 mb-2">{m.description}</p>}
+                                {m.type === "FILE" ? (
+                                  <a href={m.url} target="_blank" rel="noopener noreferrer" className="text-xs text-stone-600 hover:text-stone-800 underline">
+                                    {m.fileName ?? "Download"}
+                                  </a>
+                                ) : (
+                                  <a href={m.url} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:text-blue-800 underline break-all">
+                                    {m.url}
+                                  </a>
+                                )}
+                                <p className="text-xs text-stone-400 mt-2">
+                                  by {m.uploadedBy.name ?? m.uploadedBy.email} · {new Date(m.createdAt).toLocaleDateString()}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              );
+            })()}
+          </div>
+        )}
       </div>
+
+      {/* Suggestions */}
+      {tab === "suggestions" && (
+        <div className="max-w-lg space-y-4">
+          <div className="bg-white rounded-xl border border-stone-200 p-6">
+            <h3 className="text-sm font-medium text-stone-700 mb-1">Suggestion Box</h3>
+            <p className="text-xs text-stone-400 mb-5">Have a suggestion for the website? We&apos;d love to hear it.</p>
+
+            {suggSuccess ? (
+              <div className="text-center py-6">
+                <p className="text-emerald-600 font-medium text-sm">Thanks! Your suggestion has been submitted.</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-xs text-stone-500 mb-1">Type</label>
+                  <select
+                    value={suggForm.type}
+                    onChange={(e) => setSuggForm({ ...suggForm, type: e.target.value })}
+                    className="w-full px-3 py-2 text-sm border border-stone-200 rounded-md focus:outline-none focus:ring-2 focus:ring-stone-300 bg-white"
+                  >
+                    <option value="FEATURE">Feature Request</option>
+                    <option value="BUG">Bug Report</option>
+                    <option value="GENERAL">General Feedback</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs text-stone-500 mb-1">Subject</label>
+                  <input
+                    type="text"
+                    placeholder="Brief subject..."
+                    value={suggForm.subject}
+                    onChange={(e) => setSuggForm({ ...suggForm, subject: e.target.value })}
+                    className="w-full px-3 py-2 text-sm border border-stone-200 rounded-md focus:outline-none focus:ring-2 focus:ring-stone-300"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-stone-500 mb-1">Message</label>
+                  <textarea
+                    placeholder="Describe your suggestion in detail..."
+                    value={suggForm.message}
+                    onChange={(e) => setSuggForm({ ...suggForm, message: e.target.value })}
+                    rows={4}
+                    className="w-full px-3 py-2 text-sm border border-stone-200 rounded-md focus:outline-none focus:ring-2 focus:ring-stone-300 resize-none"
+                  />
+                </div>
+                {suggError && <p className="text-xs text-red-500">{suggError}</p>}
+                <button
+                  disabled={suggSubmitting || !suggForm.subject.trim() || !suggForm.message.trim()}
+                  onClick={submitSuggestion}
+                  className="px-4 py-2 text-sm bg-stone-800 text-white hover:bg-stone-700 rounded-md transition-colors disabled:opacity-50"
+                >
+                  {suggSubmitting ? "Submitting..." : "Submit Suggestion"}
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Feedback Modal */}
+      {feedbackModal && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-sm p-6">
+            <h3 className="text-sm font-semibold text-stone-800 mb-1">How was your shift?</h3>
+            <p className="text-xs text-stone-400 mb-4">at {feedbackModal.slotInfo}</p>
+
+            {/* Star rating */}
+            <div className="flex items-center gap-1 mb-4">
+              {[1, 2, 3, 4, 5].map((star) => (
+                <span
+                  key={star}
+                  onClick={() => setFeedbackRating(star)}
+                  className={`text-2xl cursor-pointer transition-colors ${star <= feedbackRating ? "text-amber-400" : "text-stone-300"}`}
+                >
+                  {star <= feedbackRating ? "★" : "☆"}
+                </span>
+              ))}
+            </div>
+
+            <textarea
+              placeholder="Share your experience — this helps us improve..."
+              value={feedbackNote}
+              onChange={(e) => setFeedbackNote(e.target.value)}
+              rows={3}
+              className="w-full px-3 py-2 text-sm border border-stone-200 rounded-md focus:outline-none focus:ring-2 focus:ring-stone-300 resize-none mb-3"
+            />
+
+            {feedbackError && <p className="text-xs text-red-500 mb-3">{feedbackError}</p>}
+
+            <div className="flex gap-2">
+              <button
+                onClick={() => { setFeedbackModal(null); setFeedbackRating(0); setFeedbackNote(""); setFeedbackError(""); }}
+                className="flex-1 px-4 py-2 text-sm border border-stone-200 text-stone-600 rounded-lg hover:bg-stone-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                disabled={feedbackSubmitting || feedbackRating === 0 || !feedbackNote.trim()}
+                onClick={submitFeedback}
+                className="flex-1 px-4 py-2 text-sm bg-stone-800 text-white rounded-lg hover:bg-stone-700 transition-colors disabled:opacity-50"
+              >
+                {feedbackSubmitting ? "Submitting..." : "Submit"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Anti-spam modal */}
       {spamModal && (
