@@ -43,6 +43,14 @@ const LANG_LABELS: Record<string, string> = {
   KO: "Korean",
 };
 
+const RATING_OPTIONS = [
+  { value: 1, label: "Needs Improvement", active: "bg-red-100 text-red-700 border-red-300", idle: "bg-white text-stone-500 border-stone-200 hover:border-red-200 hover:text-red-600" },
+  { value: 2, label: "Okay",              active: "bg-orange-100 text-orange-700 border-orange-300", idle: "bg-white text-stone-500 border-stone-200 hover:border-orange-200 hover:text-orange-600" },
+  { value: 3, label: "Good",              active: "bg-yellow-100 text-yellow-700 border-yellow-300", idle: "bg-white text-stone-500 border-stone-200 hover:border-yellow-200 hover:text-yellow-600" },
+  { value: 4, label: "Excellent",         active: "bg-green-100 text-green-700 border-green-300",  idle: "bg-white text-stone-500 border-stone-200 hover:border-green-200 hover:text-green-600" },
+  { value: 5, label: "I'd literally hire them", active: "bg-emerald-100 text-emerald-700 border-emerald-300", idle: "bg-white text-stone-500 border-stone-200 hover:border-emerald-200 hover:text-emerald-600" },
+];
+
 const LANG_COLORS: Record<string, string> = {
   ES: "bg-amber-50 text-amber-700",
   ZH: "bg-red-50 text-red-700",
@@ -131,7 +139,7 @@ export default function ClinicDashboard() {
   const [selectedSlotIds, setSelectedSlotIds] = useState<Set<string>>(new Set());
   const [postError, setPostError] = useState("");
   // Feedback state
-  const [feedbackModal, setFeedbackModal] = useState<{ signupId: string; volunteerName: string } | null>(null);
+  const [feedbackModal, setFeedbackModal] = useState<{ signupId: string; feedbackKey: string; volunteerName: string } | null>(null);
   const [feedbackRating, setFeedbackRating] = useState(0);
   const [feedbackNote, setFeedbackNote] = useState("");
   const [feedbackSubmitting, setFeedbackSubmitting] = useState(false);
@@ -286,14 +294,14 @@ export default function ClinicDashboard() {
       body: JSON.stringify({ signupId: feedbackModal.signupId, rating: feedbackRating, note: feedbackNote }),
     });
     if (res.ok) {
-      setFeedbackGiven((prev) => new Set([...prev, feedbackModal.signupId]));
+      setFeedbackGiven((prev) => new Set([...prev, feedbackModal.feedbackKey]));
       setFeedbackModal(null);
       setFeedbackRating(0);
       setFeedbackNote("");
     } else {
       const err = await res.json().catch(() => ({}));
       if (res.status === 409) {
-        setFeedbackGiven((prev) => new Set([...prev, feedbackModal.signupId]));
+        setFeedbackGiven((prev) => new Set([...prev, feedbackModal.feedbackKey]));
         setFeedbackModal(null);
         setFeedbackRating(0);
         setFeedbackNote("");
@@ -685,21 +693,31 @@ export default function ClinicDashboard() {
                                           No-Show
                                         </button>
                                       )}
-                                      {feedbackGiven.has(signup.id) ? (
-                                        <span className="text-xs text-emerald-600">✓ Feedback</span>
-                                      ) : (
-                                        <button
-                                          onClick={() => {
-                                            setFeedbackModal({ signupId: signup.id, volunteerName: signup.volunteer.user.name ?? signup.volunteer.user.email });
-                                            setFeedbackRating(0);
-                                            setFeedbackNote("");
-                                            setFeedbackError("");
-                                          }}
-                                          className="text-xs px-2 py-1 bg-blue-50 text-blue-700 hover:bg-blue-100 rounded transition-colors"
-                                        >
-                                          Feedback
-                                        </button>
-                                      )}
+                                      {(() => {
+                                        const feedbackKey = `${slot.id}-${signup.volunteer.id}`;
+                                        // Only show the button on the first hour row for this volunteer in this slot
+                                        const firstHourForVolunteer = Math.min(
+                                          ...slot.signups
+                                            .filter((s) => s.volunteer.id === signup.volunteer.id)
+                                            .map((s) => s.subBlockHour)
+                                        );
+                                        if (signup.subBlockHour !== firstHourForVolunteer) return null;
+                                        return feedbackGiven.has(feedbackKey) ? (
+                                          <span className="text-xs text-emerald-600">✓ Rated</span>
+                                        ) : (
+                                          <button
+                                            onClick={() => {
+                                              setFeedbackModal({ signupId: signup.id, feedbackKey, volunteerName: signup.volunteer.user.name ?? signup.volunteer.user.email });
+                                              setFeedbackRating(0);
+                                              setFeedbackNote("");
+                                              setFeedbackError("");
+                                            }}
+                                            className="text-xs px-2 py-1 bg-blue-50 text-blue-700 hover:bg-blue-100 rounded transition-colors"
+                                          >
+                                            Rate
+                                          </button>
+                                        );
+                                      })()}
                                     </div>
                                   </td>
                                 )}
@@ -957,21 +975,21 @@ export default function ClinicDashboard() {
             <h3 className="text-sm font-semibold text-stone-800 mb-1">How did {feedbackModal.volunteerName} perform?</h3>
             <p className="text-xs text-stone-400 mb-4">Your feedback helps us improve volunteer quality.</p>
 
-            {/* Star rating */}
-            <div className="flex items-center gap-1 mb-4">
-              {[1, 2, 3, 4, 5].map((star) => (
-                <span
-                  key={star}
-                  onClick={() => setFeedbackRating(star)}
-                  className={`text-2xl cursor-pointer transition-colors ${star <= feedbackRating ? "text-amber-400" : "text-stone-300"}`}
+            {/* Rating */}
+            <div className="flex flex-col gap-2 mb-4">
+              {RATING_OPTIONS.map((opt) => (
+                <button
+                  key={opt.value}
+                  onClick={() => setFeedbackRating(opt.value)}
+                  className={`px-3 py-2 text-sm rounded-md border transition-colors text-left ${feedbackRating === opt.value ? opt.active : opt.idle}`}
                 >
-                  {star <= feedbackRating ? "★" : "☆"}
-                </span>
+                  {opt.label}
+                </button>
               ))}
             </div>
 
             <textarea
-              placeholder="Share your experience — this helps us improve..."
+              placeholder="Any additional comments? (optional)"
               value={feedbackNote}
               onChange={(e) => setFeedbackNote(e.target.value)}
               rows={3}
@@ -988,7 +1006,7 @@ export default function ClinicDashboard() {
                 Cancel
               </button>
               <button
-                disabled={feedbackSubmitting || feedbackRating === 0 || !feedbackNote.trim()}
+                disabled={feedbackSubmitting || feedbackRating === 0}
                 onClick={submitFeedback}
                 className="flex-1 px-4 py-2 text-sm bg-stone-800 text-white rounded-lg hover:bg-stone-700 transition-colors disabled:opacity-50"
               >

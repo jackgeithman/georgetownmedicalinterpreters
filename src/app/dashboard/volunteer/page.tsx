@@ -48,6 +48,14 @@ type Tab = "browse" | "signups" | "profile" | "training" | "suggestions";
 
 type FeedbackEntry = { id: string; authorRole: string; rating: number | null; note: string; createdAt: string };
 
+const RATING_OPTIONS = [
+  { value: 1, label: "Needs Improvement", active: "bg-red-100 text-red-700 border-red-300", idle: "bg-white text-stone-500 border-stone-200 hover:border-red-200 hover:text-red-600" },
+  { value: 2, label: "Okay",              active: "bg-orange-100 text-orange-700 border-orange-300", idle: "bg-white text-stone-500 border-stone-200 hover:border-orange-200 hover:text-orange-600" },
+  { value: 3, label: "Good",              active: "bg-yellow-100 text-yellow-700 border-yellow-300", idle: "bg-white text-stone-500 border-stone-200 hover:border-yellow-200 hover:text-yellow-600" },
+  { value: 4, label: "Excellent",         active: "bg-green-100 text-green-700 border-green-300",  idle: "bg-white text-stone-500 border-stone-200 hover:border-green-200 hover:text-green-600" },
+  { value: 5, label: "I'd literally hire them", active: "bg-emerald-100 text-emerald-700 border-emerald-300", idle: "bg-white text-stone-500 border-stone-200 hover:border-emerald-200 hover:text-emerald-600" },
+];
+
 type TrainingMaterial = {
   id: string;
   title: string;
@@ -149,7 +157,7 @@ export default function VolunteerDashboard() {
   const [easterCount, setEasterCount] = useState(0);
 
   // Feedback state
-  const [feedbackModal, setFeedbackModal] = useState<{ signupId: string; slotInfo: string } | null>(null);
+  const [feedbackModal, setFeedbackModal] = useState<{ signupId: string; slotId: string; slotInfo: string } | null>(null);
   const [feedbackRating, setFeedbackRating] = useState(0);
   const [feedbackNote, setFeedbackNote] = useState("");
   const [feedbackSubmitting, setFeedbackSubmitting] = useState(false);
@@ -191,26 +199,29 @@ export default function VolunteerDashboard() {
     if (notifRes.ok) setNotifPrefs(await notifRes.json());
     setLoading(false);
 
-    // Check feedback status for past signups
+    // Check feedback status for past slots (one check per unique slot, not per sub-block).
     const now = new Date();
-    const pastSignupIds = loadedSignups
-      .filter((s) => {
-        const end = new Date(s.slot.date.slice(0, 10) + "T" + String(s.slot.endTime).padStart(2, "0") + ":00:00");
-        return end < now;
-      })
-      .map((s) => s.id);
+    const pastSignups = loadedSignups.filter((s) => {
+      const end = new Date(s.slot.date.slice(0, 10) + "T" + String(s.slot.endTime).padStart(2, "0") + ":00:00");
+      return end < now;
+    });
+    // Deduplicate by slotId — use the first signupId for each slot
+    const slotToSignupId = new Map<string, string>();
+    for (const s of pastSignups) {
+      if (!slotToSignupId.has(s.slot.id)) slotToSignupId.set(s.slot.id, s.id);
+    }
 
-    if (pastSignupIds.length > 0) {
+    if (slotToSignupId.size > 0) {
       const results = await Promise.all(
-        pastSignupIds.map((id) =>
-          fetch(`/api/feedback?signupId=${id}`)
+        Array.from(slotToSignupId.entries()).map(([slotId, signupId]) =>
+          fetch(`/api/feedback?signupId=${signupId}`)
             .then((r) => r.ok ? r.json() : [])
-            .then((list: FeedbackEntry[]) => ({ id, hasVolunteerFeedback: list.some((f) => f.authorRole === "VOLUNTEER") }))
+            .then((list: FeedbackEntry[]) => ({ slotId, hasFeedback: list.some((f) => f.authorRole === "VOLUNTEER") }))
         )
       );
       const given = new Set<string>();
       for (const r of results) {
-        if (r.hasVolunteerFeedback) given.add(r.id);
+        if (r.hasFeedback) given.add(r.slotId);
       }
       setFeedbackGiven(given);
     }
@@ -322,14 +333,14 @@ export default function VolunteerDashboard() {
       body: JSON.stringify({ signupId: feedbackModal.signupId, rating: feedbackRating, note: feedbackNote }),
     });
     if (res.ok) {
-      setFeedbackGiven((prev) => new Set([...prev, feedbackModal.signupId]));
+      setFeedbackGiven((prev) => new Set([...prev, feedbackModal.slotId]));
       setFeedbackModal(null);
       setFeedbackRating(0);
       setFeedbackNote("");
     } else {
       const err = await res.json().catch(() => ({}));
       if (res.status === 409) {
-        setFeedbackGiven((prev) => new Set([...prev, feedbackModal.signupId]));
+        setFeedbackGiven((prev) => new Set([...prev, feedbackModal.slotId]));
         setFeedbackModal(null);
         setFeedbackRating(0);
         setFeedbackNote("");
@@ -713,7 +724,7 @@ export default function VolunteerDashboard() {
                         const isPast = end < new Date();
                         if (!isPast) return null;
                         const signupId = sigs[0].id;
-                        if (feedbackGiven.has(signupId)) {
+                        if (feedbackGiven.has(slot.id)) {
                           return (
                             <p className="mt-2 text-xs text-emerald-600">✓ Feedback submitted</p>
                           );
@@ -721,7 +732,7 @@ export default function VolunteerDashboard() {
                         return (
                           <button
                             onClick={() => {
-                              setFeedbackModal({ signupId, slotInfo: slot.clinic.name });
+                              setFeedbackModal({ signupId, slotId: slot.id, slotInfo: slot.clinic.name });
                               setFeedbackRating(0);
                               setFeedbackNote("");
                               setFeedbackError("");
@@ -1004,21 +1015,21 @@ export default function VolunteerDashboard() {
             <h3 className="text-sm font-semibold text-stone-800 mb-1">How was your shift?</h3>
             <p className="text-xs text-stone-400 mb-4">at {feedbackModal.slotInfo}</p>
 
-            {/* Star rating */}
-            <div className="flex items-center gap-1 mb-4">
-              {[1, 2, 3, 4, 5].map((star) => (
-                <span
-                  key={star}
-                  onClick={() => setFeedbackRating(star)}
-                  className={`text-2xl cursor-pointer transition-colors ${star <= feedbackRating ? "text-amber-400" : "text-stone-300"}`}
+            {/* Rating */}
+            <div className="flex flex-col gap-2 mb-4">
+              {RATING_OPTIONS.map((opt) => (
+                <button
+                  key={opt.value}
+                  onClick={() => setFeedbackRating(opt.value)}
+                  className={`px-3 py-2 text-sm rounded-md border transition-colors text-left ${feedbackRating === opt.value ? opt.active : opt.idle}`}
                 >
-                  {star <= feedbackRating ? "★" : "☆"}
-                </span>
+                  {opt.label}
+                </button>
               ))}
             </div>
 
             <textarea
-              placeholder="Share your experience — this helps us improve..."
+              placeholder="Any additional comments? (optional)"
               value={feedbackNote}
               onChange={(e) => setFeedbackNote(e.target.value)}
               rows={3}
@@ -1035,7 +1046,7 @@ export default function VolunteerDashboard() {
                 Cancel
               </button>
               <button
-                disabled={feedbackSubmitting || feedbackRating === 0 || !feedbackNote.trim()}
+                disabled={feedbackSubmitting || feedbackRating === 0}
                 onClick={submitFeedback}
                 className="flex-1 px-4 py-2 text-sm bg-stone-800 text-white rounded-lg hover:bg-stone-700 transition-colors disabled:opacity-50"
               >

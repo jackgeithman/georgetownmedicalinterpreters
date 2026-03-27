@@ -41,16 +41,24 @@ export async function POST(req: NextRequest) {
 
   if (!signupId) return NextResponse.json({ error: "signupId required" }, { status: 400 });
   if (rating == null || rating < 1 || rating > 5) return NextResponse.json({ error: "rating must be 1-5" }, { status: 400 });
-  if (!note || !note.trim()) return NextResponse.json({ error: "note required" }, { status: 400 });
 
   const signup = await prisma.subBlockSignup.findUnique({ where: { id: signupId } });
   if (!signup) return NextResponse.json({ error: "Signup not found" }, { status: 404 });
 
+  // One rating per volunteer per slot (not per sub-block).
+  // Check if any feedback with this authorRole already exists for ANY sub-block
+  // that belongs to the same slot AND the same volunteer.
   const existing = await prisma.feedback.findFirst({
-    where: { signupId, authorRole },
+    where: {
+      authorRole,
+      signup: {
+        slotId: signup.slotId,
+        volunteerId: signup.volunteerId,
+      },
+    },
   });
   if (existing) {
-    return NextResponse.json({ error: "Feedback already submitted for this signup" }, { status: 409 });
+    return NextResponse.json({ error: "Feedback already submitted for this shift" }, { status: 409 });
   }
 
   const feedback = await prisma.feedback.create({
