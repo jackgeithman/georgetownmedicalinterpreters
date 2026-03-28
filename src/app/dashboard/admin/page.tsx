@@ -189,6 +189,9 @@ export default function AdminDashboard() {
   const [roleActionLoading, setRoleActionLoading] = useState<string | null>(null);
   const [pinVisible, setPinVisible] = useState<Set<string>>(new Set());
   const [mounted, setMounted] = useState(false);
+  const [viewDropdownOpen, setViewDropdownOpen] = useState(false);
+  const [addLangTarget, setAddLangTarget] = useState<string | null>(null);
+  const [addLangDropdownPos, setAddLangDropdownPos] = useState<{ top: number; left: number } | null>(null);
 
   useEffect(() => { setMounted(true); }, []);
 
@@ -204,6 +207,43 @@ export default function AdminDashboard() {
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, [addRoleTarget]);
+
+  useEffect(() => {
+    if (!roleFilterOpen) return;
+    const handler = (e: MouseEvent) => {
+      const t = e.target as HTMLElement;
+      if (!t.closest("[data-role-filter-dropdown]") && !t.closest("[data-role-filter-btn]")) {
+        setRoleFilterOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [roleFilterOpen]);
+
+  useEffect(() => {
+    if (!viewDropdownOpen) return;
+    const handler = (e: MouseEvent) => {
+      const t = e.target as HTMLElement;
+      if (!t.closest("[data-view-dropdown]") && !t.closest("[data-view-btn]")) {
+        setViewDropdownOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [viewDropdownOpen]);
+
+  useEffect(() => {
+    if (!addLangTarget) return;
+    const handler = (e: MouseEvent) => {
+      const t = e.target as HTMLElement;
+      if (!t.closest("[data-lang-add-dropdown]") && !t.closest("[data-lang-add-btn]")) {
+        setAddLangTarget(null);
+        setAddLangDropdownPos(null);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [addLangTarget]);
 
   useEffect(() => {
     if (status === "unauthenticated") router.push("/login");
@@ -721,6 +761,30 @@ export default function AdminDashboard() {
     if (res.ok) await fetchData();
     setRoleActionLoading(null);
   };
+
+  const handleAddLanguage = async (userId: string, langCode: string) => {
+    setRoleActionLoading(`addlang-${userId}-${langCode}`);
+    const res = await fetch("/api/admin/users", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId, addLanguage: langCode }),
+    });
+    if (res.ok) await fetchData();
+    setAddLangTarget(null);
+    setAddLangDropdownPos(null);
+    setRoleActionLoading(null);
+  };
+
+  const handleRemoveLanguage = async (userId: string, langCode: string) => {
+    setRoleActionLoading(`removelang-${userId}-${langCode}`);
+    const res = await fetch("/api/admin/users", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId, removeLanguage: langCode }),
+    });
+    if (res.ok) await fetchData();
+    setRoleActionLoading(null);
+  };
   // ─────────────────────────────────────────────────────────────────
 
   if (status === "loading" || loading) {
@@ -930,16 +994,54 @@ export default function AdminDashboard() {
               Super Admin
             </span>
           )}
-          <button
-            onClick={() => router.push("/dashboard/volunteer")}
-            style={{ background: "rgba(255,255,255,.08)", border: "1px solid rgba(255,255,255,.2)", color: "#fff", fontFamily: "'DM Sans', sans-serif", fontSize: "0.8rem", fontWeight: 500, padding: "7px 16px", borderRadius: "8px", cursor: "pointer", display: "flex", alignItems: "center", gap: "6px" }}
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" style={{ width: "14px", height: "14px" }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-              <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-            </svg>
-            Volunteer View
-          </button>
+          <div style={{ position: "relative" }}>
+            <button
+              data-view-btn="true"
+              onClick={() => setViewDropdownOpen(!viewDropdownOpen)}
+              style={{ background: "rgba(255,255,255,.08)", border: "1px solid rgba(255,255,255,.2)", color: "#fff", fontFamily: "'DM Sans', sans-serif", fontSize: "0.8rem", fontWeight: 500, padding: "7px 16px", borderRadius: "8px", cursor: "pointer", display: "flex", alignItems: "center", gap: "6px" }}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" style={{ width: "14px", height: "14px" }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+              </svg>
+              View
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+            </button>
+            {viewDropdownOpen && (
+              <div
+                data-view-dropdown="true"
+                style={{ position: "absolute", top: "calc(100% + 6px)", right: 0, zIndex: 200, background: "var(--card-bg)", border: "1.5px solid var(--card-border)", borderRadius: "12px", padding: "6px", minWidth: "180px", boxShadow: "0 8px 24px rgba(0,0,0,.15)" }}
+              >
+                <button
+                  onClick={() => setViewDropdownOpen(false)}
+                  style={{ display: "flex", alignItems: "center", gap: "8px", width: "100%", textAlign: "left", padding: "7px 10px", fontSize: "0.82rem", fontWeight: 600, background: "rgba(74,144,217,.1)", color: "var(--blue)", border: "none", borderRadius: "7px", cursor: "default", fontFamily: "'DM Sans', sans-serif" }}
+                >
+                  ✓ Admin View
+                </button>
+                <button
+                  onClick={() => { setViewDropdownOpen(false); router.push("/dashboard/volunteer"); }}
+                  style={{ display: "flex", alignItems: "center", width: "100%", textAlign: "left", padding: "7px 10px", fontSize: "0.82rem", fontWeight: 500, background: "none", color: "var(--gray-900)", border: "none", borderRadius: "7px", cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}
+                >
+                  Volunteer View
+                </button>
+                {clinics.length > 0 && (
+                  <>
+                    <div style={{ height: "1px", background: "var(--card-border)", margin: "4px 0" }} />
+                    <p style={{ fontSize: "0.65rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--gray-400)", padding: "4px 10px 2px" }}>Clinic View</p>
+                    {clinics.map((c) => (
+                      <button
+                        key={c.id}
+                        onClick={() => { setViewDropdownOpen(false); router.push(`/dashboard/clinic?adminPreview=${c.id}`); }}
+                        style={{ display: "block", width: "100%", textAlign: "left", padding: "7px 10px", fontSize: "0.82rem", fontWeight: 500, background: "none", color: "var(--gray-900)", border: "none", borderRadius: "7px", cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}
+                      >
+                        {c.name}
+                      </button>
+                    ))}
+                  </>
+                )}
+              </div>
+            )}
+          </div>
           <button
             onClick={() => signOut({ callbackUrl: "/login" })}
             style={{ background: "rgba(255,255,255,.08)", border: "1px solid rgba(255,255,255,.2)", color: "#fff", fontFamily: "'DM Sans', sans-serif", fontSize: "0.8rem", fontWeight: 500, padding: "7px 16px", borderRadius: "8px", cursor: "pointer" }}
@@ -1124,6 +1226,7 @@ export default function AdminDashboard() {
             <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "16px", flexWrap: "wrap" }}>
               <div style={{ position: "relative" }}>
                 <button
+                  data-role-filter-btn="true"
                   onClick={() => setRoleFilterOpen(!roleFilterOpen)}
                   style={{ display: "flex", alignItems: "center", gap: "6px", padding: "7px 14px", fontSize: "0.82rem", fontWeight: 500, border: roleFilter.length > 0 ? "1.5px solid var(--blue)" : "1.5px solid var(--card-border)", borderRadius: "9px", background: roleFilter.length > 0 ? "#EFF6FF" : "var(--card-bg)", color: roleFilter.length > 0 ? "var(--blue)" : "var(--gray-900)", cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}
                 >
@@ -1131,7 +1234,7 @@ export default function AdminDashboard() {
                   Filter{roleFilter.length > 0 && ` (${roleFilter.length})`}
                 </button>
                 {roleFilterOpen && (
-                  <div style={{ position: "absolute", top: "calc(100% + 6px)", left: 0, zIndex: 50, background: "var(--card-bg)", border: "1.5px solid var(--card-border)", borderRadius: "12px", padding: "12px", minWidth: "220px", boxShadow: "0 8px 24px rgba(0,0,0,.12)" }}>
+                  <div data-role-filter-dropdown="true" style={{ position: "absolute", top: "calc(100% + 6px)", left: 0, zIndex: 50, background: "var(--card-bg)", border: "1.5px solid var(--card-border)", borderRadius: "12px", padding: "12px", minWidth: "220px", boxShadow: "0 8px 24px rgba(0,0,0,.12)" }}>
                     <p style={{ fontSize: "0.68rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--gray-400)", marginBottom: "8px" }}>Roles</p>
                     {(["SUPER_ADMIN","ADMIN","VOLUNTEER","INSTRUCTOR","PENDING","SUSPENDED"] as const).map(r => (
                       <label key={r} style={{ display: "flex", alignItems: "center", gap: "8px", padding: "5px 4px", cursor: "pointer", fontSize: "0.82rem", color: "var(--gray-900)" }}>
@@ -1292,19 +1395,48 @@ export default function AdminDashboard() {
                             {langChips.map(({ code, cleared }) => {
                               const isLoading = roleActionLoading === `lang-${user.id}-${code}`;
                               return (
-                                <button
+                                <span
                                   key={code}
-                                  onClick={() => handleToggleLangClearance(user.id, code)}
-                                  disabled={isLoading}
-                                  title={cleared ? `${getLangLabel(code)} — Cleared. Click to revoke.` : `${getLangLabel(code)} — Not cleared. Click to clear.`}
-                                  style={{ display: "inline-flex", alignItems: "center", gap: "5px", fontSize: "0.72rem", padding: "2px 8px", borderRadius: "99px", fontWeight: 600, cursor: "pointer", opacity: isLoading ? 0.5 : 1, background: cleared ? "#F0FDFA" : "#FAFAFA", color: cleared ? "#0F766E" : "#64748B", border: cleared ? "1px solid #99F6E4" : "1px solid #CBD5E1", fontFamily: "'DM Sans', sans-serif" }}
+                                  style={{ display: "inline-flex", alignItems: "center", gap: "2px", fontSize: "0.72rem", borderRadius: "99px", fontWeight: 600, background: cleared ? "#F0FDFA" : "#FAFAFA", color: cleared ? "#0F766E" : "#64748B", border: cleared ? "1px solid #99F6E4" : "1px solid #CBD5E1" }}
                                 >
-                                  <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: cleared ? "#10B981" : "#94A3B8", flexShrink: 0 }} />
-                                  {getLangLabel(code)}
-                                </button>
+                                  <button
+                                    onClick={() => handleToggleLangClearance(user.id, code)}
+                                    disabled={isLoading}
+                                    title={cleared ? `${getLangLabel(code)} — Cleared. Click to revoke.` : `${getLangLabel(code)} — Not cleared. Click to clear.`}
+                                    style={{ display: "inline-flex", alignItems: "center", gap: "5px", padding: "2px 6px 2px 8px", background: "none", border: "none", cursor: "pointer", color: "inherit", fontFamily: "'DM Sans', sans-serif", fontSize: "inherit", fontWeight: "inherit", opacity: isLoading ? 0.5 : 1 }}
+                                  >
+                                    <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: cleared ? "#10B981" : "#94A3B8", flexShrink: 0 }} />
+                                    {getLangLabel(code)}
+                                  </button>
+                                  {canModify && (
+                                    <button
+                                      onClick={() => handleRemoveLanguage(user.id, code)}
+                                      disabled={roleActionLoading === `removelang-${user.id}-${code}`}
+                                      title={`Remove ${getLangLabel(code)}`}
+                                      style={{ background: "none", border: "none", cursor: "pointer", color: "inherit", opacity: 0.55, fontSize: "0.9rem", lineHeight: 1, padding: "0 5px 0 1px", fontFamily: "'DM Sans', sans-serif" }}
+                                    >×</button>
+                                  )}
+                                </span>
                               );
                             })}
                             {langChips.length === 0 && <span style={{ fontSize: "0.78rem", color: "var(--gray-400)" }}>—</span>}
+                            {canModify && (
+                              <button
+                                data-lang-add-btn="true"
+                                onClick={(e) => {
+                                  if (addLangTarget === user.id) {
+                                    setAddLangTarget(null);
+                                    setAddLangDropdownPos(null);
+                                  } else {
+                                    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                                    setAddLangTarget(user.id);
+                                    setAddLangDropdownPos({ top: rect.bottom + window.scrollY + 4, left: rect.left + window.scrollX });
+                                  }
+                                }}
+                                title="Add language"
+                                style={{ width: "20px", height: "20px", borderRadius: "99px", border: "1.5px dashed #94A3B8", background: "none", cursor: "pointer", color: "#94A3B8", fontSize: "1rem", lineHeight: 1, display: "inline-flex", alignItems: "center", justifyContent: "center", fontFamily: "'DM Sans', sans-serif" }}
+                              >+</button>
+                            )}
                           </div>
                         </td>
 
@@ -1416,6 +1548,34 @@ export default function AdminDashboard() {
                       style={{ display: "block", width: "100%", textAlign: "left", padding: "6px 10px", fontSize: "0.78rem", fontWeight: 600, background: "none", border: "none", cursor: "pointer", color: r.color, borderRadius: "6px", fontFamily: "'DM Sans', sans-serif" }}
                     >
                       {roleActionLoading === `add-${targetUser.id}-${r.key}` ? "…" : r.label}
+                    </button>
+                  ))}
+                </div>,
+                document.body
+              );
+            })()}
+
+            {/* Portal: add-language dropdown */}
+            {mounted && addLangTarget && addLangDropdownPos && (() => {
+              const targetUser = users.find(u => u.id === addLangTarget);
+              if (!targetUser) return null;
+              const { langChips } = parseUserRoles(targetUser.roles ?? []);
+              const assignedCodes = langChips.map(l => l.code);
+              const availableLangs = languages.filter(l => l.isActive && !assignedCodes.includes(l.code.toUpperCase()));
+              if (availableLangs.length === 0) return null;
+              return ReactDOM.createPortal(
+                <div
+                  data-lang-add-dropdown="true"
+                  style={{ position: "absolute", top: addLangDropdownPos.top, left: addLangDropdownPos.left, zIndex: 9999, background: "var(--card-bg)", border: "1.5px solid var(--card-border)", borderRadius: "10px", padding: "6px", minWidth: "140px", maxHeight: "200px", overflowY: "auto", boxShadow: "0 6px 20px rgba(0,0,0,.15)" }}
+                >
+                  {availableLangs.map(lang => (
+                    <button
+                      key={lang.code}
+                      onClick={() => handleAddLanguage(targetUser.id, lang.code)}
+                      disabled={roleActionLoading === `addlang-${targetUser.id}-${lang.code}`}
+                      style={{ display: "block", width: "100%", textAlign: "left", padding: "6px 10px", fontSize: "0.78rem", fontWeight: 600, background: "none", border: "none", cursor: "pointer", color: "#64748B", borderRadius: "6px", fontFamily: "'DM Sans', sans-serif" }}
+                    >
+                      {roleActionLoading === `addlang-${targetUser.id}-${lang.code}` ? "…" : lang.name}
                     </button>
                   ))}
                 </div>,
