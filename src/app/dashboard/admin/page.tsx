@@ -3,6 +3,7 @@
 import { useSession, signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useCallback } from "react";
+import ReactDOM from "react-dom";
 
 type VolunteerStats = {
   languages: string[];
@@ -35,6 +36,7 @@ type Clinic = {
   contactName: string;
   contactEmail: string;
   loginToken: string;
+  loginPin: string;
   _count?: { staff: number; slots: number };
 };
 
@@ -182,8 +184,26 @@ export default function AdminDashboard() {
   const [roleFilterOpen, setRoleFilterOpen] = useState(false);
   const [emailExpanded, setEmailExpanded] = useState<Set<string>>(new Set());
   const [addRoleTarget, setAddRoleTarget] = useState<string | null>(null);
+  const [addRoleDropdownPos, setAddRoleDropdownPos] = useState<{ top: number; left: number } | null>(null);
   const [volunteerRemoveWarning, setVolunteerRemoveWarning] = useState<{ userId: string; userName: string; upcomingCount: number } | null>(null);
   const [roleActionLoading, setRoleActionLoading] = useState<string | null>(null);
+  const [pinVisible, setPinVisible] = useState<Set<string>>(new Set());
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => { setMounted(true); }, []);
+
+  useEffect(() => {
+    if (!addRoleTarget) return;
+    const handler = (e: MouseEvent) => {
+      const t = e.target as HTMLElement;
+      if (!t.closest("[data-role-add-dropdown]") && !t.closest("[data-role-add-btn]")) {
+        setAddRoleTarget(null);
+        setAddRoleDropdownPos(null);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [addRoleTarget]);
 
   useEffect(() => {
     if (status === "unauthenticated") router.push("/login");
@@ -1142,6 +1162,20 @@ export default function AdminDashboard() {
               ))}
             </div>
 
+            {/* Language clearance legend */}
+            <div style={{ display: "flex", alignItems: "center", gap: "16px", marginBottom: "10px", padding: "8px 14px", background: "var(--card-bg)", border: "1.5px solid var(--card-border)", borderRadius: "10px", fontSize: "0.75rem", color: "var(--gray-500)", flexWrap: "wrap" }}>
+              <span style={{ fontWeight: 600, color: "var(--gray-600)" }}>Language Clearance:</span>
+              <span style={{ display: "inline-flex", alignItems: "center", gap: "5px" }}>
+                <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#10B981", flexShrink: 0 }} />
+                Green dot = cleared to interpret
+              </span>
+              <span style={{ display: "inline-flex", alignItems: "center", gap: "5px" }}>
+                <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#94A3B8", flexShrink: 0 }} />
+                Gray dot = awaiting clearance
+              </span>
+              <span style={{ color: "var(--gray-400)" }}>Click a language chip to toggle clearance.</span>
+            </div>
+
             <div style={{ background: "var(--card-bg)", borderRadius: "14px", border: "1.5px solid var(--card-border)", overflow: "hidden" }}>
               <table style={{ width: "100%", borderCollapse: "collapse" }}>
                 <thead>
@@ -1232,27 +1266,21 @@ export default function AdminDashboard() {
                             })}
                             {/* + Add role */}
                             {canModify && addableRoles.length > 0 && (
-                              <div style={{ position: "relative" }}>
-                                <button
-                                  onClick={() => setAddRoleTarget(addRoleTarget === user.id ? null : user.id)}
-                                  title="Add role"
-                                  style={{ width: "20px", height: "20px", borderRadius: "99px", border: "1.5px dashed var(--gray-300)", background: "none", cursor: "pointer", color: "var(--gray-400)", fontSize: "1rem", lineHeight: 1, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'DM Sans', sans-serif" }}
-                                >+</button>
-                                {addRoleTarget === user.id && (
-                                  <div style={{ position: "absolute", top: "calc(100% + 4px)", left: 0, zIndex: 50, background: "var(--card-bg)", border: "1.5px solid var(--card-border)", borderRadius: "10px", padding: "6px", minWidth: "140px", boxShadow: "0 6px 20px rgba(0,0,0,.12)" }}>
-                                    {addableRoles.map(r => (
-                                      <button
-                                        key={r.key}
-                                        onClick={() => handleAddRole(user.id, r.key)}
-                                        disabled={roleActionLoading === `add-${user.id}-${r.key}`}
-                                        style={{ display: "block", width: "100%", textAlign: "left", padding: "6px 10px", fontSize: "0.78rem", fontWeight: 600, background: "none", border: "none", cursor: "pointer", color: r.color, borderRadius: "6px", fontFamily: "'DM Sans', sans-serif" }}
-                                      >
-                                        {roleActionLoading === `add-${user.id}-${r.key}` ? "…" : r.label}
-                                      </button>
-                                    ))}
-                                  </div>
-                                )}
-                              </div>
+                              <button
+                                data-role-add-btn="true"
+                                onClick={(e) => {
+                                  if (addRoleTarget === user.id) {
+                                    setAddRoleTarget(null);
+                                    setAddRoleDropdownPos(null);
+                                  } else {
+                                    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                                    setAddRoleTarget(user.id);
+                                    setAddRoleDropdownPos({ top: rect.bottom + window.scrollY + 4, left: rect.left + window.scrollX });
+                                  }
+                                }}
+                                title="Add role"
+                                style={{ width: "20px", height: "20px", borderRadius: "99px", border: "1.5px dashed var(--gray-300)", background: "none", cursor: "pointer", color: "var(--gray-400)", fontSize: "1rem", lineHeight: 1, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'DM Sans', sans-serif" }}
+                              >+</button>
                             )}
                           </div>
                         </td>
@@ -1361,6 +1389,38 @@ export default function AdminDashboard() {
                 </div>
               </div>
             )}
+
+            {/* Portal: add-role dropdown — rendered at document.body to escape overflow:hidden */}
+            {mounted && addRoleTarget && addRoleDropdownPos && (() => {
+              const targetUser = users.find(u => u.id === addRoleTarget);
+              if (!targetUser) return null;
+              const { roleChips: tRoleChips } = parseUserRoles(targetUser.roles ?? []);
+              const tIsSuperAdmin = targetUser.role === "SUPER_ADMIN";
+              const tAddableRoles = ROLE_CHIPS.filter(r => {
+                if (tRoleChips.includes(r.key)) return false;
+                if ((r.key === "SUPER_ADMIN" || r.key === "ADMIN") && session?.user?.role !== "SUPER_ADMIN") return false;
+                if (tIsSuperAdmin) return false;
+                return true;
+              });
+              return ReactDOM.createPortal(
+                <div
+                  data-role-add-dropdown="true"
+                  style={{ position: "absolute", top: addRoleDropdownPos.top, left: addRoleDropdownPos.left, zIndex: 9999, background: "var(--card-bg)", border: "1.5px solid var(--card-border)", borderRadius: "10px", padding: "6px", minWidth: "140px", maxHeight: "200px", overflowY: "auto", boxShadow: "0 6px 20px rgba(0,0,0,.15)" }}
+                >
+                  {tAddableRoles.map(r => (
+                    <button
+                      key={r.key}
+                      onClick={() => handleAddRole(targetUser.id, r.key)}
+                      disabled={roleActionLoading === `add-${targetUser.id}-${r.key}`}
+                      style={{ display: "block", width: "100%", textAlign: "left", padding: "6px 10px", fontSize: "0.78rem", fontWeight: 600, background: "none", border: "none", cursor: "pointer", color: r.color, borderRadius: "6px", fontFamily: "'DM Sans', sans-serif" }}
+                    >
+                      {roleActionLoading === `add-${targetUser.id}-${r.key}` ? "…" : r.label}
+                    </button>
+                  ))}
+                </div>,
+                document.body
+              );
+            })()}
           </div>
         )}
 
@@ -1439,17 +1499,21 @@ export default function AdminDashboard() {
                         <div style={{ marginTop: "12px", display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
                           <div style={{ display: "flex", alignItems: "center", gap: "6px", background: "rgba(0,0,0,.04)", border: "1.5px solid var(--card-border)", borderRadius: "8px", padding: "4px 10px" }}>
                             <span style={{ fontSize: "0.72rem", color: "var(--gray-400)" }}>PIN</span>
-                            <span style={{ fontSize: "0.72rem", fontFamily: "monospace", fontWeight: 700, color: "var(--gray-400)", letterSpacing: "0.2em" }}>••••••</span>
+                            <span style={{ fontSize: "0.72rem", fontFamily: "monospace", fontWeight: 700, color: "var(--gray-600)", letterSpacing: "0.2em" }}>
+                              {pinVisible.has(clinic.id) ? clinic.loginPin : "••••••••"}
+                            </span>
+                            <button
+                              onClick={() => setPinVisible(prev => { const n = new Set(prev); n.has(clinic.id) ? n.delete(clinic.id) : n.add(clinic.id); return n; })}
+                              title={pinVisible.has(clinic.id) ? "Hide PIN" : "Show PIN"}
+                              style={{ background: "none", border: "none", cursor: "pointer", color: "var(--gray-400)", lineHeight: 1, padding: "0 2px", display: "flex", alignItems: "center" }}
+                            >
+                              {pinVisible.has(clinic.id) ? (
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                              ) : (
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                              )}
+                            </button>
                           </div>
-                          <button
-                            onClick={() => {
-                              const url = `${window.location.origin}/clinic-login/${clinic.loginToken}`;
-                              navigator.clipboard.writeText(url);
-                            }}
-                            style={{ fontSize: "0.75rem", padding: "4px 12px", background: "var(--card-bg)", border: "1.5px solid var(--card-border)", color: "var(--gray-600)", borderRadius: "8px", cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}
-                          >
-                            Copy Login URL
-                          </button>
                           <button
                             disabled={actionLoading === `pin-${clinic.id}`}
                             onClick={() => regeneratePin(clinic.id, clinic.name)}
