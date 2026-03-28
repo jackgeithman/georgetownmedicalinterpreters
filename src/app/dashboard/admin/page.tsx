@@ -1151,11 +1151,18 @@ export default function AdminDashboard() {
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
           <span style={{ color: "#CBD5E1", fontSize: "0.82rem" }}>{session?.user?.email}</span>
-          {session?.user?.roles?.includes("DEV") && (
-            <span style={{ fontSize: "0.72rem", padding: "2px 10px", borderRadius: "99px", background: "rgba(167,139,250,.2)", color: "#ddd6fe", fontWeight: 600 }}>
-              Super Admin
-            </span>
-          )}
+          <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+            {session?.user?.role && (
+              <span style={{ fontSize: "0.72rem", padding: "2px 10px", borderRadius: "99px", background: "rgba(59,130,246,.2)", color: "#bfdbfe", fontWeight: 600 }}>
+                {session.user.role}
+              </span>
+            )}
+            {session?.user?.roles?.includes("DEV") && (
+              <span style={{ fontSize: "0.72rem", padding: "2px 10px", borderRadius: "99px", background: "rgba(167,139,250,.2)", color: "#ddd6fe", fontWeight: 600 }}>
+                Developer
+              </span>
+            )}
+          </div>
           <div style={{ position: "relative" }}>
             <button
               data-view-btn="true"
