@@ -382,6 +382,10 @@ export default function AdminDashboard() {
   useEffect(() => {
     if (session?.user?.role === "ADMIN") {
       fetchData(session.user.roles?.includes("DEV"));
+    } else if (session?.user && !session.user.role) {
+      // Session loaded but role not set - show error
+      console.error("Session loaded but user role not set", session.user);
+      setLoading(false);
     }
   }, [session, fetchData]);
 
@@ -952,6 +956,24 @@ export default function AdminDashboard() {
     return (
       <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--page-bg)" }}>
         <p style={{ color: "var(--gray-400)" }}>Loading...</p>
+      </div>
+    );
+  }
+
+  // If session is loaded but role is not set, show error
+  if (status === "authenticated" && !session?.user?.role) {
+    return (
+      <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--page-bg)" }}>
+        <div style={{ background: "var(--card-bg)", padding: "32px", borderRadius: "12px", border: "1px solid var(--card-border)", maxWidth: "400px", textAlign: "center" }}>
+          <h2 style={{ color: "var(--gray-900)", marginBottom: "12px", fontSize: "1.1rem", fontWeight: 600 }}>Error Loading Profile</h2>
+          <p style={{ color: "var(--gray-600)", marginBottom: "20px", fontSize: "0.95rem" }}>Your user profile couldn't be loaded from the database. Please sign out and sign back in.</p>
+          <button
+            onClick={() => signOut({ callbackUrl: "/login" })}
+            style={{ background: "var(--blue)", color: "#fff", border: "none", padding: "10px 20px", borderRadius: "8px", cursor: "pointer", fontFamily: "'DM Sans', sans-serif", fontWeight: 500 }}
+          >
+            Sign Out
+          </button>
+        </div>
       </div>
     );
   }
