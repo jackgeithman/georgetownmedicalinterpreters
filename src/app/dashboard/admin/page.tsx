@@ -751,115 +751,135 @@ export default function AdminDashboard() {
   const renderSlot = (slot: AdminSlot, isPast: boolean) => {
     const subBlocks = Array.from({ length: slot.endTime - slot.startTime }, (_, i) => slot.startTime + i);
     const canSignUp = adminProfile?.languages.includes(slot.language) ?? false;
+    const openCount = subBlocks.filter((h) => slot.signups.filter((s) => s.subBlockHour === h).length < slot.interpreterCount).length;
 
     return (
-      <div key={slot.id} style={{ background: "var(--card-bg)", borderRadius: "14px", border: "1.5px solid var(--card-border)", marginBottom: "14px", boxShadow: "0 2px 6px rgba(0,0,0,.05)", overflow: "hidden", opacity: isPast ? 0.55 : 1 }}>
-        <div style={{ padding: "16px 22px 14px", borderBottom: "1.5px solid var(--card-border)", display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "12px", flexWrap: "wrap" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
-            {!isPast && (
-              <input
-                type="checkbox"
-                checked={adminSelectedSlotIds.has(slot.id)}
-                onChange={() => toggleSelectAdminSlot(slot.id)}
-                style={{ width: "16px", height: "16px", cursor: "pointer", accentColor: "var(--navy)" }}
-                onClick={(e) => e.stopPropagation()}
-              />
-            )}
-            <span className={`text-xs px-2 py-1 rounded-full font-medium ${LANG_COLORS[slot.language]}`}>
-              {LANG_LABELS[slot.language]}
-            </span>
-            <span style={{ fontSize: "0.875rem", fontWeight: 600, color: "var(--gray-900)" }}>{formatDate(slot.date)}</span>
-            <span style={{ fontSize: "0.875rem", color: "var(--gray-600)" }}>{formatHour(slot.startTime)} – {formatHour(slot.endTime)}</span>
-            {isPast && <span style={{ fontSize: "0.72rem", padding: "2px 8px", borderRadius: "99px", background: "var(--gray-200)", color: "var(--gray-600)", fontWeight: 600, textTransform: "uppercase" }}>Past</span>}
-          </div>
-          <div style={{ textAlign: "right" }}>
-            <p style={{ fontSize: "0.95rem", fontWeight: 700, color: "var(--navy)" }}>{slot.clinic.name}</p>
-            {slot.clinic.address && (
-              <p style={{ fontSize: "0.72rem", color: "var(--gray-400)" }}>
-                {slot.clinic.address}
-                <MapsLinks address={slot.clinic.address} />
-              </p>
-            )}
-          </div>
-        </div>
-        {slot.notes && <p style={{ fontSize: "0.75rem", color: "var(--gray-400)", fontStyle: "italic", padding: "10px 22px 0" }}>{slot.notes}</p>}
-        <div style={{ padding: "10px 22px 14px", display: "flex", flexDirection: "column", gap: "8px" }}>
-          {subBlocks.map((hour) => {
-            const hoursSignups = slot.signups.filter((s) => s.subBlockHour === hour);
-            const mySignup = adminProfile ? hoursSignups.find((s) => s.volunteer.id === adminProfile.id) : null;
-            const filled = hoursSignups.length;
-            const isFull = filled >= slot.interpreterCount;
-            const signupKey = `signup-${slot.id}-${hour}`;
-
-            return (
-              <div key={hour} style={{ borderRadius: "9px", background: "rgba(0,0,0,.03)", padding: "10px 14px", display: "flex", flexDirection: "column", gap: "6px" }}>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                    <span style={{ fontSize: "0.8rem", color: "var(--gray-600)", minWidth: "110px" }}>{formatHour(hour)} – {formatHour(hour + 1)}</span>
-                    <span style={{ fontSize: "0.8rem", color: "var(--gray-400)" }}>{filled}/{slot.interpreterCount} filled</span>
-                  </div>
-                  <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                    {!isPast && (
-                      <button
-                        onClick={() => {
-                          setVolunteerAssignTarget({ slotId: slot.id, hour, language: slot.language, date: slot.date, clinicName: slot.clinic.name });
-                          setAssignSearch("");
-                          setAssignSelected(null);
-                          setAssignError("");
-                        }}
-                        style={{ fontSize: "0.75rem", padding: "4px 10px", background: "#EEF2FF", color: "#4338CA", border: "1px solid #C7D2FE", borderRadius: "6px", cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}
-                      >
-                        Assign
-                      </button>
-                    )}
-                    {isPast ? (
-                      <span style={{ fontSize: "0.75rem", padding: "4px 10px", background: "var(--gray-200)", color: "var(--gray-400)", borderRadius: "6px" }}>Past</span>
-                    ) : mySignup ? (
-                      <button
-                        disabled={actionLoading === mySignup.id}
-                        onClick={() => cancelMySignup(mySignup.id)}
-                        style={{ fontSize: "0.75rem", padding: "4px 10px", background: "#DCFCE7", color: "#15803D", border: "1px solid #BBF7D0", borderRadius: "6px", fontWeight: 600, cursor: "pointer", opacity: actionLoading === mySignup.id ? 0.5 : 1, fontFamily: "'DM Sans', sans-serif" }}
-                        title="Click to cancel"
-                      >
-                        {actionLoading === mySignup.id ? "..." : "Signed Up ✓"}
-                      </button>
-                    ) : isFull ? (
-                      <span style={{ fontSize: "0.75rem", padding: "4px 10px", background: "var(--gray-200)", color: "var(--gray-400)", borderRadius: "6px" }}>Full</span>
-                    ) : (
-                      <button
-                        disabled={actionLoading === signupKey || !canSignUp}
-                        onClick={() => signUp(slot.id, hour)}
-                        title={!canSignUp ? "Add this language to your volunteer profile first" : undefined}
-                        style={{ fontSize: "0.75rem", padding: "4px 12px", background: "var(--blue)", color: "#fff", border: "none", borderRadius: "99px", cursor: "pointer", opacity: (actionLoading === signupKey || !canSignUp) ? 0.4 : 1, fontFamily: "'DM Sans', sans-serif" }}
-                      >
-                        {actionLoading === signupKey ? "..." : "Sign Up"}
-                      </button>
-                    )}
-                  </div>
-                </div>
-                {hoursSignups
-                  .filter((s) => s.volunteer.id !== adminProfile?.id)
-                  .map((s) => (
-                    <div key={s.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", paddingLeft: "4px" }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                        <span style={{ fontSize: "0.78rem", color: "var(--gray-600)" }}>{s.volunteer.user.name ?? s.volunteer.user.email}</span>
-                        <span style={{ fontSize: "0.78rem", color: "var(--gray-400)" }}>{s.volunteer.user.email}</span>
-                      </div>
-                      {!isPast && (
-                        <button
-                          disabled={actionLoading === s.id}
-                          onClick={() => removeVolunteer(s.id)}
-                          style={{ fontSize: "0.72rem", padding: "2px 8px", background: "#FEF2F2", color: "#EF4444", border: "none", borderRadius: "4px", cursor: "pointer", opacity: actionLoading === s.id ? 0.5 : 1, fontFamily: "'DM Sans', sans-serif" }}
-                        >
-                          Remove
-                        </button>
-                      )}
-                    </div>
-                  ))}
+      <div key={slot.id} style={{ background: "var(--card-bg)", borderRadius: "14px", border: "1.5px solid var(--card-border)", overflow: "hidden", marginBottom: "14px", boxShadow: "0 2px 6px rgba(0,0,0,.05)", opacity: isPast ? 0.5 : 1 }}>
+        {/* Card header */}
+        <div style={{ padding: "16px 22px 14px", borderBottom: "1.5px solid var(--card-border)", display: "grid", gridTemplateColumns: "1fr auto", gap: "16px", alignItems: "center" }}>
+          <div>
+            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+              {!isPast && (
+                <input
+                  type="checkbox"
+                  checked={adminSelectedSlotIds.has(slot.id)}
+                  onChange={() => toggleSelectAdminSlot(slot.id)}
+                  onClick={(e) => e.stopPropagation()}
+                  style={{ width: "16px", height: "16px", cursor: "pointer", accentColor: "var(--navy)", flexShrink: 0 }}
+                />
+              )}
+              <div style={{ fontSize: "1.15rem", fontWeight: 700, color: "var(--navy)" }}>{slot.clinic.name}</div>
+            </div>
+            <div style={{ fontSize: "0.875rem", fontWeight: 500, color: "var(--gray-600)", marginTop: "3px" }}>
+              {LANG_LABELS[slot.language] ?? slot.language}
+            </div>
+            <div style={{ display: "flex", gap: "24px", marginTop: "12px", flexWrap: "wrap" }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: "3px" }}>
+                <span style={{ fontSize: "0.68rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.09em", color: "var(--gray-400)" }}>Date</span>
+                <span style={{ fontSize: "0.95rem", fontWeight: 600, color: "var(--gray-900)" }}>{formatDate(slot.date)}</span>
               </div>
-            );
-          })}
+              <div style={{ display: "flex", flexDirection: "column", gap: "3px" }}>
+                <span style={{ fontSize: "0.68rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.09em", color: "var(--gray-400)" }}>Session</span>
+                <span style={{ fontSize: "0.95rem", fontWeight: 600, color: "var(--gray-900)" }}>{formatHour(slot.startTime)} – {formatHour(slot.endTime)}</span>
+              </div>
+              {slot.clinic.address && (
+                <div style={{ display: "flex", flexDirection: "column", gap: "3px" }}>
+                  <span style={{ fontSize: "0.68rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.09em", color: "var(--gray-400)" }}>Location</span>
+                  <span style={{ fontSize: "0.95rem", fontWeight: 600, color: "var(--gray-900)" }}>
+                    {slot.clinic.address}
+                    <MapsLinks address={slot.clinic.address} />
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+          {isPast ? (
+            <span style={{ background: "var(--gray-200)", color: "var(--gray-600)", fontSize: "0.7rem", fontWeight: 600, padding: "4px 10px", borderRadius: "99px", textTransform: "uppercase" }}>Past</span>
+          ) : (
+            <div style={{ background: "var(--green-light)", color: "var(--green)", fontSize: "0.9rem", fontWeight: 700, padding: "9px 18px", borderRadius: "10px", whiteSpace: "nowrap", textAlign: "center", lineHeight: 1.2 }}>
+              {openCount} open
+              <span style={{ display: "block", fontSize: "0.72rem", fontWeight: 500, marginTop: "2px", opacity: 0.8 }}>slots</span>
+            </div>
+          )}
         </div>
+        {slot.notes && (
+          <div style={{ padding: "8px 22px", fontSize: "0.82rem", color: "var(--gray-600)", fontStyle: "italic", borderBottom: "1px solid var(--card-border)" }}>
+            {slot.notes}
+          </div>
+        )}
+        {/* Hour rows */}
+        {subBlocks.map((hour) => {
+          const hoursSignups = slot.signups.filter((s) => s.subBlockHour === hour);
+          const mySignup = adminProfile ? hoursSignups.find((s) => s.volunteer.id === adminProfile.id) : null;
+          const otherSignups = hoursSignups.filter((s) => s.volunteer.id !== adminProfile?.id);
+          const filled = hoursSignups.length;
+          const isFull = filled >= slot.interpreterCount;
+          const signupKey = `signup-${slot.id}-${hour}`;
+          return (
+            <div key={hour}>
+              <div style={{ display: "flex", alignItems: "center", padding: "13px 22px", borderBottom: "1px solid var(--card-border)", gap: "16px" }}>
+                <div style={{ width: "9px", height: "9px", borderRadius: "50%", background: isPast ? "var(--gray-400)" : "var(--green)", flexShrink: 0 }} />
+                <span style={{ fontSize: "0.95rem", fontWeight: 600, color: "var(--gray-900)", minWidth: "145px" }}>
+                  {formatHour(hour)} – {formatHour(hour + 1)}
+                </span>
+                <span style={{ fontSize: "0.875rem", fontWeight: 500, color: "var(--gray-900)", flex: 1 }}>
+                  {filled}/{slot.interpreterCount} filled
+                </span>
+                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                  {!isPast && (
+                    <button
+                      onClick={() => {
+                        setVolunteerAssignTarget({ slotId: slot.id, hour, language: slot.language, date: slot.date, clinicName: slot.clinic.name });
+                        setAssignSearch("");
+                        setAssignSelected(null);
+                        setAssignError("");
+                      }}
+                      style={{ fontSize: "0.75rem", padding: "4px 10px", background: "#EEF2FF", color: "#4338CA", border: "1px solid #C7D2FE", borderRadius: "6px", cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}
+                    >Assign</button>
+                  )}
+                  {isPast ? (
+                    <span style={{ fontSize: "0.75rem", padding: "4px 10px", background: "var(--gray-200)", color: "var(--gray-600)", borderRadius: "6px" }}>Past</span>
+                  ) : mySignup ? (
+                    <button
+                      disabled={actionLoading === mySignup.id}
+                      onClick={() => cancelMySignup(mySignup.id)}
+                      style={{ fontSize: "0.75rem", padding: "6px 14px", background: "#ecfdf5", color: "#047857", border: "1px solid #a7f3d0", borderRadius: "8px", fontWeight: 600, cursor: "pointer", opacity: actionLoading === mySignup.id ? 0.5 : 1, fontFamily: "'DM Sans', sans-serif" }}
+                      title="Click to cancel"
+                    >
+                      {actionLoading === mySignup.id ? "..." : "Signed Up ✓"}
+                    </button>
+                  ) : isFull ? (
+                    <span style={{ fontSize: "0.75rem", padding: "4px 10px", background: "var(--gray-200)", color: "var(--gray-400)", borderRadius: "6px" }}>Full</span>
+                  ) : (
+                    <button
+                      disabled={actionLoading === signupKey || !canSignUp}
+                      onClick={() => signUp(slot.id, hour)}
+                      title={!canSignUp ? "Add this language to your volunteer profile first" : undefined}
+                      style={{ background: "var(--blue)", color: "#fff", border: "none", borderRadius: "8px", padding: "9px 22px", fontFamily: "'DM Sans', sans-serif", fontSize: "0.875rem", fontWeight: 600, cursor: "pointer", opacity: (actionLoading === signupKey || !canSignUp) ? 0.4 : 1, whiteSpace: "nowrap" }}
+                    >
+                      {actionLoading === signupKey ? "..." : "Sign Up"}
+                    </button>
+                  )}
+                </div>
+              </div>
+              {otherSignups.map((s) => (
+                <div key={s.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 22px 8px 48px", borderBottom: "1px solid var(--card-border)", background: "rgba(0,0,0,.02)" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                    <span style={{ fontSize: "0.78rem", color: "var(--gray-600)" }}>{s.volunteer.user.name ?? s.volunteer.user.email}</span>
+                    <span style={{ fontSize: "0.78rem", color: "var(--gray-400)" }}>{s.volunteer.user.email}</span>
+                  </div>
+                  {!isPast && (
+                    <button
+                      disabled={actionLoading === s.id}
+                      onClick={() => removeVolunteer(s.id)}
+                      style={{ fontSize: "0.72rem", padding: "2px 8px", background: "#FEF2F2", color: "#EF4444", border: "none", borderRadius: "4px", cursor: "pointer", opacity: actionLoading === s.id ? 0.5 : 1, fontFamily: "'DM Sans', sans-serif" }}
+                    >Remove</button>
+                  )}
+                </div>
+              ))}
+            </div>
+          );
+        })}
       </div>
     );
   };
@@ -996,62 +1016,60 @@ export default function AdminDashboard() {
             )}
 
             {/* Filters */}
-            <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "8px", marginBottom: "20px" }}>
-              {["ALL", "ES", "ZH", "KO"].map((lang) => (
+            <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "10px", marginBottom: "28px" }}>
+              {["ALL", ...languages.filter((l) => l.isActive).map((l) => l.code)].map((lang) => (
                 <button
                   key={lang}
                   onClick={() => setLangFilter(lang)}
-                  style={{ padding: "6px 14px", fontSize: "0.78rem", borderRadius: "8px", cursor: "pointer", fontFamily: "'DM Sans', sans-serif", background: langFilter === lang ? "var(--blue)" : "var(--card-bg)", color: langFilter === lang ? "#fff" : "var(--gray-600)", border: langFilter === lang ? "none" : "1.5px solid var(--card-border)" }}
+                  style={{ padding: "9px 14px", borderRadius: "9px", fontSize: "0.875rem", fontWeight: 500, border: langFilter === lang ? "1.5px solid var(--blue)" : "1.5px solid var(--card-border)", background: langFilter === lang ? "var(--blue)" : "var(--card-bg)", color: langFilter === lang ? "#fff" : "var(--gray-900)", fontFamily: "'DM Sans', sans-serif", cursor: "pointer" }}
                 >
-                  {lang === "ALL" ? "All Languages" : LANG_LABELS[lang]}
+                  {lang === "ALL" ? "All Languages" : (languages.find((l) => l.code === lang)?.name ?? LANG_LABELS[lang] ?? lang)}
                 </button>
               ))}
 
-              <div style={{ width: "1px", background: "var(--gray-200)", alignSelf: "stretch", margin: "0 4px" }} />
+              <div style={{ width: "1px", background: "var(--card-border)", alignSelf: "stretch", margin: "0 4px" }} />
 
               <select
                 value={clinicFilter}
                 onChange={(e) => setClinicFilter(e.target.value)}
-                style={{ padding: "6px 12px", fontSize: "0.78rem", border: "1.5px solid var(--card-border)", borderRadius: "8px", background: "var(--card-bg)", color: "var(--gray-600)", outline: "none", fontFamily: "'DM Sans', sans-serif", cursor: "pointer" }}
+                style={{ padding: "9px 14px", borderRadius: "9px", fontSize: "0.875rem", fontWeight: 500, border: "1.5px solid var(--card-border)", background: "var(--card-bg)", color: "var(--gray-900)", fontFamily: "'DM Sans', sans-serif", cursor: "pointer", outline: "none" }}
               >
                 <option value="ALL">All Clinics</option>
                 {uniqueClinics.map((c) => <option key={c} value={c}>{c}</option>)}
               </select>
 
-              <div style={{ width: "1px", background: "var(--gray-200)", alignSelf: "stretch", margin: "0 4px" }} />
+              <div style={{ width: "1px", background: "var(--card-border)", alignSelf: "stretch", margin: "0 4px" }} />
 
-              <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                <span style={{ fontSize: "0.75rem", color: "var(--gray-400)" }}>From</span>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "0.875rem", fontWeight: 500, color: "var(--gray-900)" }}>
+                From
                 <input
                   type="date"
                   value={dateFrom}
                   onChange={(e) => setDateFrom(e.target.value)}
-                  style={{ padding: "6px 10px", fontSize: "0.78rem", border: "1.5px solid var(--card-border)", borderRadius: "8px", background: "var(--card-bg)", color: "var(--gray-900)", outline: "none", fontFamily: "'DM Sans', sans-serif" }}
+                  style={{ padding: "9px 12px", border: "1.5px solid var(--card-border)", borderRadius: "9px", fontSize: "0.875rem", fontFamily: "'DM Sans', sans-serif", color: "var(--gray-900)", outline: "none", background: "var(--card-bg)" }}
                 />
               </div>
-              <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                <span style={{ fontSize: "0.75rem", color: "var(--gray-400)" }}>To</span>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "0.875rem", fontWeight: 500, color: "var(--gray-900)" }}>
+                To
                 <input
                   type="date"
                   value={dateTo}
                   onChange={(e) => setDateTo(e.target.value)}
-                  style={{ padding: "6px 10px", fontSize: "0.78rem", border: "1.5px solid var(--card-border)", borderRadius: "8px", background: "var(--card-bg)", color: "var(--gray-900)", outline: "none", fontFamily: "'DM Sans', sans-serif" }}
+                  style={{ padding: "9px 12px", border: "1.5px solid var(--card-border)", borderRadius: "9px", fontSize: "0.875rem", fontFamily: "'DM Sans', sans-serif", color: "var(--gray-900)", outline: "none", background: "var(--card-bg)" }}
                 />
               </div>
               {(dateFrom || dateTo) && (
                 <button
                   onClick={() => { setDateFrom(""); setDateTo(""); }}
-                  style={{ fontSize: "0.75rem", color: "var(--gray-400)", background: "none", border: "none", cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}
-                >
-                  Clear
-                </button>
+                  style={{ fontSize: "0.8rem", color: "var(--gray-400)", background: "none", border: "none", cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}
+                >Clear</button>
               )}
 
-              <div style={{ width: "1px", background: "var(--gray-200)", alignSelf: "stretch", margin: "0 4px" }} />
+              <div style={{ width: "1px", background: "var(--card-border)", alignSelf: "stretch", margin: "0 4px" }} />
 
               <button
                 onClick={() => setAvailableOnly(!availableOnly)}
-                style={{ padding: "6px 14px", fontSize: "0.78rem", borderRadius: "8px", cursor: "pointer", fontFamily: "'DM Sans', sans-serif", background: availableOnly ? "#15803D" : "var(--card-bg)", color: availableOnly ? "#fff" : "var(--gray-600)", border: availableOnly ? "none" : "1.5px solid var(--card-border)" }}
+                style={{ padding: "9px 14px", borderRadius: "9px", fontSize: "0.875rem", fontWeight: 500, border: availableOnly ? "1.5px solid var(--green)" : "1.5px solid var(--card-border)", background: availableOnly ? "var(--green)" : "var(--card-bg)", color: availableOnly ? "#fff" : "var(--gray-900)", fontFamily: "'DM Sans', sans-serif", cursor: "pointer" }}
               >
                 Available Only
               </button>
@@ -1066,7 +1084,11 @@ export default function AdminDashboard() {
                 {upcomingSlots.map((slot) => renderSlot(slot, false))}
                 {pastSlots.length > 0 && (
                   <>
-                    <p style={{ fontSize: "0.78rem", fontWeight: 700, color: "var(--gray-400)", textTransform: "uppercase", letterSpacing: "0.1em", paddingTop: "8px", marginBottom: "8px" }}>Past Slots</p>
+                    <div style={{ display: "flex", alignItems: "center", gap: "12px", margin: "32px 0 16px", fontSize: "0.72rem", textTransform: "uppercase", letterSpacing: "0.1em", fontWeight: 700, color: "var(--gray-400)" }}>
+                      <span style={{ flex: 1, height: "1px", background: "var(--card-border)", display: "block" }} />
+                      Past Slots
+                      <span style={{ flex: 1, height: "1px", background: "var(--card-border)", display: "block" }} />
+                    </div>
                     {pastSlots.map((slot) => renderSlot(slot, true))}
                   </>
                 )}
