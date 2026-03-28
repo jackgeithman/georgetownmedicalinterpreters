@@ -11,7 +11,7 @@ async function getVolunteerUser() {
     include: { volunteer: { include: { notifPrefs: true } } },
   });
   if (!user) return null;
-  const validRole = user.role === "VOLUNTEER" || user.role === "ADMIN" || user.role === "SUPER_ADMIN";
+  const validRole = user.role === "VOLUNTEER" || user.role === "ADMIN" || user.role === "INSTRUCTOR";
   if (!validRole || user.status !== "ACTIVE") return null;
   return user;
 }

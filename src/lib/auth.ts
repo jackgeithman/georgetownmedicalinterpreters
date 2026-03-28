@@ -4,7 +4,7 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { prisma } from "./prisma";
 
-const SUPER_ADMIN_EMAIL = process.env.SUPER_ADMIN_EMAIL ?? "jackgeithman2005@gmail.com";
+const DEV_EMAIL = process.env.DEV_EMAIL ?? "jackgeithman2005@gmail.com";
 const ALLOWED_EMAILS = (process.env.ALLOWED_EXTRA_EMAILS ?? "")
   .split(",")
   .map((e) => e.trim())
@@ -82,17 +82,20 @@ export const authOptions: NextAuthOptions = {
         if (existing?.status === "SUSPENDED") return false;
 
         if (existing) {
-          if (user.email === SUPER_ADMIN_EMAIL && existing.role !== "SUPER_ADMIN") {
-            await prisma.user.update({ where: { email: user.email }, data: { role: "SUPER_ADMIN", roles: { push: "SUPER_ADMIN" } } });
+          if (user.email === DEV_EMAIL && !existing.roles?.includes("DEV")) {
+            await prisma.user.update({
+              where: { email: user.email },
+              data: { role: "ADMIN", roles: { push: "DEV" } }
+            });
           }
         } else {
-          if (user.email === SUPER_ADMIN_EMAIL) {
+          if (user.email === DEV_EMAIL) {
             await prisma.user.create({
-              data: { email: user.email, name: user.name ?? user.email, role: "SUPER_ADMIN", roles: ["SUPER_ADMIN"], status: "ACTIVE" },
+              data: { email: user.email, name: user.name ?? user.email, role: "ADMIN", roles: ["DEV"], status: "ACTIVE" },
             });
           } else {
             const adminCount = await prisma.user.count({
-              where: { role: { in: ["ADMIN", "SUPER_ADMIN"] } },
+              where: { role: "ADMIN" },
             });
             await prisma.user.create({
               data: {

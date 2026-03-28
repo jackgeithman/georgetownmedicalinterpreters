@@ -6,7 +6,7 @@ import { sendTestEmail } from "@/lib/email";
 
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
-  if (session?.user?.role !== "SUPER_ADMIN") {
+  if (!session?.user?.roles?.includes("DEV")) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
   }
 

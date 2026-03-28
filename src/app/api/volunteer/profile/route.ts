@@ -10,7 +10,7 @@ async function getVolunteerUser() {
     where: { email: session.user.email },
     include: { volunteer: true },
   });
-  if (!user || (user.role !== "VOLUNTEER" && user.role !== "ADMIN" && user.role !== "SUPER_ADMIN")) return null;
+  if (!user || (user.role !== "VOLUNTEER" && user.role !== "ADMIN" && user.role !== "INSTRUCTOR")) return null;
   return user;
 }
 
@@ -25,7 +25,18 @@ export async function GET() {
     return NextResponse.json(profile);
   }
 
-  return NextResponse.json(user.volunteer);
+  // Fetch clearance status
+  const clearance = await prisma.clearanceLog.findFirst({
+    where: { volunteerId: user.id },
+    orderBy: { createdAt: "desc" },
+    select: { isCleared: true, createdAt: true },
+  });
+
+  return NextResponse.json({
+    ...user.volunteer,
+    clearanceStatus: clearance?.isCleared ? "APPROVED" : clearance ? "PENDING" : null,
+    clearanceDate: clearance?.createdAt ?? null,
+  });
 }
 
 export async function PATCH(req: NextRequest) {

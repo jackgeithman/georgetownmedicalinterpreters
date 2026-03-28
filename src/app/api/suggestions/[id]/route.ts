@@ -9,7 +9,7 @@ export async function DELETE(
 ) {
   const session = await getServerSession(authOptions);
   const role = session?.user?.role;
-  if (role !== "ADMIN" && role !== "SUPER_ADMIN") {
+  if (role !== "ADMIN") {
     return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
   }
 
@@ -30,7 +30,7 @@ export async function PATCH(
 ) {
   const session = await getServerSession(authOptions);
   const role = session?.user?.role;
-  if (role !== "ADMIN" && role !== "SUPER_ADMIN") {
+  if (role !== "ADMIN") {
     return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
   }
 

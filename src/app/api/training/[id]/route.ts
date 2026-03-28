@@ -22,7 +22,7 @@ export async function DELETE(
   const material = await prisma.trainingMaterial.findUnique({ where: { id } });
   if (!material) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-  const isAdmin = user.role === "ADMIN" || user.role === "SUPER_ADMIN";
+  const isAdmin = user.role === "ADMIN";
   const isInstructor = user.role === "INSTRUCTOR";
 
   if (!isAdmin && !isInstructor) {

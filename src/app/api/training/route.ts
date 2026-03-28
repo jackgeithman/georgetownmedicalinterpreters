@@ -11,7 +11,7 @@ async function getAuthenticatedUser() {
 }
 
 function canUpload(role: string) {
-  return role === "ADMIN" || role === "SUPER_ADMIN" || role === "INSTRUCTOR";
+  return role === "ADMIN" || role === "INSTRUCTOR";
 }
 
 export async function GET() {

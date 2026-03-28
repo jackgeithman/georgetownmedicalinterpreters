@@ -35,6 +35,8 @@ type VolunteerProfile = {
   languages: string[];
   backgroundInfo: string | null;
   hoursVolunteered: number;
+  clearanceStatus: string | null;
+  clearanceDate: string | null;
 };
 
 type VolunteerNotifPrefs = {
@@ -188,14 +190,28 @@ const ALL_WORLD_LANGUAGES = [...TOP_WORLD_LANGUAGES, ...OTHER_WORLD_LANGUAGES];
 function MapsLinks({ address }: { address: string }) {
   const [open, setOpen] = useState(false);
   const q = encodeURIComponent(address);
+
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: MouseEvent) => {
+      const t = e.target as HTMLElement;
+      if (!t.closest("[data-maps-dropdown]") && !t.closest("[data-maps-btn]")) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [open]);
+
   return (
     <span style={{ position: "relative", display: "inline-flex", alignItems: "center", marginLeft: "6px" }}>
       <button
+        data-maps-btn
         onClick={(e) => { e.stopPropagation(); setOpen((o) => !o); }}
         style={{ fontSize: "0.72rem", color: "var(--blue)", background: "none", border: "none", cursor: "pointer", padding: 0, textDecoration: "underline", fontFamily: "inherit" }}
       >Maps ↗</button>
       {open && (
-        <span style={{ position: "absolute", top: "100%", left: 0, zIndex: 50, background: "var(--card-bg)", border: "1.5px solid var(--card-border)", borderRadius: "8px", boxShadow: "0 4px 12px rgba(0,0,0,.1)", padding: "6px 0", display: "flex", flexDirection: "column", whiteSpace: "nowrap", minWidth: "120px" }}>
+        <span data-maps-dropdown style={{ position: "absolute", top: "100%", left: 0, zIndex: 50, background: "var(--card-bg)", border: "1.5px solid var(--card-border)", borderRadius: "8px", boxShadow: "0 4px 12px rgba(0,0,0,.1)", padding: "6px 0", display: "flex", flexDirection: "column", whiteSpace: "nowrap", minWidth: "120px" }}>
           <a href={`https://www.google.com/maps/search/?api=1&query=${q}`} target="_blank" rel="noopener noreferrer" onClick={() => setOpen(false)} style={{ padding: "5px 14px", fontSize: "0.78rem", color: "var(--gray-900)", textDecoration: "none", display: "block" }}>Google Maps</a>
           <a href={`https://maps.apple.com/?q=${q}`} target="_blank" rel="noopener noreferrer" onClick={() => setOpen(false)} style={{ padding: "5px 14px", fontSize: "0.78rem", color: "var(--gray-900)", textDecoration: "none", display: "block" }}>Apple Maps</a>
         </span>
@@ -275,13 +291,13 @@ export default function VolunteerDashboard() {
   const [suggSuccess, setSuggSuccess] = useState(false);
   const [suggError, setSuggError] = useState("");
 
-  const isAdmin = session?.user?.role === "ADMIN" || session?.user?.role === "SUPER_ADMIN";
+  const isAdmin = session?.user?.role === "ADMIN";
   const isInstructor = (session?.user?.roles ?? []).includes("INSTRUCTOR");
 
   useEffect(() => {
     if (status === "unauthenticated") router.push("/login");
     const role = session?.user?.role;
-    if (role && role !== "VOLUNTEER" && role !== "ADMIN" && role !== "SUPER_ADMIN" && role !== "INSTRUCTOR") router.push("/dashboard");
+    if (role && role !== "VOLUNTEER" && role !== "ADMIN" && role !== "INSTRUCTOR") router.push("/dashboard");
   }, [status, session, router]);
 
   const fetchAll = useCallback(async () => {
@@ -321,7 +337,7 @@ export default function VolunteerDashboard() {
 
   useEffect(() => {
     const role = session?.user?.role;
-    if (role === "VOLUNTEER" || role === "ADMIN" || role === "SUPER_ADMIN" || role === "INSTRUCTOR") {
+    if (role === "VOLUNTEER" || role === "ADMIN" || role === "INSTRUCTOR") {
       fetchAll();
       fetch("/api/languages")
         .then((r) => r.json())
@@ -759,7 +775,12 @@ export default function VolunteerDashboard() {
                       {otherLangs.length > 0 && (
                         <select
                           value={otherSelected ? langFilter : ""}
-                          onChange={(e) => { if (e.target.value) setLangFilter(e.target.value); }}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            // Selecting the already-active lang resets to ALL
+                            if (!val || val === langFilter) setLangFilter("ALL");
+                            else setLangFilter(val);
+                          }}
                           style={{
                             padding: "9px 14px", borderRadius: "9px", fontSize: "0.875rem", fontWeight: 500, cursor: "pointer", fontFamily: "'DM Sans', sans-serif", outline: "none",
                             border: otherSelected ? "1.5px solid var(--blue)" : "1.5px solid var(--card-border)",
@@ -767,7 +788,7 @@ export default function VolunteerDashboard() {
                             color: otherSelected ? "#fff" : "var(--gray-900)",
                           }}
                         >
-                          <option value="">Other languages…</option>
+                          <option value="">{otherSelected ? "Clear filter" : "Other languages…"}</option>
                           {otherLangs.map((l) => <option key={l.code} value={l.code}>{l.name}</option>)}
                         </select>
                       )}
@@ -988,6 +1009,29 @@ export default function VolunteerDashboard() {
                 <p style={{ fontSize: "1.75rem", fontWeight: 700, color: "var(--gray-900)", lineHeight: 1 }}>{profile.hoursVolunteered}</p>
                 <p style={{ fontSize: "0.75rem", color: "var(--gray-400)", marginTop: "6px" }}>Hours Volunteered</p>
               </div>
+            </div>
+
+            {/* Clearance Status */}
+            <div style={{ background: "var(--card-bg)", borderRadius: "14px", border: "1.5px solid var(--card-border)", padding: "28px" }}>
+              <h3 style={{ fontSize: "1rem", fontWeight: 600, color: "var(--gray-900)", marginBottom: "12px" }}>Clearance Status</h3>
+              {profile.clearanceStatus ? (
+                <div>
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
+                    <div style={{ width: "12px", height: "12px", borderRadius: "50%", background: profile.clearanceStatus === "APPROVED" ? "#10B981" : "#F59E0B" }}></div>
+                    <p style={{ fontSize: "0.9rem", fontWeight: 600, color: "var(--gray-900)" }}>
+                      {profile.clearanceStatus === "APPROVED" ? "Approved" : "Pending"}
+                    </p>
+                  </div>
+                  {profile.clearanceDate && (
+                    <p style={{ fontSize: "0.75rem", color: "var(--gray-500)" }}>
+                      {profile.clearanceStatus === "APPROVED" ? "Approved on " : "Requested on "}
+                      {new Date(profile.clearanceDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                    </p>
+                  )}
+                </div>
+              ) : (
+                <p style={{ fontSize: "0.875rem", color: "var(--gray-600)" }}>No clearance status yet. You will be cleared once your background check is complete.</p>
+              )}
             </div>
 
             {/* Languages */}

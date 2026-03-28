@@ -156,14 +156,28 @@ const ALL_WORLD_LANGUAGES = [...TOP_WORLD_LANGUAGES, ...OTHER_WORLD_LANGUAGES];
 function MapsLinks({ address }: { address: string }) {
   const [open, setOpen] = useState(false);
   const q = encodeURIComponent(address);
+
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: MouseEvent) => {
+      const t = e.target as HTMLElement;
+      if (!t.closest("[data-maps-dropdown]") && !t.closest("[data-maps-btn]")) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [open]);
+
   return (
     <span style={{ position: "relative", display: "inline-flex", alignItems: "center", marginLeft: "6px" }}>
       <button
+        data-maps-btn
         onClick={(e) => { e.stopPropagation(); setOpen((o) => !o); }}
         style={{ fontSize: "0.72rem", color: "var(--blue)", background: "none", border: "none", cursor: "pointer", padding: 0, textDecoration: "underline", fontFamily: "inherit" }}
       >Maps ↗</button>
       {open && (
-        <span style={{ position: "absolute", top: "100%", left: 0, zIndex: 50, background: "var(--card-bg)", border: "1.5px solid var(--card-border)", borderRadius: "8px", boxShadow: "0 4px 12px rgba(0,0,0,.1)", padding: "6px 0", display: "flex", flexDirection: "column", whiteSpace: "nowrap", minWidth: "120px" }}>
+        <span data-maps-dropdown style={{ position: "absolute", top: "100%", left: 0, zIndex: 50, background: "var(--card-bg)", border: "1.5px solid var(--card-border)", borderRadius: "8px", boxShadow: "0 4px 12px rgba(0,0,0,.1)", padding: "6px 0", display: "flex", flexDirection: "column", whiteSpace: "nowrap", minWidth: "120px" }}>
           <a href={`https://www.google.com/maps/search/?api=1&query=${q}`} target="_blank" rel="noopener noreferrer" onClick={() => setOpen(false)} style={{ padding: "5px 14px", fontSize: "0.78rem", color: "var(--gray-900)", textDecoration: "none", display: "block" }}>Google Maps</a>
           <a href={`https://maps.apple.com/?q=${q}`} target="_blank" rel="noopener noreferrer" onClick={() => setOpen(false)} style={{ padding: "5px 14px", fontSize: "0.78rem", color: "var(--gray-900)", textDecoration: "none", display: "block" }}>Apple Maps</a>
         </span>
@@ -236,7 +250,7 @@ export default function AdminDashboard() {
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [testEmailTo, setTestEmailTo] = useState("");
   const [testEmailStatus, setTestEmailStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
-  const [langDeactivateConflict, setLangDeactivateConflict] = useState<{ langId: string; langName: string; conflicts: { id: string; clinicName: string; date: string; language: string }[] } | null>(null);
+  const [langDeactivateConflict, setLangDeactivateConflict] = useState<{ langId: string; langName: string; conflicts: { id: string; clinicName: string; clinicEmail: string; date: string; language: string; isFilled: boolean; assignedVolunteers: { name: string | null; email: string }[]; interpreterCount: number; signupCount: number }[] } | null>(null);
   const [langDeactivateLoading, setLangDeactivateLoading] = useState(false);
   const [roleFilter, setRoleFilter] = useState<string[]>([]);
   const [roleFilterOpen, setRoleFilterOpen] = useState(false);
@@ -322,7 +336,7 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     if (status === "unauthenticated") router.push("/login");
-    if (session?.user?.role && session.user.role !== "ADMIN" && session.user.role !== "SUPER_ADMIN") router.push("/dashboard");
+    if (session?.user?.role && session.user.role !== "ADMIN" && !session.user.roles?.includes("DEV")) router.push("/dashboard");
   }, [status, session, router]);
 
   const fetchData = useCallback(async (isSuperAdmin?: boolean) => {
@@ -366,8 +380,8 @@ export default function AdminDashboard() {
   }, []);
 
   useEffect(() => {
-    if (session?.user?.role === "ADMIN" || session?.user?.role === "SUPER_ADMIN") {
-      fetchData(session.user.role === "SUPER_ADMIN");
+    if (session?.user?.role === "ADMIN") {
+      fetchData(session.user.roles?.includes("DEV"));
     }
   }, [session, fetchData]);
 
@@ -832,10 +846,10 @@ export default function AdminDashboard() {
 
   // ── Role chip helpers ────────────────────────────────────────────
   const ROLE_CHIPS = [
-    { key: "SUPER_ADMIN", label: "Super Admin", bg: "#EDE9FE", color: "#5B21B6", border: "#DDD6FE" },
     { key: "ADMIN",       label: "Admin",       bg: "#F5F3FF", color: "#6D28D9", border: "#EDE9FE" },
     { key: "VOLUNTEER",   label: "Volunteer",   bg: "#DCFCE7", color: "#15803D", border: "#BBF7D0" },
     { key: "INSTRUCTOR",  label: "Instructor",  bg: "#EEF2FF", color: "#4338CA", border: "#C7D2FE" },
+    { key: "DEV",         label: "Developer",   bg: "#EDE9FE", color: "#5B21B6", border: "#DDD6FE" },
     { key: "PENDING",     label: "Unassigned",  bg: "#F1F5F9", color: "#475569", border: "#CBD5E1" },
   ] as const;
 
@@ -1115,7 +1129,7 @@ export default function AdminDashboard() {
     );
   };
 
-  const isSuperAdmin = session?.user?.role === "SUPER_ADMIN";
+  const isSuperAdmin = session?.user?.roles?.includes("DEV");
 
   return (
     <div style={{ minHeight: "100vh", background: "var(--page-bg)", fontFamily: "'DM Sans', system-ui, sans-serif", color: "var(--gray-900)" }}>
@@ -1137,7 +1151,7 @@ export default function AdminDashboard() {
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
           <span style={{ color: "#CBD5E1", fontSize: "0.82rem" }}>{session?.user?.email}</span>
-          {session?.user?.role === "SUPER_ADMIN" && (
+          {session?.user?.roles?.includes("DEV") && (
             <span style={{ fontSize: "0.72rem", padding: "2px 10px", borderRadius: "99px", background: "rgba(167,139,250,.2)", color: "#ddd6fe", fontWeight: 600 }}>
               Super Admin
             </span>
@@ -1213,7 +1227,7 @@ export default function AdminDashboard() {
             { key: "suggestions" as Tab, label: "Messages", count: suggestions.filter((s) => s.status === "OPEN").length },
             { key: "activity-log" as Tab, label: "Activity Log", count: 0 },
             { key: "notes" as Tab, label: "Notes", count: 0 },
-            ...(session?.user?.role === "SUPER_ADMIN"
+            ...(session?.user?.roles?.includes("DEV")
               ? [
                   { key: "access" as Tab, label: "Access Control", count: 0 },
                   { key: "flags" as Tab, label: "Feature Flags", count: 0 },
@@ -1386,12 +1400,16 @@ export default function AdminDashboard() {
                 {roleFilterOpen && (
                   <div data-role-filter-dropdown="true" style={{ position: "absolute", top: "calc(100% + 6px)", left: 0, zIndex: 50, background: "var(--card-bg)", border: "1.5px solid var(--card-border)", borderRadius: "12px", padding: "12px", minWidth: "220px", boxShadow: "0 8px 24px rgba(0,0,0,.12)" }}>
                     <p style={{ fontSize: "0.68rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--gray-400)", marginBottom: "8px" }}>Roles</p>
-                    {(["SUPER_ADMIN","ADMIN","VOLUNTEER","INSTRUCTOR","PENDING","SUSPENDED"] as const).map(r => (
+                    {(["ADMIN","VOLUNTEER","INSTRUCTOR","PENDING","SUSPENDED"] as const).map(r => (
                       <label key={r} style={{ display: "flex", alignItems: "center", gap: "8px", padding: "5px 4px", cursor: "pointer", fontSize: "0.82rem", color: "var(--gray-900)" }}>
                         <input type="checkbox" checked={roleFilter.includes(r)} onChange={() => setRoleFilter(prev => prev.includes(r) ? prev.filter(x => x !== r) : [...prev, r])} style={{ accentColor: "var(--blue)", width: "14px", height: "14px" }} />
-                        {r === "SUPER_ADMIN" ? "Super Admin" : r === "PENDING" ? "Unassigned" : r.charAt(0) + r.slice(1).toLowerCase()}
+                        {r === "PENDING" ? "Unassigned" : r.charAt(0) + r.slice(1).toLowerCase()}
                       </label>
                     ))}
+                    <label style={{ display: "flex", alignItems: "center", gap: "8px", padding: "5px 4px", cursor: "pointer", fontSize: "0.82rem", color: "var(--gray-900)" }}>
+                      <input type="checkbox" checked={roleFilter.includes("DEV")} onChange={() => setRoleFilter(prev => prev.includes("DEV") ? prev.filter(x => x !== "DEV") : [...prev, "DEV"])} style={{ accentColor: "var(--blue)", width: "14px", height: "14px" }} />
+                      Developer (Dev scope)
+                    </label>
                     <div style={{ borderTop: "1px solid var(--card-border)", marginTop: "8px", paddingTop: "8px" }}>
                       <p style={{ fontSize: "0.68rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--gray-400)", marginBottom: "8px" }}>Languages</p>
                       {["ES","ZH","KO","AR","FR","HI","PT","RU","DE","JA","VI"].map(code => (
@@ -1409,7 +1427,7 @@ export default function AdminDashboard() {
               </div>
               {roleFilter.map(f => (
                 <span key={f} style={{ display: "inline-flex", alignItems: "center", gap: "4px", padding: "3px 8px", fontSize: "0.75rem", fontWeight: 600, background: "#EFF6FF", color: "var(--blue)", borderRadius: "6px", border: "1px solid #BFDBFE" }}>
-                  {f.startsWith("LANG_") ? getLangLabel(f.slice(5)) : f === "SUPER_ADMIN" ? "Super Admin" : f === "PENDING" ? "Unassigned" : f.charAt(0) + f.slice(1).toLowerCase()}
+                  {f.startsWith("LANG_") ? getLangLabel(f.slice(5)) : f === "DEV" ? "Super Admin" : f === "PENDING" ? "Unassigned" : f.charAt(0) + f.slice(1).toLowerCase()}
                   <button onClick={() => setRoleFilter(prev => prev.filter(x => x !== f))} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--blue)", fontSize: "0.85rem", lineHeight: 1, padding: 0 }}>×</button>
                 </span>
               ))}
@@ -1462,14 +1480,14 @@ export default function AdminDashboard() {
                     );
                   })().map((user) => {
                     const { roleChips, langChips } = parseUserRoles(user.roles ?? []);
-                    const isUserSuperAdmin = user.role === "SUPER_ADMIN";
-                    const canModify = session?.user?.role === "SUPER_ADMIN" || (!isUserSuperAdmin && user.role !== "ADMIN");
+                    const isUserSuperAdmin = user.roles?.includes("DEV");
+                    const canModify = session?.user?.roles?.includes("DEV") || (!isUserSuperAdmin && user.role !== "ADMIN");
                     const emailFull = user.email ?? "";
                     const isExpanded = emailExpanded.has(user.id);
                     const addableRoles = ROLE_CHIPS.filter(r => {
                       if (roleChips.includes(r.key)) return false;
-                      if (r.key === "SUPER_ADMIN") return false;
-                      if (r.key === "ADMIN" && session?.user?.role !== "SUPER_ADMIN") return false;
+                      if (r.key === "DEV") return false;
+                      if (r.key === "ADMIN" && !session?.user?.roles?.includes("DEV")) return false;
                       if (isUserSuperAdmin) return false;
                       return true;
                     });
@@ -1508,7 +1526,7 @@ export default function AdminDashboard() {
                               return (
                                 <span key={r} style={{ display: "inline-flex", alignItems: "center", gap: "3px", fontSize: "0.72rem", padding: "2px 6px 2px 8px", borderRadius: "99px", fontWeight: 600, background: bg, color, border: `1px solid ${border}` }}>
                                   {label}
-                                  {canModify && r !== "PENDING" && r !== "SUPER_ADMIN" && (
+                                  {canModify && r !== "PENDING" && r !== "DEV" && (
                                     <button
                                       onClick={() => handleRemoveRole(user.id, r)}
                                       disabled={!!isLoading}
@@ -1722,11 +1740,11 @@ export default function AdminDashboard() {
               const targetUser = users.find(u => u.id === addRoleTarget);
               if (!targetUser) return null;
               const { roleChips: tRoleChips } = parseUserRoles(targetUser.roles ?? []);
-              const tIsSuperAdmin = targetUser.role === "SUPER_ADMIN";
+              const tIsSuperAdmin = targetUser.roles?.includes("DEV");
               const tAddableRoles = ROLE_CHIPS.filter(r => {
                 if (tRoleChips.includes(r.key)) return false;
-                if (r.key === "SUPER_ADMIN") return false;
-                if (r.key === "ADMIN" && session?.user?.role !== "SUPER_ADMIN") return false;
+                if (r.key === "DEV") return false;
+                if (r.key === "ADMIN" && !session?.user?.roles?.includes("DEV")) return false;
                 if (tIsSuperAdmin) return false;
                 return true;
               });
@@ -2182,12 +2200,10 @@ export default function AdminDashboard() {
                               <span style={{ fontSize: "0.72rem", padding: "2px 8px", borderRadius: "99px", fontWeight: 600, background: fb.authorRole === "CLINIC" ? "#EBF3FC" : "#DCFCE7", color: fb.authorRole === "CLINIC" ? "#0D1F3C" : "#15803D" }}>
                                 {fb.authorRole}
                               </span>
-                              {isSuperAdmin && (
-                                <button
-                                  onClick={() => deleteFeedback(fb.id)}
-                                  style={{ fontSize: "0.68rem", padding: "2px 8px", background: "#FEF2F2", color: "#EF4444", border: "none", borderRadius: "5px", cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}
-                                >Delete</button>
-                              )}
+                              <button
+                                onClick={() => deleteFeedback(fb.id)}
+                                style={{ fontSize: "0.68rem", padding: "2px 8px", background: "#FEF2F2", color: "#EF4444", border: "none", borderRadius: "5px", cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}
+                              >Delete</button>
                               {fb.rating != null && (
                                 <span style={{ fontSize: "0.75rem", color: "#F59E0B" }}>
                                   {"★".repeat(fb.rating)}{"☆".repeat(5 - fb.rating)}
@@ -2339,8 +2355,8 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        {/* Access Control — SUPER_ADMIN only */}
-        {tab === "access" && session?.user?.role === "SUPER_ADMIN" && (
+        {/* Access Control — DEV only */}
+        {tab === "access" && session?.user?.roles?.includes("DEV") && (
           <div style={{ maxWidth: "560px", display: "flex", flexDirection: "column", gap: "16px" }}>
             <div style={{ background: "var(--card-bg)", borderRadius: "14px", border: "1.5px solid var(--card-border)", padding: "24px" }}>
               <h3 style={{ fontSize: "0.875rem", fontWeight: 600, color: "var(--gray-600)", marginBottom: "4px" }}>Add Email Rule</h3>
@@ -2414,8 +2430,8 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        {/* Feature Flags — SUPER_ADMIN only */}
-        {tab === "flags" && session?.user?.role === "SUPER_ADMIN" && (
+        {/* Feature Flags — DEV only */}
+        {tab === "flags" && session?.user?.roles?.includes("DEV") && (
           <div style={{ maxWidth: "640px", display: "flex", flexDirection: "column", gap: "14px" }}>
             <p style={{ fontSize: "0.75rem", color: "#92400E", background: "#FFFBEB", border: "1px solid #FDE68A", borderRadius: "8px", padding: "8px 16px" }}>
               Disabled features are hidden from all non-admin users.
@@ -2734,7 +2750,7 @@ export default function AdminDashboard() {
         const reqLang = volunteerAssignTarget.language;
         const activeVolunteers = users.filter(
           (u) =>
-            (u.role === "VOLUNTEER" || u.role === "ADMIN" || u.role === "SUPER_ADMIN") &&
+            (u.role === "VOLUNTEER" || u.role === "ADMIN") &&
             u.status === "ACTIVE" &&
             (u.roles ?? []).some((r) => r === `LANG_${reqLang}` || r === `LANG_${reqLang}_CLEARED`)
         );
@@ -2885,43 +2901,82 @@ export default function AdminDashboard() {
       )}
 
       {/* Language Deactivate Conflict Modal */}
-      {langDeactivateConflict && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.45)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 200, padding: "16px" }}>
-          <div style={{ background: "var(--card-bg)", borderRadius: "16px", boxShadow: "0 8px 32px rgba(0,0,0,.18)", width: "100%", maxWidth: "440px" }}>
-            <div style={{ padding: "16px 24px", borderBottom: "1.5px solid var(--card-border)" }}>
-              <h3 style={{ fontSize: "0.875rem", fontWeight: 700, color: "var(--gray-900)" }}>Deactivate {langDeactivateConflict.langName}?</h3>
-              <p style={{ fontSize: "0.75rem", color: "var(--gray-400)", marginTop: "2px" }}>This will affect upcoming clinic postings.</p>
-            </div>
-            <div style={{ padding: "16px 24px" }}>
-              <p style={{ fontSize: "0.875rem", color: "var(--gray-600)", marginBottom: "12px" }}>
-                The following upcoming slots use <strong>{langDeactivateConflict.langName}</strong> and will be <strong>deleted</strong> if you proceed. Clinics will be notified.
-              </p>
-              <div style={{ maxHeight: "160px", overflowY: "auto", display: "flex", flexDirection: "column", gap: "4px", marginBottom: "16px" }}>
-                {langDeactivateConflict.conflicts.map((c) => (
-                  <div key={c.id} style={{ fontSize: "0.78rem", color: "var(--gray-600)", padding: "4px 0", borderBottom: "1px solid var(--card-border)" }}>
-                    <span style={{ fontWeight: 600 }}>{c.clinicName}</span> · {new Date(c.date.slice(0,10) + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
-                  </div>
-                ))}
+      {langDeactivateConflict && (() => {
+        const filled = langDeactivateConflict.conflicts.filter((c) => c.isFilled);
+        const unfilled = langDeactivateConflict.conflicts.filter((c) => !c.isFilled);
+        return (
+          <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.45)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 200, padding: "16px" }}>
+            <div style={{ background: "var(--card-bg)", borderRadius: "16px", boxShadow: "0 8px 32px rgba(0,0,0,.18)", width: "100%", maxWidth: "520px", maxHeight: "80vh", overflowY: "auto" }}>
+              <div style={{ padding: "16px 24px", borderBottom: "1.5px solid var(--card-border)" }}>
+                <h3 style={{ fontSize: "0.875rem", fontWeight: 700, color: "var(--gray-900)", margin: "0 0 4px 0" }}>Deactivate {langDeactivateConflict.langName}?</h3>
+                <p style={{ fontSize: "0.75rem", color: "var(--gray-400)", margin: 0 }}>Review slots that will be affected</p>
               </div>
-              <div style={{ display: "flex", gap: "8px" }}>
-                <button
-                  onClick={() => setLangDeactivateConflict(null)}
-                  style={{ flex: 1, padding: "9px", fontSize: "0.875rem", border: "1.5px solid var(--card-border)", color: "var(--gray-600)", borderRadius: "10px", background: "none", cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}
-                >
-                  Cancel
-                </button>
-                <button
-                  disabled={langDeactivateLoading}
-                  onClick={forceDeactivateLanguage}
-                  style={{ flex: 1, padding: "9px", fontSize: "0.875rem", background: "#DC2626", color: "#fff", border: "none", borderRadius: "10px", cursor: "pointer", fontWeight: 600, opacity: langDeactivateLoading ? 0.5 : 1, fontFamily: "'DM Sans', sans-serif" }}
-                >
-                  {langDeactivateLoading ? "Deactivating..." : "Deactivate & Delete Slots"}
-                </button>
+              <div style={{ padding: "16px 24px" }}>
+                {unfilled.length > 0 && (
+                  <div style={{ marginBottom: "16px" }}>
+                    <p style={{ fontSize: "0.85rem", fontWeight: 600, color: "#DC2626", marginBottom: "8px" }}>Unfilled Slots (Will be Cancelled)</p>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "6px", marginBottom: "12px" }}>
+                      {unfilled.map((c) => (
+                        <div key={c.id} style={{ fontSize: "0.75rem", color: "var(--gray-700)", padding: "8px", background: "#FEE2E2", borderRadius: "6px" }}>
+                          <div style={{ fontWeight: 600 }}>{c.clinicName}</div>
+                          <div style={{ color: "var(--gray-600)", marginTop: "2px" }}>{new Date(c.date.slice(0,10) + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</div>
+                          <div style={{ color: "var(--gray-600)", marginTop: "2px" }}>Need: {c.interpreterCount}, Have: {c.signupCount}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {filled.length > 0 && (
+                  <div style={{ marginBottom: "16px" }}>
+                    <p style={{ fontSize: "0.85rem", fontWeight: 600, color: "#059669", marginBottom: "8px" }}>Filled Slots (Will be Preserved)</p>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "6px", marginBottom: "12px" }}>
+                      {filled.map((c) => (
+                        <div key={c.id} style={{ fontSize: "0.75rem", color: "var(--gray-700)", padding: "8px", background: "#ECFDF5", borderRadius: "6px" }}>
+                          <div style={{ fontWeight: 600 }}>{c.clinicName}</div>
+                          <div style={{ color: "var(--gray-600)", marginTop: "2px" }}>{new Date(c.date.slice(0,10) + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</div>
+                          <div style={{ color: "var(--gray-600)", marginTop: "2px" }}>Assigned: {c.assignedVolunteers.map((v) => v.name).join(", ")}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {unfilled.length > 0 && (
+                  <div style={{ marginBottom: "16px", padding: "12px", background: "var(--gray-50)", borderRadius: "8px", border: "1px solid var(--card-border)" }}>
+                    <p style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--gray-700)", margin: "0 0 8px 0" }}>Email Preview (Clinics)</p>
+                    <div style={{ fontSize: "0.7rem", color: "var(--gray-600)", lineHeight: "1.4", fontFamily: "monospace", padding: "8px", background: "var(--card-bg)", borderRadius: "4px" }}>
+                      <div style={{ fontWeight: 600, marginBottom: "4px" }}>Subject: Interpreter Slots Cancelled: {langDeactivateConflict.langName} Language No Longer Supported</div>
+                      <div style={{ marginTop: "8px" }}>The following interpreter slots have been cancelled because the language is currently not supported:</div>
+                      <div style={{ marginTop: "4px", fontStyle: "italic" }}>{unfilled.map((s) => {
+                        const date = new Date(s.date.slice(0,10) + "T12:00:00");
+                        const dateStr = date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+                        return `${dateStr} (${langDeactivateConflict.langName})`;
+                      }).join(", ")}</div>
+                    </div>
+                  </div>
+                )}
+
+                <div style={{ display: "flex", gap: "8px" }}>
+                  <button
+                    onClick={() => setLangDeactivateConflict(null)}
+                    style={{ flex: 1, padding: "9px", fontSize: "0.875rem", border: "1.5px solid var(--card-border)", color: "var(--gray-600)", borderRadius: "10px", background: "none", cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    disabled={langDeactivateLoading}
+                    onClick={forceDeactivateLanguage}
+                    style={{ flex: 1, padding: "9px", fontSize: "0.875rem", background: "#DC2626", color: "#fff", border: "none", borderRadius: "10px", cursor: "pointer", fontWeight: 600, opacity: langDeactivateLoading ? 0.5 : 1, fontFamily: "'DM Sans', sans-serif" }}
+                  >
+                    {langDeactivateLoading ? "Deactivating..." : "Deactivate Language"}
+                  </button>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* Assign Clinic Modal */}
       {assignModal && (
