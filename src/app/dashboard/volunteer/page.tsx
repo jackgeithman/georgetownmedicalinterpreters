@@ -44,7 +44,14 @@ type VolunteerNotifPrefs = {
   unfilledSlotAlert: boolean;
 };
 
-type Tab = "browse" | "signups" | "profile" | "training" | "suggestions";
+type Tab = "browse" | "signups" | "profile" | "training" | "clearance" | "suggestions";
+
+type ClearanceVolunteer = {
+  id: string;
+  name: string | null;
+  email: string;
+  roles: string[];
+};
 
 type FeedbackEntry = { id: string; authorRole: string; rating: number | null; note: string; createdAt: string };
 
@@ -260,6 +267,14 @@ export default function VolunteerDashboard() {
 
   const [langSearch, setLangSearch] = useState("");
   const [availableLanguages, setAvailableLanguages] = useState<{ code: string; name: string }[]>([]);
+  const [trainingForm, setTrainingForm] = useState({ title: "", description: "", type: "LINK" as "LINK" | "FILE", url: "", languageCode: "", category: "General" });
+  const [trainingFile, setTrainingFile] = useState<File | null>(null);
+  const [trainingFormError, setTrainingFormError] = useState("");
+  const [trainingSubmitting, setTrainingSubmitting] = useState(false);
+  const [showTrainingForm, setShowTrainingForm] = useState(false);
+  const [clearanceVolunteers, setClearanceVolunteers] = useState<ClearanceVolunteer[]>([]);
+  const [clearanceLoaded, setClearanceLoaded] = useState(false);
+  const [clearanceActionLoading, setClearanceActionLoading] = useState<string | null>(null);
 
   // Suggestions state
   const [suggForm, setSuggForm] = useState({ type: "FEATURE", subject: "", message: "" });
@@ -268,11 +283,12 @@ export default function VolunteerDashboard() {
   const [suggError, setSuggError] = useState("");
 
   const isAdmin = session?.user?.role === "ADMIN" || session?.user?.role === "SUPER_ADMIN";
+  const isInstructor = (session?.user?.roles ?? []).includes("INSTRUCTOR");
 
   useEffect(() => {
     if (status === "unauthenticated") router.push("/login");
     const role = session?.user?.role;
-    if (role && role !== "VOLUNTEER" && role !== "ADMIN" && role !== "SUPER_ADMIN") router.push("/dashboard");
+    if (role && role !== "VOLUNTEER" && role !== "ADMIN" && role !== "SUPER_ADMIN" && role !== "INSTRUCTOR") router.push("/dashboard");
   }, [status, session, router]);
 
   const fetchAll = useCallback(async () => {
@@ -312,7 +328,7 @@ export default function VolunteerDashboard() {
 
   useEffect(() => {
     const role = session?.user?.role;
-    if (role === "VOLUNTEER" || role === "ADMIN" || role === "SUPER_ADMIN") {
+    if (role === "VOLUNTEER" || role === "ADMIN" || role === "SUPER_ADMIN" || role === "INSTRUCTOR") {
       fetchAll();
       fetch("/api/languages")
         .then((r) => r.json())
@@ -404,6 +420,63 @@ export default function VolunteerDashboard() {
       ? profileForm.languages.filter((l) => l !== lang)
       : [...profileForm.languages, lang];
     setProfileForm({ languages: langs });
+  };
+
+  const submitTraining = async () => {
+    setTrainingFormError("");
+    setTrainingSubmitting(true);
+    try {
+      let url = trainingForm.url;
+      let fileName: string | null = null;
+      if (trainingForm.type === "FILE") {
+        if (!trainingFile) { setTrainingFormError("Please select a file."); setTrainingSubmitting(false); return; }
+        const fd = new FormData();
+        fd.append("file", trainingFile);
+        const uploadRes = await fetch("/api/training/upload", { method: "POST", body: fd });
+        if (!uploadRes.ok) { const err = await uploadRes.json().catch(() => ({})); setTrainingFormError(err.error ?? "File upload failed."); setTrainingSubmitting(false); return; }
+        const uploadData = await uploadRes.json();
+        url = uploadData.url;
+        fileName = uploadData.fileName;
+      }
+      const res = await fetch("/api/training", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: trainingForm.title, description: trainingForm.description || null, type: trainingForm.type, url, fileName, languageCode: trainingForm.languageCode || null, category: trainingForm.category || "General" }),
+      });
+      if (res.ok) {
+        const material = await res.json();
+        setTrainingMaterials((prev) => [material, ...prev]);
+        setTrainingForm({ title: "", description: "", type: "LINK", url: "", languageCode: "", category: "General" });
+        setTrainingFile(null);
+        setShowTrainingForm(false);
+      } else {
+        const err = await res.json().catch(() => ({}));
+        setTrainingFormError(err.error ?? "Could not add material.");
+      }
+    } finally {
+      setTrainingSubmitting(false);
+    }
+  };
+
+  const deleteTraining = async (id: string) => {
+    if (!confirm("Delete this training material?")) return;
+    const res = await fetch(`/api/training/${id}`, { method: "DELETE" });
+    if (res.ok) setTrainingMaterials((prev) => prev.filter((m) => m.id !== id));
+  };
+
+  const toggleLangClearance = async (userId: string, langCode: string) => {
+    const key = `${userId}-${langCode}`;
+    setClearanceActionLoading(key);
+    const res = await fetch("/api/admin/users", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId, toggleLanguageClearance: langCode }),
+    });
+    if (res.ok) {
+      const { roles: newRoles } = await res.json();
+      setClearanceVolunteers((prev) => prev.map((v) => v.id === userId ? { ...v, roles: newRoles } : v));
+    }
+    setClearanceActionLoading(null);
   };
 
   const submitInlineFeedback = async (slotId: string, signupId: string) => {
@@ -503,6 +576,7 @@ export default function VolunteerDashboard() {
             { key: "signups" as Tab, label: "My Signups", count: mySignups.length },
             { key: "profile" as Tab, label: "Profile", count: 0 },
             { key: "training" as Tab, label: "Training", count: 0 },
+            ...(isInstructor ? [{ key: "clearance" as Tab, label: "Clearance", count: 0 }] : []),
             { key: "suggestions" as Tab, label: "Messages", count: 0 },
           ].map((t) => (
             <button
@@ -514,6 +588,12 @@ export default function VolunteerDashboard() {
                     .then((r) => r.json())
                     .then((data) => { setTrainingMaterials(data); setTrainingLoaded(true); })
                     .catch(() => setTrainingLoaded(true));
+                }
+                if (t.key === "clearance" && !clearanceLoaded) {
+                  fetch("/api/admin/users")
+                    .then((r) => r.json())
+                    .then((data) => { setClearanceVolunteers(data.filter((u: ClearanceVolunteer) => (u.roles ?? []).some((r: string) => r.startsWith("LANG_")))); setClearanceLoaded(true); })
+                    .catch(() => setClearanceLoaded(true));
                 }
               }}
               style={{
@@ -1097,6 +1177,51 @@ export default function VolunteerDashboard() {
         {/* Training */}
         {tab === "training" && (
           <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+            {isInstructor && (
+              <div style={{ display: "flex", justifyContent: "flex-end" }}>
+                <button
+                  onClick={() => setShowTrainingForm(!showTrainingForm)}
+                  style={{ padding: "9px 22px", fontSize: "0.875rem", background: "var(--blue)", color: "#fff", border: "none", borderRadius: "99px", cursor: "pointer", fontWeight: 600, fontFamily: "'DM Sans', sans-serif" }}
+                >
+                  {showTrainingForm ? "Cancel" : "+ Add Material"}
+                </button>
+              </div>
+            )}
+            {isInstructor && showTrainingForm && (
+              <div style={{ background: "var(--card-bg)", borderRadius: "14px", border: "1.5px solid var(--card-border)", padding: "24px", display: "flex", flexDirection: "column", gap: "12px" }}>
+                <h3 style={{ fontSize: "0.875rem", fontWeight: 600, color: "var(--gray-900)", margin: 0 }}>New Training Material</h3>
+                <input placeholder="Title" value={trainingForm.title} onChange={(e) => setTrainingForm({ ...trainingForm, title: e.target.value })} style={{ padding: "9px 12px", fontSize: "0.875rem", border: "1.5px solid var(--card-border)", borderRadius: "9px", fontFamily: "'DM Sans', sans-serif", background: "var(--card-bg)", color: "var(--gray-900)", outline: "none" }} />
+                <textarea placeholder="Description (optional)" value={trainingForm.description} onChange={(e) => setTrainingForm({ ...trainingForm, description: e.target.value })} rows={2} style={{ padding: "9px 12px", fontSize: "0.875rem", border: "1.5px solid var(--card-border)", borderRadius: "9px", fontFamily: "'DM Sans', sans-serif", background: "var(--card-bg)", color: "var(--gray-900)", outline: "none", resize: "none" }} />
+                <div style={{ display: "flex", gap: "8px" }}>
+                  {(["LINK", "FILE"] as const).map((t) => (
+                    <button key={t} onClick={() => setTrainingForm({ ...trainingForm, type: t })} style={{ flex: 1, padding: "8px", fontSize: "0.875rem", borderRadius: "9px", border: trainingForm.type === t ? "none" : "1.5px solid var(--card-border)", background: trainingForm.type === t ? "var(--blue)" : "none", color: trainingForm.type === t ? "#fff" : "var(--gray-600)", cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>{t === "LINK" ? "Link" : "File Upload"}</button>
+                  ))}
+                </div>
+                {trainingForm.type === "LINK" ? (
+                  <input placeholder="URL (https://...)" value={trainingForm.url} onChange={(e) => setTrainingForm({ ...trainingForm, url: e.target.value })} style={{ padding: "9px 12px", fontSize: "0.875rem", border: "1.5px solid var(--card-border)", borderRadius: "9px", fontFamily: "'DM Sans', sans-serif", background: "var(--card-bg)", color: "var(--gray-900)", outline: "none" }} />
+                ) : (
+                  <input type="file" accept=".pdf,.doc,.docx,.pptx,.mp4,.mov" onChange={(e) => setTrainingFile(e.target.files?.[0] ?? null)} style={{ fontSize: "0.875rem", color: "var(--gray-600)" }} />
+                )}
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+                  <div>
+                    <label style={{ display: "block", fontSize: "0.72rem", color: "var(--gray-400)", marginBottom: "4px" }}>Language</label>
+                    <select value={trainingForm.languageCode} onChange={(e) => setTrainingForm({ ...trainingForm, languageCode: e.target.value })} style={{ width: "100%", padding: "8px 12px", fontSize: "0.875rem", border: "1.5px solid var(--card-border)", borderRadius: "9px", background: "var(--card-bg)", color: "var(--gray-900)", outline: "none", fontFamily: "'DM Sans', sans-serif" }}>
+                      <option value="">All Languages</option>
+                      {availableLanguages.map((l) => <option key={l.code} value={l.code}>{l.name}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label style={{ display: "block", fontSize: "0.72rem", color: "var(--gray-400)", marginBottom: "4px" }}>Category</label>
+                    <input placeholder="General" value={trainingForm.category} list="vol-training-categories" onChange={(e) => setTrainingForm({ ...trainingForm, category: e.target.value })} style={{ width: "100%", padding: "8px 12px", fontSize: "0.875rem", border: "1.5px solid var(--card-border)", borderRadius: "9px", fontFamily: "'DM Sans', sans-serif", background: "var(--card-bg)", color: "var(--gray-900)", outline: "none", boxSizing: "border-box" }} />
+                    <datalist id="vol-training-categories">{["General", "Medical Terminology", "Ethics", "Language-Specific", "Administrative"].map((c) => <option key={c} value={c} />)}</datalist>
+                  </div>
+                </div>
+                {trainingFormError && <p style={{ fontSize: "0.875rem", color: "#DC2626", background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: "8px", padding: "8px 12px" }}>{trainingFormError}</p>}
+                <button disabled={trainingSubmitting || !trainingForm.title || (trainingForm.type === "LINK" && !trainingForm.url)} onClick={submitTraining} style={{ padding: "9px 22px", fontSize: "0.875rem", background: "var(--blue)", color: "#fff", border: "none", borderRadius: "99px", cursor: "pointer", fontWeight: 600, fontFamily: "'DM Sans', sans-serif", opacity: trainingSubmitting || !trainingForm.title ? 0.5 : 1, alignSelf: "flex-start" }}>
+                  {trainingSubmitting ? "Saving..." : "Add Material"}
+                </button>
+              </div>
+            )}
             {!trainingLoaded ? (
               <div style={{ background: "var(--card-bg)", borderRadius: "14px", border: "1.5px solid var(--card-border)", padding: "48px", textAlign: "center" }}>
                 <p style={{ color: "var(--gray-400)" }}>Loading training materials...</p>
@@ -1119,6 +1244,9 @@ export default function VolunteerDashboard() {
                               <div style={{ minWidth: 0, flex: 1 }}>
                                 <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap", marginBottom: "4px" }}>
                                   <span style={{ fontWeight: 600, color: "var(--gray-900)", fontSize: "0.875rem" }}>{m.title}</span>
+                                  {isInstructor && session?.user?.email === m.uploadedBy.email && (
+                                    <button onClick={() => deleteTraining(m.id)} style={{ fontSize: "0.72rem", padding: "2px 8px", background: "#FEF2F2", color: "#DC2626", border: "none", borderRadius: "6px", cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>Delete</button>
+                                  )}
                                   {m.languageCode && (
                                     <span style={{ fontSize: "0.72rem", padding: "2px 6px", borderRadius: "4px", background: "var(--blue-light)", color: "var(--navy)" }}>{m.languageCode}</span>
                                   )}
@@ -1151,6 +1279,77 @@ export default function VolunteerDashboard() {
             })()}
           </div>
         )}
+
+        {/* Clearance — instructor only */}
+        {tab === "clearance" && isInstructor && (() => {
+          const myRoles = session?.user?.roles ?? [];
+          const myClearedLangs = myRoles.filter((r) => r.startsWith("LANG_") && r.endsWith("_CLEARED")).map((r) => r.slice(5, -8));
+          const relevant = clearanceVolunteers.filter((v) =>
+            myClearedLangs.some((lang) => (v.roles ?? []).some((r) => r === `LANG_${lang}` || r === `LANG_${lang}_CLEARED`))
+          );
+          return (
+            <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+              <div style={{ background: "var(--card-bg)", borderRadius: "10px", border: "1.5px solid var(--card-border)", padding: "10px 16px", fontSize: "0.75rem", color: "var(--gray-500)" }}>
+                You can clear volunteers for languages you are yourself cleared for: {myClearedLangs.length === 0 ? "none yet" : myClearedLangs.join(", ")}
+              </div>
+              {!clearanceLoaded ? (
+                <div style={{ background: "var(--card-bg)", borderRadius: "14px", border: "1.5px solid var(--card-border)", padding: "48px", textAlign: "center" }}>
+                  <p style={{ color: "var(--gray-400)" }}>Loading volunteers...</p>
+                </div>
+              ) : relevant.length === 0 ? (
+                <div style={{ background: "var(--card-bg)", borderRadius: "14px", border: "1.5px solid var(--card-border)", padding: "48px", textAlign: "center" }}>
+                  <p style={{ color: "var(--gray-400)" }}>No volunteers have your cleared languages yet.</p>
+                </div>
+              ) : (
+                <div style={{ background: "var(--card-bg)", borderRadius: "14px", border: "1.5px solid var(--card-border)", overflow: "hidden" }}>
+                  <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                    <thead>
+                      <tr style={{ borderBottom: "1.5px solid var(--card-border)" }}>
+                        <th style={{ textAlign: "left", fontSize: "0.68rem", fontWeight: 700, color: "#000", textTransform: "uppercase", letterSpacing: "0.09em", padding: "12px 20px" }}>Volunteer</th>
+                        <th style={{ textAlign: "left", fontSize: "0.68rem", fontWeight: 700, color: "#000", textTransform: "uppercase", letterSpacing: "0.09em", padding: "12px 20px" }}>Languages</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {relevant.map((v) => {
+                        const vRoles = v.roles ?? [];
+                        const langRows = myClearedLangs.filter((lang) => vRoles.some((r) => r === `LANG_${lang}` || r === `LANG_${lang}_CLEARED`));
+                        return (
+                          <tr key={v.id} style={{ borderBottom: "1px solid var(--card-border)" }}>
+                            <td style={{ padding: "14px 20px" }}>
+                              <p style={{ fontSize: "0.875rem", fontWeight: 500, color: "var(--gray-900)" }}>{v.name ?? "—"}</p>
+                              <p style={{ fontSize: "0.75rem", color: "var(--gray-400)" }}>{v.email}</p>
+                            </td>
+                            <td style={{ padding: "14px 20px" }}>
+                              <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
+                                {langRows.map((lang) => {
+                                  const isCleared = vRoles.includes(`LANG_${lang}_CLEARED`);
+                                  const loadingKey = `${v.id}-${lang}`;
+                                  return (
+                                    <span key={lang} style={{ display: "inline-flex", alignItems: "center", gap: "6px", padding: "4px 10px", borderRadius: "99px", fontSize: "0.75rem", fontWeight: 600, background: isCleared ? "#F0FDFA" : "#FAFAFA", color: isCleared ? "#0F766E" : "#64748B", border: isCleared ? "1px solid #99F6E4" : "1px solid #CBD5E1" }}>
+                                      <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: isCleared ? "#10B981" : "#94A3B8", flexShrink: 0 }} />
+                                      {lang}
+                                      <button
+                                        disabled={clearanceActionLoading === loadingKey}
+                                        onClick={() => toggleLangClearance(v.id, lang)}
+                                        style={{ fontSize: "0.68rem", padding: "1px 6px", borderRadius: "4px", border: "none", background: isCleared ? "#FECACA" : "#BBF7D0", color: isCleared ? "#DC2626" : "#15803D", cursor: "pointer", fontFamily: "'DM Sans', sans-serif", opacity: clearanceActionLoading === loadingKey ? 0.5 : 1 }}
+                                      >
+                                        {clearanceActionLoading === loadingKey ? "…" : isCleared ? "Revoke" : "Clear"}
+                                      </button>
+                                    </span>
+                                  );
+                                })}
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          );
+        })()}
 
         {/* Suggestions */}
         {tab === "suggestions" && (
