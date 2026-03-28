@@ -96,12 +96,61 @@ type Suggestion = {
   submittedBy: { name: string | null; email: string } | null;
 };
 
+type VolunteerNotifPrefs = {
+  signupReceipt: boolean;
+  cancellationReceipt: boolean;
+  reminder24h: boolean;
+  unfilledSlotAlert: boolean;
+};
+
 const LANG_LABELS: Record<string, string> = { ES: "Spanish", ZH: "Chinese", KO: "Korean" };
 const LANG_COLORS: Record<string, string> = {
   ES: "bg-amber-50 text-amber-700",
   ZH: "bg-red-50 text-red-700",
   KO: "bg-[#EBF3FC] text-[#041E42]",
 };
+
+const TOP_WORLD_LANGUAGES = [
+  { code: "EN", name: "English" },
+  { code: "ZH", name: "Mandarin Chinese" },
+  { code: "HI", name: "Hindi" },
+  { code: "ES", name: "Spanish" },
+  { code: "FR", name: "French" },
+  { code: "AR", name: "Arabic" },
+  { code: "BN", name: "Bengali" },
+  { code: "PT", name: "Portuguese" },
+  { code: "RU", name: "Russian" },
+  { code: "UR", name: "Urdu" },
+];
+const OTHER_WORLD_LANGUAGES = [
+  { code: "AF", name: "Afrikaans" }, { code: "SQ", name: "Albanian" }, { code: "AM", name: "Amharic" },
+  { code: "HY", name: "Armenian" }, { code: "AZ", name: "Azerbaijani" }, { code: "EU", name: "Basque" },
+  { code: "BE", name: "Belarusian" }, { code: "BS", name: "Bosnian" }, { code: "BG", name: "Bulgarian" },
+  { code: "MY", name: "Burmese" }, { code: "CA", name: "Catalan" }, { code: "HR", name: "Croatian" },
+  { code: "CS", name: "Czech" }, { code: "DA", name: "Danish" }, { code: "NL", name: "Dutch" },
+  { code: "ET", name: "Estonian" }, { code: "TL", name: "Filipino/Tagalog" }, { code: "FI", name: "Finnish" },
+  { code: "GL", name: "Galician" }, { code: "KA", name: "Georgian" }, { code: "DE", name: "German" },
+  { code: "EL", name: "Greek" }, { code: "GU", name: "Gujarati" }, { code: "HT", name: "Haitian Creole" },
+  { code: "HA", name: "Hausa" }, { code: "HE", name: "Hebrew" }, { code: "HU", name: "Hungarian" },
+  { code: "IS", name: "Icelandic" }, { code: "IG", name: "Igbo" }, { code: "ID", name: "Indonesian" },
+  { code: "GA", name: "Irish" }, { code: "IT", name: "Italian" }, { code: "JA", name: "Japanese" },
+  { code: "JV", name: "Javanese" }, { code: "KN", name: "Kannada" }, { code: "KK", name: "Kazakh" },
+  { code: "KM", name: "Khmer" }, { code: "KO", name: "Korean" }, { code: "KU", name: "Kurdish" },
+  { code: "KY", name: "Kyrgyz" }, { code: "LO", name: "Lao" }, { code: "LV", name: "Latvian" },
+  { code: "LT", name: "Lithuanian" }, { code: "MK", name: "Macedonian" }, { code: "MS", name: "Malay" },
+  { code: "ML", name: "Malayalam" }, { code: "MT", name: "Maltese" }, { code: "MR", name: "Marathi" },
+  { code: "MN", name: "Mongolian" }, { code: "NE", name: "Nepali" }, { code: "NO", name: "Norwegian" },
+  { code: "OR", name: "Odia" }, { code: "PS", name: "Pashto" }, { code: "FA", name: "Persian/Farsi" },
+  { code: "PL", name: "Polish" }, { code: "PA", name: "Punjabi" }, { code: "RO", name: "Romanian" },
+  { code: "SR", name: "Serbian" }, { code: "SD", name: "Sindhi" }, { code: "SI", name: "Sinhala" },
+  { code: "SK", name: "Slovak" }, { code: "SL", name: "Slovenian" }, { code: "SO", name: "Somali" },
+  { code: "SW", name: "Swahili" }, { code: "SV", name: "Swedish" }, { code: "TG", name: "Tajik" },
+  { code: "TA", name: "Tamil" }, { code: "TE", name: "Telugu" }, { code: "TH", name: "Thai" },
+  { code: "TR", name: "Turkish" }, { code: "TK", name: "Turkmen" }, { code: "UK", name: "Ukrainian" },
+  { code: "UZ", name: "Uzbek" }, { code: "VI", name: "Vietnamese" }, { code: "CY", name: "Welsh" },
+  { code: "XH", name: "Xhosa" }, { code: "YO", name: "Yoruba" }, { code: "ZU", name: "Zulu" },
+];
+const ALL_WORLD_LANGUAGES = [...TOP_WORLD_LANGUAGES, ...OTHER_WORLD_LANGUAGES];
 
 function MapsLinks({ address }: { address: string }) {
   const q = encodeURIComponent(address);
@@ -192,6 +241,9 @@ export default function AdminDashboard() {
   const [viewDropdownOpen, setViewDropdownOpen] = useState(false);
   const [addLangTarget, setAddLangTarget] = useState<string | null>(null);
   const [addLangDropdownPos, setAddLangDropdownPos] = useState<{ top: number; left: number } | null>(null);
+  const [notifPrefs, setNotifPrefs] = useState<VolunteerNotifPrefs>({ signupReceipt: true, cancellationReceipt: true, reminder24h: true, unfilledSlotAlert: false });
+  const [notifSaved, setNotifSaved] = useState(false);
+  const [langSearch, setLangSearch] = useState("");
 
   useEffect(() => { setMounted(true); }, []);
 
@@ -261,13 +313,14 @@ export default function AdminDashboard() {
       fetch("/api/training"),
       fetch("/api/admin/feedback"),
       fetch("/api/suggestions"),
+      fetch("/api/volunteer/notif-prefs"),
     ];
     if (isSuperAdmin) {
       fetches.push(fetch("/api/admin/email-rules"));
       fetches.push(fetch("/api/admin/feature-flags"));
     }
 
-    const [usersRes, clinicsRes, slotsRes, profileRes, langsRes, metricsRes, trainingRes, feedbackRes, suggestionsRes, rulesRes, flagsRes] = await Promise.all(fetches);
+    const [usersRes, clinicsRes, slotsRes, profileRes, langsRes, metricsRes, trainingRes, feedbackRes, suggestionsRes, notifRes, rulesRes, flagsRes] = await Promise.all(fetches);
     if (usersRes.ok) setUsers(await usersRes.json());
     if (clinicsRes.ok) setClinics(await clinicsRes.json());
     if (slotsRes.ok) setAdminSlots(await slotsRes.json());
@@ -281,6 +334,7 @@ export default function AdminDashboard() {
     if (trainingRes?.ok) setTrainingMaterials(await trainingRes.json());
     if (feedbackRes?.ok) setAllFeedback(await feedbackRes.json());
     if (suggestionsRes?.ok) setSuggestions(await suggestionsRes.json());
+    if (notifRes?.ok) setNotifPrefs(await notifRes.json());
     if (rulesRes?.ok) setEmailRules(await rulesRes.json());
     if (flagsRes?.ok) setFeatureFlags(await flagsRes.json());
     setLoading(false);
@@ -476,6 +530,22 @@ export default function AdminDashboard() {
       ? profileForm.languages.filter((l) => l !== lang)
       : [...profileForm.languages, lang];
     setProfileForm({ languages: langs });
+  };
+
+  const saveNotifPrefs = async (updated: VolunteerNotifPrefs) => {
+    await fetch("/api/volunteer/notif-prefs", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(updated),
+    });
+    setNotifPrefs(updated);
+    setNotifSaved(true);
+    setTimeout(() => setNotifSaved(false), 2000);
+  };
+
+  const toggleNotif = (key: keyof VolunteerNotifPrefs) => {
+    const updated = { ...notifPrefs, [key]: !notifPrefs[key] };
+    saveNotifPrefs(updated);
   };
 
   const addEmailRule = async () => {
@@ -1705,40 +1775,141 @@ export default function AdminDashboard() {
 
         {/* My Profile */}
         {tab === "profile" && (
-          <div style={{ maxWidth: "560px", display: "flex", flexDirection: "column", gap: "16px" }}>
-            <div style={{ background: "var(--card-bg)", borderRadius: "14px", border: "1.5px solid var(--card-border)", padding: "20px", display: "flex", alignItems: "center", gap: "16px" }}>
-              <div style={{ textAlign: "center" }}>
-                <p style={{ fontSize: "2rem", fontWeight: 700, color: "var(--gray-900)" }}>{adminProfile?.hoursVolunteered ?? 0}</p>
-                <p style={{ fontSize: "0.75rem", color: "var(--gray-400)", marginTop: "4px" }}>Hours Volunteered</p>
-              </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+            {/* Stats */}
+            <div style={{ background: "var(--card-bg)", borderRadius: "14px", border: "1.5px solid var(--card-border)", padding: "20px", textAlign: "center", width: "192px", boxShadow: "0 2px 6px rgba(0,0,0,.05)" }}>
+              <p style={{ fontSize: "1.5rem", fontWeight: 600, color: "var(--gray-900)" }}>{adminProfile?.hoursVolunteered ?? 0}</p>
+              <p style={{ fontSize: "0.72rem", color: "var(--gray-400)", marginTop: "4px" }}>Hours Volunteered</p>
             </div>
 
-            <div style={{ background: "var(--card-bg)", borderRadius: "14px", border: "1.5px solid var(--card-border)", padding: "24px" }}>
-              <h3 style={{ fontSize: "0.875rem", fontWeight: 600, color: "var(--gray-600)", marginBottom: "4px" }}>Languages</h3>
-              <p style={{ fontSize: "0.75rem", color: "var(--gray-400)", marginBottom: "16px" }}>Click to toggle. Filled = you speak it. Only matching slots will let you sign up.</p>
-              <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", marginBottom: "20px" }}>
-                {Object.entries(LANG_LABELS).map(([code, label]) => (
-                  <button
-                    key={code}
-                    onClick={() => toggleLanguage(code)}
-                    style={{ padding: "9px 20px", fontSize: "0.875rem", borderRadius: "9px", cursor: "pointer", fontFamily: "'DM Sans', sans-serif", background: profileForm.languages.includes(code) ? "var(--blue)" : "none", color: profileForm.languages.includes(code) ? "#fff" : "var(--gray-600)", border: profileForm.languages.includes(code) ? "1.5px solid var(--blue)" : "1.5px solid var(--card-border)" }}
-                  >
-                    {label}
-                  </button>
-                ))}
+            {/* Languages */}
+            <div style={{ background: "var(--card-bg)", borderRadius: "14px", border: "1.5px solid var(--card-border)", padding: "24px", boxShadow: "0 2px 6px rgba(0,0,0,.05)" }}>
+              <h3 style={{ fontSize: "0.9rem", fontWeight: 600, color: "var(--gray-900)", marginBottom: "4px" }}>Languages</h3>
+              <p style={{ fontSize: "0.75rem", color: "var(--gray-400)", marginBottom: "4px" }}>Select the languages you speak and can interpret.</p>
+              <p style={{ fontSize: "0.75rem", color: "#92400e", background: "#fffbeb", border: "1px solid #fde68a", borderRadius: "8px", padding: "8px 12px", marginBottom: "16px" }}>
+                ⚠️ You must have a medical-level vocabulary to effectively translate in a clinical context. Only select languages you are confident interpreting in a healthcare setting.
+              </p>
+              <div style={{ marginBottom: "12px" }}>
+                <input
+                  type="text"
+                  placeholder="Search languages..."
+                  value={langSearch}
+                  onChange={(e) => setLangSearch(e.target.value)}
+                  style={{ width: "100%", padding: "8px 12px", fontSize: "0.875rem", border: "1.5px solid var(--card-border)", borderRadius: "9px", fontFamily: "'DM Sans', sans-serif", background: "var(--card-bg)", color: "var(--gray-900)", outline: "none", boxSizing: "border-box" }}
+                />
               </div>
+              {profileForm.languages.length > 0 && (
+                <div style={{ marginBottom: "12px" }}>
+                  <p style={{ fontSize: "0.72rem", fontWeight: 700, color: "var(--gray-400)", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "8px" }}>Selected</p>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
+                    {profileForm.languages.map((code) => {
+                      const lang = ALL_WORLD_LANGUAGES.find((l) => l.code === code);
+                      return (
+                        <button
+                          key={code}
+                          onClick={() => toggleLanguage(code)}
+                          style={{ padding: "4px 12px", fontSize: "0.75rem", borderRadius: "99px", background: "var(--blue)", color: "#fff", border: "none", fontFamily: "'DM Sans', sans-serif", cursor: "pointer", display: "flex", alignItems: "center", gap: "4px" }}
+                        >
+                          {lang?.name ?? code}
+                          <span style={{ color: "rgba(255,255,255,.7)" }}>×</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+              {(() => {
+                const query = langSearch.trim().toLowerCase();
+                const filtered = query
+                  ? ALL_WORLD_LANGUAGES.filter((l) => l.name.toLowerCase().includes(query) || l.code.toLowerCase().includes(query))
+                  : ALL_WORLD_LANGUAGES;
+                const top10 = filtered.filter((l) => TOP_WORLD_LANGUAGES.some((t) => t.code === l.code));
+                const others = filtered.filter((l) => !TOP_WORLD_LANGUAGES.some((t) => t.code === l.code));
+                const unselected = [...top10, ...others].filter((l) => !profileForm.languages.includes(l.code));
+                return (
+                  <div style={{ maxHeight: "192px", overflowY: "auto", border: "1.5px solid var(--card-border)", borderRadius: "9px" }}>
+                    {unselected.length === 0 ? (
+                      <p style={{ fontSize: "0.75rem", color: "var(--gray-400)", padding: "12px", textAlign: "center" }}>No languages match your search.</p>
+                    ) : (
+                      <>
+                        {!query && top10.filter((l) => !profileForm.languages.includes(l.code)).length > 0 && (
+                          <div style={{ padding: "8px 12px 4px" }}>
+                            <p style={{ fontSize: "0.72rem", fontWeight: 700, color: "var(--gray-400)", textTransform: "uppercase", letterSpacing: "0.1em" }}>Most Common</p>
+                          </div>
+                        )}
+                        {!query && top10.filter((l) => !profileForm.languages.includes(l.code)).map((lang) => (
+                          <button key={lang.code} onClick={() => toggleLanguage(lang.code)} style={{ width: "100%", textAlign: "left", padding: "8px 12px", fontSize: "0.875rem", color: "var(--gray-900)", background: "none", border: "none", fontFamily: "'DM Sans', sans-serif", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                            {lang.name}<span style={{ fontSize: "0.72rem", color: "var(--gray-400)" }}>+</span>
+                          </button>
+                        ))}
+                        {!query && others.filter((l) => !profileForm.languages.includes(l.code)).length > 0 && (
+                          <div style={{ padding: "8px 12px 4px", borderTop: "1px solid var(--card-border)" }}>
+                            <p style={{ fontSize: "0.72rem", fontWeight: 700, color: "var(--gray-400)", textTransform: "uppercase", letterSpacing: "0.1em" }}>All Languages</p>
+                          </div>
+                        )}
+                        {(query ? unselected : others.filter((l) => !profileForm.languages.includes(l.code))).map((lang) => (
+                          <button key={lang.code} onClick={() => toggleLanguage(lang.code)} style={{ width: "100%", textAlign: "left", padding: "8px 12px", fontSize: "0.875rem", color: "var(--gray-900)", background: "none", border: "none", fontFamily: "'DM Sans', sans-serif", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                            {lang.name}<span style={{ fontSize: "0.72rem", color: "var(--gray-400)" }}>+</span>
+                          </button>
+                        ))}
+                      </>
+                    )}
+                  </div>
+                );
+              })()}
+              <button
+                disabled={actionLoading === "profile"}
+                onClick={saveProfile}
+                style={{ marginTop: "16px", padding: "9px 20px", fontSize: "0.875rem", background: "var(--blue)", color: "#fff", border: "none", borderRadius: "9px", fontFamily: "'DM Sans', sans-serif", fontWeight: 600, cursor: "pointer", opacity: actionLoading === "profile" ? 0.5 : 1 }}
+              >
+                {actionLoading === "profile" ? "Saving..." : "Save Languages"}
+              </button>
+            </div>
 
-              <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                <button
-                  disabled={actionLoading === "profile"}
-                  onClick={saveProfile}
-                  style={{ padding: "9px 22px", fontSize: "0.875rem", background: "var(--blue)", color: "#fff", border: "none", borderRadius: "99px", cursor: "pointer", fontWeight: 600, opacity: actionLoading === "profile" ? 0.5 : 1, fontFamily: "'DM Sans', sans-serif" }}
-                >
-                  {actionLoading === "profile" ? "Saving..." : "Save Profile"}
-                </button>
-                {profileSaved && (
-                  <span style={{ fontSize: "0.875rem", color: "#16A34A" }}>Saved!</span>
-                )}
+            {/* Notification Preferences */}
+            <div style={{ background: "var(--card-bg)", borderRadius: "14px", border: "1.5px solid var(--card-border)", padding: "24px", boxShadow: "0 2px 6px rgba(0,0,0,.05)" }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "4px" }}>
+                <h3 style={{ fontSize: "0.9rem", fontWeight: 600, color: "var(--gray-900)" }}>Email Notifications</h3>
+                {notifSaved && <span style={{ fontSize: "0.75rem", color: "var(--green)" }}>Saved ✓</span>}
+              </div>
+              <p style={{ fontSize: "0.75rem", color: "var(--gray-400)", marginBottom: "20px" }}>Toggles save instantly. We&apos;ll never send you more than you want.</p>
+              <div>
+                <p style={{ fontSize: "0.72rem", fontWeight: 700, color: "var(--gray-400)", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "8px" }}>Recommended</p>
+                {([
+                  { key: "signupReceipt" as const, label: "Signup confirmation", desc: "Sent after you sign up (2 min delay so quick toggles don't flood your inbox)" },
+                  { key: "cancellationReceipt" as const, label: "Cancellation receipt", desc: "Confirms when you cancel a shift" },
+                  { key: "reminder24h" as const, label: "24-hour reminder", desc: "Email the day before your shift" },
+                ] as const).map(({ key, label, desc }) => (
+                  <label key={key} style={{ display: "flex", alignItems: "flex-start", gap: "12px", padding: "10px 0", cursor: "pointer" }}>
+                    <button role="switch" aria-checked={notifPrefs[key]} onClick={() => toggleNotif(key)} style={{ marginTop: "2px", position: "relative", display: "inline-flex", height: "20px", width: "36px", flexShrink: 0, borderRadius: "99px", border: "2px solid transparent", background: notifPrefs[key] ? "var(--blue)" : "var(--gray-200)", cursor: "pointer", outline: "none" }}>
+                      <span style={{ display: "inline-block", height: "16px", width: "16px", borderRadius: "50%", background: "#fff", boxShadow: "0 1px 3px rgba(0,0,0,.2)", transform: notifPrefs[key] ? "translateX(16px)" : "translateX(0)", transition: "transform .15s" }} />
+                    </button>
+                    <div>
+                      <p style={{ fontSize: "0.875rem", color: "var(--gray-900)" }}>{label}</p>
+                      <p style={{ fontSize: "0.75rem", color: "var(--gray-400)" }}>{desc}</p>
+                    </div>
+                  </label>
+                ))}
+                <div style={{ paddingTop: "12px", borderTop: "1px solid var(--card-border)", marginTop: "8px" }}>
+                  <p style={{ fontSize: "0.72rem", fontWeight: 700, color: "var(--gray-400)", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "8px" }}>Optional</p>
+                  <label style={{ display: "flex", alignItems: "flex-start", gap: "12px", padding: "10px 0", cursor: "pointer" }}>
+                    <button role="switch" aria-checked={notifPrefs.unfilledSlotAlert} onClick={() => toggleNotif("unfilledSlotAlert")} style={{ marginTop: "2px", position: "relative", display: "inline-flex", height: "20px", width: "36px", flexShrink: 0, borderRadius: "99px", border: "2px solid transparent", background: notifPrefs.unfilledSlotAlert ? "var(--blue)" : "var(--gray-200)", cursor: "pointer", outline: "none" }}>
+                      <span style={{ display: "inline-block", height: "16px", width: "16px", borderRadius: "50%", background: "#fff", boxShadow: "0 1px 3px rgba(0,0,0,.2)", transform: notifPrefs.unfilledSlotAlert ? "translateX(16px)" : "translateX(0)", transition: "transform .15s" }} />
+                    </button>
+                    <div>
+                      <p style={{ fontSize: "0.875rem", color: "var(--gray-900)" }}>Urgent: unfilled slot alerts</p>
+                      <p style={{ fontSize: "0.75rem", color: "var(--gray-400)" }}>Notified immediately when a qualifying slot within 24 hrs has a last-minute opening due to a cancellation</p>
+                    </div>
+                  </label>
+                </div>
+                <div style={{ paddingTop: "12px", borderTop: "1px solid var(--card-border)", marginTop: "8px" }}>
+                  <p style={{ fontSize: "0.72rem", fontWeight: 700, color: "var(--gray-400)", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "8px" }}>Always On</p>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "4px", fontSize: "0.75rem", color: "var(--gray-400)", paddingLeft: "4px" }}>
+                    <p>• Removed from a shift by an admin</p>
+                    <p>• Slot cancelled by a clinic</p>
+                    <p>• Slot edited and your signup was dropped</p>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
