@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { logActivity } from "@/lib/activity-log";
 
 function primaryRole(roles: string[]): string {
   if (roles.includes("SUPER_ADMIN")) return "SUPER_ADMIN";
@@ -100,6 +101,17 @@ export async function PATCH(req: NextRequest) {
         await notifyUserSuspended({ email: target.email, name: target.name ?? target.email }).catch(console.error);
       }
     }
+    await logActivity({
+      actorId: admin.id,
+      actorEmail: admin.email ?? undefined,
+      actorName: admin.name ?? undefined,
+      action: status ? "USER_STATUS_CHANGED" : "USER_CLINIC_CHANGED",
+      targetType: "User",
+      targetId: userId,
+      detail: status
+        ? `Changed status of ${target.email} to ${status}`
+        : `Changed clinic of ${target.email} to ${clinicId ?? "none"}`,
+    });
     return NextResponse.json(updated);
   }
 
@@ -161,6 +173,15 @@ export async function PATCH(req: NextRequest) {
         });
       }
     });
+    await logActivity({
+      actorId: admin.id,
+      actorEmail: admin.email ?? undefined,
+      actorName: admin.name ?? undefined,
+      action: nowCleared ? "LANG_CLEARANCE_GRANTED" : "LANG_CLEARANCE_REVOKED",
+      targetType: "User",
+      targetId: userId,
+      detail: `${nowCleared ? "Granted" : "Revoked"} ${langCode} clearance for ${target.email}`,
+    });
     return NextResponse.json({ ok: true, roles: newRoles });
   }
 
@@ -190,6 +211,15 @@ export async function PATCH(req: NextRequest) {
       where: { id: userId },
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       data: { roles: newRoles, role: newPrimaryRole as any },
+    });
+    await logActivity({
+      actorId: admin.id,
+      actorEmail: admin.email ?? undefined,
+      actorName: admin.name ?? undefined,
+      action: "ROLE_ADDED",
+      targetType: "User",
+      targetId: userId,
+      detail: `Added role ${addRole} to ${target.email}`,
     });
     return NextResponse.json({ ok: true, roles: newRoles });
   }
@@ -243,6 +273,15 @@ export async function PATCH(req: NextRequest) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       data: { roles: newRoles, role: newPrimaryRole as any },
     });
+    await logActivity({
+      actorId: admin.id,
+      actorEmail: admin.email ?? undefined,
+      actorName: admin.name ?? undefined,
+      action: "ROLE_REMOVED",
+      targetType: "User",
+      targetId: userId,
+      detail: `Removed role ${removeRole} from ${target.email}`,
+    });
     return NextResponse.json({ ok: true, roles: newRoles });
   }
 
@@ -265,6 +304,29 @@ export async function PATCH(req: NextRequest) {
     const newRoles = target.roles.filter((r) => r !== `LANG_${langCode}` && r !== `LANG_${langCode}_CLEARED`);
     await prisma.user.update({ where: { id: userId }, data: { roles: newRoles } });
     return NextResponse.json({ ok: true, roles: newRoles });
+  }
+
+  // Handle counter edits (cancellations / no-shows)
+  if (body.updateCounters !== undefined) {
+    if (!isAdmin) return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+    const { cancellationsWithin24h, cancellationsWithin2h, noShows } = body.updateCounters as Record<string, number>;
+    const vp = await prisma.volunteerProfile.findUnique({ where: { userId: target.id } });
+    if (!vp) return NextResponse.json({ error: "No volunteer profile" }, { status: 400 });
+    const updateData: Record<string, number> = {};
+    if (cancellationsWithin24h !== undefined) updateData.cancellationsWithin24h = cancellationsWithin24h;
+    if (cancellationsWithin2h !== undefined) updateData.cancellationsWithin2h = cancellationsWithin2h;
+    if (noShows !== undefined) updateData.noShows = noShows;
+    await prisma.volunteerProfile.update({ where: { id: vp.id }, data: updateData });
+    await logActivity({
+      actorId: admin.id,
+      actorEmail: admin.email ?? undefined,
+      actorName: admin.name ?? undefined,
+      action: "COUNTERS_EDITED",
+      targetType: "User",
+      targetId: userId,
+      detail: `Edited counters for ${target.email}: ${JSON.stringify(updateData)}`,
+    });
+    return NextResponse.json({ ok: true });
   }
 
   return NextResponse.json({ error: "No valid operation specified" }, { status: 400 });

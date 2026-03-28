@@ -69,9 +69,10 @@ type AdminProfile = {
 type EmailRule = { id: string; email: string; type: "ALLOW" | "BLOCK"; note: string | null };
 type LanguageConfig = { id: string; code: string; name: string; isActive: boolean; createdAt: string; volunteerCount?: number };
 type TrainingMaterial = { id: string; title: string; description: string | null; type: string; url: string; fileName: string | null; languageCode: string | null; category: string; uploadedBy: { name: string | null; email: string }; createdAt: string };
-type Metrics = { totalHours: number; hoursByLanguage: { code: string; name: string; hours: number }[]; hoursByClinic: { clinicId: string; clinicName: string; hours: number }[]; volunteerCount: number; activeSlotCount: number; feedbackCount?: number; avgVolunteerRating?: number | null; avgClinicRating?: number | null };
+type Metrics = { totalHours: number; hoursByLanguage: { code: string; name: string; hours: number }[]; hoursByClinic: { clinicId: string; clinicName: string; hours: number }[]; volunteerCount: number; activeVolunteerCount?: number; filledSlotHours?: number; unfilledSlotHours?: number; feedbackCount?: number; avgVolunteerRating?: number | null; avgClinicRating?: number | null };
 type FeatureFlag = { id: string; key: string; label: string; description: string | null; enabled: boolean };
-type Tab = "slots" | "users" | "clinics" | "profile" | "access" | "languages" | "metrics" | "training" | "flags" | "suggestions";
+type Tab = "slots" | "users" | "clinics" | "profile" | "access" | "languages" | "metrics" | "training" | "flags" | "suggestions" | "activity-log" | "notes";
+type ActivityLogEntry = { id: string; actorEmail: string | null; actorName: string | null; action: string; targetType: string | null; detail: string | null; createdAt: string };
 
 type AdminFeedback = {
   id: string;
@@ -153,12 +154,20 @@ const OTHER_WORLD_LANGUAGES = [
 const ALL_WORLD_LANGUAGES = [...TOP_WORLD_LANGUAGES, ...OTHER_WORLD_LANGUAGES];
 
 function MapsLinks({ address }: { address: string }) {
+  const [open, setOpen] = useState(false);
   const q = encodeURIComponent(address);
   return (
-    <span style={{ display: "inline-flex", gap: "6px", marginLeft: "6px", alignItems: "center" }}>
-      <a href={`https://www.google.com/maps/search/?api=1&query=${q}`} target="_blank" rel="noopener noreferrer" style={{ fontSize: "0.72rem", color: "var(--blue)", textDecoration: "underline" }} title="Google Maps">G Maps</a>
-      <span style={{ color: "#CBD5E1" }}>·</span>
-      <a href={`https://maps.apple.com/?q=${q}`} target="_blank" rel="noopener noreferrer" style={{ fontSize: "0.72rem", color: "var(--blue)", textDecoration: "underline" }} title="Apple Maps">Apple Maps</a>
+    <span style={{ position: "relative", display: "inline-flex", alignItems: "center", marginLeft: "6px" }}>
+      <button
+        onClick={(e) => { e.stopPropagation(); setOpen((o) => !o); }}
+        style={{ fontSize: "0.72rem", color: "var(--blue)", background: "none", border: "none", cursor: "pointer", padding: 0, textDecoration: "underline", fontFamily: "inherit" }}
+      >Maps ↗</button>
+      {open && (
+        <span style={{ position: "absolute", top: "100%", left: 0, zIndex: 50, background: "var(--card-bg)", border: "1.5px solid var(--card-border)", borderRadius: "8px", boxShadow: "0 4px 12px rgba(0,0,0,.1)", padding: "6px 0", display: "flex", flexDirection: "column", whiteSpace: "nowrap", minWidth: "120px" }}>
+          <a href={`https://www.google.com/maps/search/?api=1&query=${q}`} target="_blank" rel="noopener noreferrer" onClick={() => setOpen(false)} style={{ padding: "5px 14px", fontSize: "0.78rem", color: "var(--gray-900)", textDecoration: "none", display: "block" }}>Google Maps</a>
+          <a href={`https://maps.apple.com/?q=${q}`} target="_blank" rel="noopener noreferrer" onClick={() => setOpen(false)} style={{ padding: "5px 14px", fontSize: "0.78rem", color: "var(--gray-900)", textDecoration: "none", display: "block" }}>Apple Maps</a>
+        </span>
+      )}
     </span>
   );
 }
@@ -244,6 +253,20 @@ export default function AdminDashboard() {
   const [notifPrefs, setNotifPrefs] = useState<VolunteerNotifPrefs>({ signupReceipt: true, cancellationReceipt: true, reminder24h: true, unfilledSlotAlert: false });
   const [notifSaved, setNotifSaved] = useState(false);
   const [langSearch, setLangSearch] = useState("");
+  // Activity Log
+  const [activityLogs, setActivityLogs] = useState<ActivityLogEntry[]>([]);
+  const [activityLogNextCursor, setActivityLogNextCursor] = useState<string | null>(null);
+  const [activityLogLoading, setActivityLogLoading] = useState(false);
+  const [activityLogSearch, setActivityLogSearch] = useState("");
+  const [activityLogSearchTimeout, setActivityLogSearchTimeout] = useState<ReturnType<typeof setTimeout> | null>(null);
+  // Admin Notes
+  const [adminNotesContent, setAdminNotesContent] = useState("");
+  const [adminNotesUpdatedBy, setAdminNotesUpdatedBy] = useState<string | null>(null);
+  const [adminNotesSaving, setAdminNotesSaving] = useState(false);
+  const [adminNotesSaved, setAdminNotesSaved] = useState(false);
+  // Inline counter editing
+  const [counterEditTarget, setCounterEditTarget] = useState<string | null>(null);
+  const [counterEditValues, setCounterEditValues] = useState<{ cancellationsWithin24h: number; cancellationsWithin2h: number; noShows: number }>({ cancellationsWithin24h: 0, cancellationsWithin2h: 0, noShows: 0 });
 
   useEffect(() => { setMounted(true); }, []);
 
@@ -314,13 +337,14 @@ export default function AdminDashboard() {
       fetch("/api/admin/feedback"),
       fetch("/api/suggestions"),
       fetch("/api/volunteer/notif-prefs"),
+      fetch("/api/admin/notes"),
     ];
     if (isSuperAdmin) {
       fetches.push(fetch("/api/admin/email-rules"));
       fetches.push(fetch("/api/admin/feature-flags"));
     }
 
-    const [usersRes, clinicsRes, slotsRes, profileRes, langsRes, metricsRes, trainingRes, feedbackRes, suggestionsRes, notifRes, rulesRes, flagsRes] = await Promise.all(fetches);
+    const [usersRes, clinicsRes, slotsRes, profileRes, langsRes, metricsRes, trainingRes, feedbackRes, suggestionsRes, notifRes, notesRes, rulesRes, flagsRes] = await Promise.all(fetches);
     if (usersRes.ok) setUsers(await usersRes.json());
     if (clinicsRes.ok) setClinics(await clinicsRes.json());
     if (slotsRes.ok) setAdminSlots(await slotsRes.json());
@@ -335,6 +359,7 @@ export default function AdminDashboard() {
     if (feedbackRes?.ok) setAllFeedback(await feedbackRes.json());
     if (suggestionsRes?.ok) setSuggestions(await suggestionsRes.json());
     if (notifRes?.ok) setNotifPrefs(await notifRes.json());
+    if (notesRes?.ok) { const nd = await notesRes.json(); setAdminNotesContent(nd.content ?? ""); setAdminNotesUpdatedBy(nd.updatedBy ?? null); }
     if (rulesRes?.ok) setEmailRules(await rulesRes.json());
     if (flagsRes?.ok) setFeatureFlags(await flagsRes.json());
     setLoading(false);
@@ -396,6 +421,58 @@ export default function AdminDashboard() {
     const res = await fetch(`/api/admin/signups/${signupId}`, { method: "DELETE" });
     if (res.ok) await fetchData();
     setActionLoading(null);
+  };
+
+  const fetchActivityLogs = async (search: string, cursor?: string) => {
+    setActivityLogLoading(true);
+    const params = new URLSearchParams();
+    if (search) params.set("q", search);
+    if (cursor) params.set("cursor", cursor);
+    const res = await fetch(`/api/admin/activity-log?${params}`);
+    if (res.ok) {
+      const data = await res.json();
+      if (cursor) {
+        setActivityLogs((prev) => [...prev, ...data.items]);
+      } else {
+        setActivityLogs(data.items);
+      }
+      setActivityLogNextCursor(data.nextCursor);
+    }
+    setActivityLogLoading(false);
+  };
+
+  const saveAdminNotes = async () => {
+    setAdminNotesSaving(true);
+    const res = await fetch("/api/admin/notes", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ content: adminNotesContent }),
+    });
+    if (res.ok) {
+      const nd = await res.json();
+      setAdminNotesUpdatedBy(nd.updatedBy ?? null);
+      setAdminNotesSaved(true);
+      setTimeout(() => setAdminNotesSaved(false), 2000);
+    }
+    setAdminNotesSaving(false);
+  };
+
+  const saveCounters = async (userId: string) => {
+    setActionLoading(`counters-${userId}`);
+    await fetch("/api/admin/users", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId, updateCounters: counterEditValues }),
+    });
+    setCounterEditTarget(null);
+    await fetchData();
+    setActionLoading(null);
+  };
+
+  const deleteFeedback = async (feedbackId: string) => {
+    if (!confirm("Delete this feedback entry?")) return;
+    const res = await fetch(`/api/admin/feedback/${feedbackId}`, { method: "DELETE" });
+    if (res.ok) setAllFeedback((prev) => prev.filter((f) => f.id !== feedbackId));
   };
 
   const signUp = async (slotId: string, subBlockHour: number) => {
@@ -1038,6 +1115,8 @@ export default function AdminDashboard() {
     );
   };
 
+  const isSuperAdmin = session?.user?.role === "SUPER_ADMIN";
+
   return (
     <div style={{ minHeight: "100vh", background: "var(--page-bg)", fontFamily: "'DM Sans', system-ui, sans-serif", color: "var(--gray-900)" }}>
       {/* Header */}
@@ -1132,6 +1211,8 @@ export default function AdminDashboard() {
             { key: "metrics" as Tab, label: "Metrics", count: 0 },
             { key: "training" as Tab, label: "Training", count: 0 },
             { key: "suggestions" as Tab, label: "Messages", count: suggestions.filter((s) => s.status === "OPEN").length },
+            { key: "activity-log" as Tab, label: "Activity Log", count: 0 },
+            { key: "notes" as Tab, label: "Notes", count: 0 },
             ...(session?.user?.role === "SUPER_ADMIN"
               ? [
                   { key: "access" as Tab, label: "Access Control", count: 0 },
@@ -1335,17 +1416,17 @@ export default function AdminDashboard() {
             </div>
 
             {/* Language clearance legend */}
-            <div style={{ display: "flex", alignItems: "center", gap: "16px", marginBottom: "10px", padding: "8px 14px", background: "var(--card-bg)", border: "1.5px solid var(--card-border)", borderRadius: "10px", fontSize: "0.75rem", color: "var(--gray-500)", flexWrap: "wrap" }}>
-              <span style={{ fontWeight: 600, color: "var(--gray-600)" }}>Language Clearance:</span>
-              <span style={{ display: "inline-flex", alignItems: "center", gap: "5px" }}>
-                <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#10B981", flexShrink: 0 }} />
-                Green dot = cleared to interpret
+            <div style={{ display: "flex", alignItems: "center", gap: "20px", marginBottom: "10px", padding: "10px 16px", background: "var(--card-bg)", border: "1.5px solid var(--card-border)", borderRadius: "10px", flexWrap: "wrap" }}>
+              <span style={{ fontSize: "0.8rem", fontWeight: 600, color: "var(--gray-700)" }}>Language chips:</span>
+              <span style={{ display: "inline-flex", alignItems: "center", gap: "6px", fontSize: "0.8rem", color: "var(--gray-700)" }}>
+                <span style={{ width: "9px", height: "9px", borderRadius: "50%", background: "#10B981", flexShrink: 0 }} />
+                Green — cleared to interpret
               </span>
-              <span style={{ display: "inline-flex", alignItems: "center", gap: "5px" }}>
-                <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#94A3B8", flexShrink: 0 }} />
-                Gray dot = awaiting clearance
+              <span style={{ display: "inline-flex", alignItems: "center", gap: "6px", fontSize: "0.8rem", color: "var(--gray-700)" }}>
+                <span style={{ width: "9px", height: "9px", borderRadius: "50%", background: "#94A3B8", flexShrink: 0 }} />
+                Gray — not yet cleared
               </span>
-              <span style={{ color: "var(--gray-400)" }}>Click a language chip to toggle clearance.</span>
+              <span style={{ fontSize: "0.78rem", color: "var(--gray-400)" }}>Click a chip to toggle clearance.</span>
             </div>
 
 
@@ -1381,15 +1462,15 @@ export default function AdminDashboard() {
                     );
                   })().map((user) => {
                     const { roleChips, langChips } = parseUserRoles(user.roles ?? []);
-                    const isSuperAdmin = user.role === "SUPER_ADMIN";
-                    const canModify = session?.user?.role === "SUPER_ADMIN" || (!isSuperAdmin && user.role !== "ADMIN");
+                    const isUserSuperAdmin = user.role === "SUPER_ADMIN";
+                    const canModify = session?.user?.role === "SUPER_ADMIN" || (!isUserSuperAdmin && user.role !== "ADMIN");
                     const emailFull = user.email ?? "";
                     const isExpanded = emailExpanded.has(user.id);
                     const addableRoles = ROLE_CHIPS.filter(r => {
                       if (roleChips.includes(r.key)) return false;
                       if (r.key === "SUPER_ADMIN") return false;
                       if (r.key === "ADMIN" && session?.user?.role !== "SUPER_ADMIN") return false;
-                      if (isSuperAdmin) return false;
+                      if (isUserSuperAdmin) return false;
                       return true;
                     });
                     return (
@@ -1513,17 +1594,60 @@ export default function AdminDashboard() {
                         {/* Stats */}
                         <td style={{ padding: "14px 20px" }}>
                           {user.volunteer ? (
-                            <div style={{ display: "flex", flexDirection: "column", gap: "2px", fontSize: "0.75rem" }}>
-                              <span style={{ color: "var(--gray-600)" }}>⏱ {user.volunteer.hoursVolunteered}h</span>
-                              {user.volunteer.noShows > 0 && <span style={{ color: "#EF4444" }}>NS {user.volunteer.noShows}</span>}
-                              {(user.volunteer.cancellationsWithin24h > 0 || user.volunteer.cancellationsWithin2h > 0) && (
-                                <span style={{ color: "#D97706" }}>
-                                  {user.volunteer.cancellationsWithin24h > 0 && `24h ${user.volunteer.cancellationsWithin24h}`}
-                                  {user.volunteer.cancellationsWithin24h > 0 && user.volunteer.cancellationsWithin2h > 0 && " · "}
-                                  {user.volunteer.cancellationsWithin2h > 0 && `2h ${user.volunteer.cancellationsWithin2h}`}
-                                </span>
-                              )}
-                            </div>
+                            counterEditTarget === user.id ? (
+                              <div style={{ display: "flex", flexDirection: "column", gap: "4px", fontSize: "0.75rem", minWidth: "120px" }}>
+                                {[
+                                  { label: "NS", field: "noShows" as const },
+                                  { label: "24h", field: "cancellationsWithin24h" as const },
+                                  { label: "2h", field: "cancellationsWithin2h" as const },
+                                ].map(({ label, field }) => (
+                                  <div key={field} style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                                    <span style={{ color: "var(--gray-400)", width: "24px" }}>{label}</span>
+                                    <input
+                                      type="number"
+                                      min={0}
+                                      value={counterEditValues[field]}
+                                      onChange={(e) => setCounterEditValues((v) => ({ ...v, [field]: parseInt(e.target.value) || 0 }))}
+                                      style={{ width: "48px", padding: "2px 4px", fontSize: "0.75rem", border: "1.5px solid var(--card-border)", borderRadius: "5px", background: "var(--card-bg)", color: "var(--gray-900)", fontFamily: "'DM Sans', sans-serif", outline: "none" }}
+                                    />
+                                  </div>
+                                ))}
+                                <div style={{ display: "flex", gap: "4px", marginTop: "2px" }}>
+                                  <button
+                                    onClick={() => saveCounters(user.id)}
+                                    disabled={actionLoading === `counters-${user.id}`}
+                                    style={{ fontSize: "0.68rem", padding: "2px 8px", background: "var(--blue)", color: "#fff", border: "none", borderRadius: "5px", cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}
+                                  >Save</button>
+                                  <button
+                                    onClick={() => setCounterEditTarget(null)}
+                                    style={{ fontSize: "0.68rem", padding: "2px 8px", background: "var(--gray-200)", color: "var(--gray-600)", border: "none", borderRadius: "5px", cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}
+                                  >Cancel</button>
+                                </div>
+                              </div>
+                            ) : (
+                              <div style={{ display: "flex", flexDirection: "column", gap: "2px", fontSize: "0.75rem" }}>
+                                <span style={{ color: "var(--gray-600)" }}>⏱ {user.volunteer.hoursVolunteered}h</span>
+                                {user.volunteer.noShows > 0 && <span style={{ color: "#EF4444" }}>NS {user.volunteer.noShows}</span>}
+                                {(user.volunteer.cancellationsWithin24h > 0 || user.volunteer.cancellationsWithin2h > 0) && (
+                                  <span style={{ color: "#D97706" }}>
+                                    {user.volunteer.cancellationsWithin24h > 0 && `24h ${user.volunteer.cancellationsWithin24h}`}
+                                    {user.volunteer.cancellationsWithin24h > 0 && user.volunteer.cancellationsWithin2h > 0 && " · "}
+                                    {user.volunteer.cancellationsWithin2h > 0 && `2h ${user.volunteer.cancellationsWithin2h}`}
+                                  </span>
+                                )}
+                                <button
+                                  onClick={() => {
+                                    setCounterEditTarget(user.id);
+                                    setCounterEditValues({
+                                      noShows: user.volunteer!.noShows,
+                                      cancellationsWithin24h: user.volunteer!.cancellationsWithin24h,
+                                      cancellationsWithin2h: user.volunteer!.cancellationsWithin2h,
+                                    });
+                                  }}
+                                  style={{ fontSize: "0.68rem", color: "var(--gray-400)", background: "none", border: "none", padding: 0, cursor: "pointer", textAlign: "left", fontFamily: "'DM Sans', sans-serif", marginTop: "2px" }}
+                                >Edit</button>
+                              </div>
+                            )
                           ) : (
                             <span style={{ fontSize: "0.78rem", color: "var(--gray-400)" }}>—</span>
                           )}
@@ -1544,7 +1668,7 @@ export default function AdminDashboard() {
                                 style={{ padding: "6px 12px", fontSize: "0.75rem", background: "#FEF2F2", color: "#DC2626", border: "none", borderRadius: "6px", cursor: "pointer", opacity: actionLoading === user.id ? 0.5 : 1, fontFamily: "'DM Sans', sans-serif" }}
                               >Reject</button>
                             </div>
-                          ) : !isSuperAdmin && (
+                          ) : !isUserSuperAdmin && (
                             <div style={{ display: "flex", gap: "4px", justifyContent: "flex-end" }}>
                               {user.status === "ACTIVE" ? (
                                 <button
@@ -1980,15 +2104,17 @@ export default function AdminDashboard() {
               </div>
             ) : (
               <>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "14px" }}>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: "14px" }}>
                   {[
                     { value: metrics.totalHours, label: "Total Hours" },
-                    { value: metrics.volunteerCount, label: "Active Volunteers" },
-                    { value: metrics.activeSlotCount, label: "Active Slots" },
+                    { value: metrics.activeVolunteerCount ?? metrics.volunteerCount, label: "Active Volunteers", sub: "volunteered in last 30 days" },
+                    { value: metrics.filledSlotHours ?? "—", label: "Filled Slot-Hours", sub: "upcoming" },
+                    { value: metrics.unfilledSlotHours ?? "—", label: "Unfilled Slot-Hours", sub: "upcoming" },
                   ].map((stat) => (
                     <div key={stat.label} style={{ background: "var(--card-bg)", borderRadius: "14px", border: "1.5px solid var(--card-border)", padding: "20px", textAlign: "center" }}>
                       <p style={{ fontSize: "2rem", fontWeight: 700, color: "var(--gray-900)" }}>{stat.value}</p>
                       <p style={{ fontSize: "0.75rem", color: "var(--gray-400)", marginTop: "4px" }}>{stat.label}</p>
+                      {stat.sub && <p style={{ fontSize: "0.68rem", color: "var(--gray-400)", marginTop: "2px", fontStyle: "italic" }}>{stat.sub}</p>}
                     </div>
                   ))}
                 </div>
@@ -2056,6 +2182,12 @@ export default function AdminDashboard() {
                               <span style={{ fontSize: "0.72rem", padding: "2px 8px", borderRadius: "99px", fontWeight: 600, background: fb.authorRole === "CLINIC" ? "#EBF3FC" : "#DCFCE7", color: fb.authorRole === "CLINIC" ? "#0D1F3C" : "#15803D" }}>
                                 {fb.authorRole}
                               </span>
+                              {isSuperAdmin && (
+                                <button
+                                  onClick={() => deleteFeedback(fb.id)}
+                                  style={{ fontSize: "0.68rem", padding: "2px 8px", background: "#FEF2F2", color: "#EF4444", border: "none", borderRadius: "5px", cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}
+                                >Delete</button>
+                              )}
                               {fb.rating != null && (
                                 <span style={{ fontSize: "0.75rem", color: "#F59E0B" }}>
                                   {"★".repeat(fb.rating)}{"☆".repeat(5 - fb.rating)}
@@ -2340,6 +2472,128 @@ export default function AdminDashboard() {
         )}
 
         {/* Messages — admin/super_admin */}
+        {/* Activity Log */}
+        {tab === "activity-log" && (() => {
+          // Load on first open
+          if (activityLogs.length === 0 && !activityLogLoading) {
+            fetchActivityLogs(activityLogSearch);
+          }
+          return (
+            <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                <input
+                  type="text"
+                  placeholder="Search by user, action, or detail..."
+                  value={activityLogSearch}
+                  onChange={(e) => {
+                    const q = e.target.value;
+                    setActivityLogSearch(q);
+                    if (activityLogSearchTimeout) clearTimeout(activityLogSearchTimeout);
+                    setActivityLogSearchTimeout(setTimeout(() => {
+                      setActivityLogs([]);
+                      setActivityLogNextCursor(null);
+                      fetchActivityLogs(q);
+                    }, 400));
+                  }}
+                  style={{ flex: 1, padding: "9px 14px", fontSize: "0.875rem", border: "1.5px solid var(--card-border)", borderRadius: "10px", background: "var(--card-bg)", color: "var(--gray-900)", outline: "none", fontFamily: "'DM Sans', sans-serif" }}
+                />
+                <button
+                  onClick={() => { setActivityLogs([]); setActivityLogNextCursor(null); fetchActivityLogs(activityLogSearch); }}
+                  style={{ padding: "9px 16px", fontSize: "0.875rem", background: "var(--gray-200)", color: "var(--gray-600)", border: "none", borderRadius: "10px", cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}
+                >Refresh</button>
+              </div>
+              {activityLogs.length === 0 && !activityLogLoading ? (
+                <div style={{ background: "var(--card-bg)", borderRadius: "14px", border: "1.5px solid var(--card-border)", padding: "48px", textAlign: "center" }}>
+                  <p style={{ color: "var(--gray-400)" }}>No activity logged yet.</p>
+                </div>
+              ) : (
+                <div style={{ background: "var(--card-bg)", borderRadius: "14px", border: "1.5px solid var(--card-border)", overflow: "hidden" }}>
+                  <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                    <thead>
+                      <tr style={{ borderBottom: "1.5px solid var(--card-border)" }}>
+                        {["Timestamp", "User", "Action", "Detail"].map((h) => (
+                          <th key={h} style={{ padding: "10px 16px", textAlign: "left", fontSize: "0.72rem", fontWeight: 700, color: "#000", textTransform: "uppercase", letterSpacing: "0.06em" }}>{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {activityLogs.map((entry) => (
+                        <tr key={entry.id} style={{ borderBottom: "1px solid var(--card-border)" }}>
+                          <td style={{ padding: "10px 16px", fontSize: "0.75rem", color: "var(--gray-400)", whiteSpace: "nowrap" }}>
+                            {new Date(entry.createdAt).toLocaleString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" })}
+                          </td>
+                          <td style={{ padding: "10px 16px", fontSize: "0.75rem", color: "var(--gray-600)" }}>
+                            {entry.actorName ?? entry.actorEmail ?? "System"}
+                            {entry.actorEmail && entry.actorName && (
+                              <div style={{ fontSize: "0.68rem", color: "var(--gray-400)" }}>{entry.actorEmail}</div>
+                            )}
+                          </td>
+                          <td style={{ padding: "10px 16px" }}>
+                            <span style={{ fontSize: "0.72rem", fontFamily: "monospace", fontWeight: 600, padding: "2px 7px", background: "var(--gray-200)", color: "var(--gray-600)", borderRadius: "5px" }}>
+                              {entry.action}
+                            </span>
+                          </td>
+                          <td style={{ padding: "10px 16px", fontSize: "0.78rem", color: "var(--gray-600)" }}>{entry.detail ?? "—"}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  {activityLogNextCursor && (
+                    <div style={{ padding: "12px", textAlign: "center", borderTop: "1px solid var(--card-border)" }}>
+                      <button
+                        disabled={activityLogLoading}
+                        onClick={() => fetchActivityLogs(activityLogSearch, activityLogNextCursor ?? undefined)}
+                        style={{ padding: "8px 24px", fontSize: "0.875rem", background: "var(--blue)", color: "#fff", border: "none", borderRadius: "99px", cursor: "pointer", opacity: activityLogLoading ? 0.5 : 1, fontFamily: "'DM Sans', sans-serif" }}
+                      >
+                        {activityLogLoading ? "Loading..." : "Load more"}
+                      </button>
+                    </div>
+                  )}
+                  {activityLogLoading && activityLogs.length === 0 && (
+                    <div style={{ padding: "32px", textAlign: "center" }}>
+                      <p style={{ fontSize: "0.875rem", color: "var(--gray-400)" }}>Loading...</p>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })()}
+
+        {/* Notes */}
+        {tab === "notes" && (
+          <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+            <div style={{ background: "var(--card-bg)", borderRadius: "14px", border: "1.5px solid var(--card-border)", padding: "24px", display: "flex", flexDirection: "column", gap: "14px" }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <h3 style={{ fontSize: "0.875rem", fontWeight: 600, color: "var(--gray-900)" }}>Admin Notes</h3>
+                {adminNotesUpdatedBy && (
+                  <span style={{ fontSize: "0.72rem", color: "var(--gray-400)" }}>Last saved by {adminNotesUpdatedBy}</span>
+                )}
+              </div>
+              <p style={{ fontSize: "0.75rem", color: "var(--gray-400)" }}>
+                Use this space for internal documentation — notification defaults, page breakdowns, role permissions, or anything else the team should know.
+              </p>
+              <textarea
+                value={adminNotesContent}
+                onChange={(e) => setAdminNotesContent(e.target.value)}
+                rows={20}
+                placeholder={"## Notification Defaults\n\n...\n\n## Page Breakdown\n\n..."}
+                style={{ width: "100%", padding: "12px 14px", fontSize: "0.875rem", border: "1.5px solid var(--card-border)", borderRadius: "10px", background: "rgba(0,0,0,.02)", color: "var(--gray-900)", outline: "none", fontFamily: "monospace", resize: "vertical", boxSizing: "border-box", lineHeight: 1.6 }}
+              />
+              <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                <button
+                  disabled={adminNotesSaving}
+                  onClick={saveAdminNotes}
+                  style={{ padding: "9px 24px", fontSize: "0.875rem", background: "var(--blue)", color: "#fff", border: "none", borderRadius: "99px", cursor: "pointer", fontWeight: 600, opacity: adminNotesSaving ? 0.5 : 1, fontFamily: "'DM Sans', sans-serif" }}
+                >
+                  {adminNotesSaving ? "Saving..." : "Save"}
+                </button>
+                {adminNotesSaved && <span style={{ fontSize: "0.75rem", color: "#15803D" }}>Saved</span>}
+              </div>
+            </div>
+          </div>
+        )}
+
         {tab === "suggestions" && (
           <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
             {suggestions.length === 0 ? (
