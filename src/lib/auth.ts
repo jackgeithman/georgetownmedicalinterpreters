@@ -144,6 +144,8 @@ export const authOptions: NextAuthOptions = {
           session.user.status = dbUser.status;
           session.user.id = dbUser.id;
           session.user.clinicId = dbUser.clinicId;
+        } else {
+          console.warn(`[AUTH] User not found in database: ${session.user.email}`);
         }
       }
       return session;
