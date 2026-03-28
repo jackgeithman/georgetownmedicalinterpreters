@@ -55,7 +55,7 @@ function LoginContent() {
       {/* Brand */}
       <div style={{ textAlign: "center", marginBottom: "32px" }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/gmi-logo.png" alt="GMI" style={{ width: "72px", height: "72px", borderRadius: "16px", margin: "0 auto 16px", display: "block" }} />
+        <img src="/logo.svg" alt="GMI" style={{ width: "72px", height: "72px", borderRadius: "16px", margin: "0 auto 16px", display: "block" }} />
         <h1 style={{ fontSize: "1.65rem", fontWeight: 700, color: "#000", letterSpacing: "-0.02em" }}>Georgetown Medical Interpreters</h1>
         <p style={{ fontSize: "1rem", color: "var(--gray-600)", marginTop: "6px" }}>GMI Volunteer Platform</p>
       </div>
