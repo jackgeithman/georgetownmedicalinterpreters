@@ -35,6 +35,8 @@ type VolunteerProfile = {
   languages: string[];
   backgroundInfo: string | null;
   hoursVolunteered: number;
+  clearanceStatus: string | null;
+  clearanceDate: string | null;
 };
 
 type VolunteerNotifPrefs = {
@@ -1007,6 +1009,29 @@ export default function VolunteerDashboard() {
                 <p style={{ fontSize: "1.75rem", fontWeight: 700, color: "var(--gray-900)", lineHeight: 1 }}>{profile.hoursVolunteered}</p>
                 <p style={{ fontSize: "0.75rem", color: "var(--gray-400)", marginTop: "6px" }}>Hours Volunteered</p>
               </div>
+            </div>
+
+            {/* Clearance Status */}
+            <div style={{ background: "var(--card-bg)", borderRadius: "14px", border: "1.5px solid var(--card-border)", padding: "28px" }}>
+              <h3 style={{ fontSize: "1rem", fontWeight: 600, color: "var(--gray-900)", marginBottom: "12px" }}>Clearance Status</h3>
+              {profile.clearanceStatus ? (
+                <div>
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
+                    <div style={{ width: "12px", height: "12px", borderRadius: "50%", background: profile.clearanceStatus === "APPROVED" ? "#10B981" : "#F59E0B" }}></div>
+                    <p style={{ fontSize: "0.9rem", fontWeight: 600, color: "var(--gray-900)" }}>
+                      {profile.clearanceStatus === "APPROVED" ? "Approved" : "Pending"}
+                    </p>
+                  </div>
+                  {profile.clearanceDate && (
+                    <p style={{ fontSize: "0.75rem", color: "var(--gray-500)" }}>
+                      {profile.clearanceStatus === "APPROVED" ? "Approved on " : "Requested on "}
+                      {new Date(profile.clearanceDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                    </p>
+                  )}
+                </div>
+              ) : (
+                <p style={{ fontSize: "0.875rem", color: "var(--gray-600)" }}>No clearance status yet. You will be cleared once your background check is complete.</p>
+              )}
             </div>
 
             {/* Languages */}

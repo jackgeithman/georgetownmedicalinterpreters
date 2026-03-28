@@ -250,7 +250,7 @@ export default function AdminDashboard() {
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [testEmailTo, setTestEmailTo] = useState("");
   const [testEmailStatus, setTestEmailStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
-  const [langDeactivateConflict, setLangDeactivateConflict] = useState<{ langId: string; langName: string; conflicts: { id: string; clinicName: string; date: string; language: string }[] } | null>(null);
+  const [langDeactivateConflict, setLangDeactivateConflict] = useState<{ langId: string; langName: string; conflicts: { id: string; clinicName: string; clinicEmail: string; date: string; language: string; isFilled: boolean; assignedVolunteers: { name: string | null; email: string }[]; interpreterCount: number; signupCount: number }[] } | null>(null);
   const [langDeactivateLoading, setLangDeactivateLoading] = useState(false);
   const [roleFilter, setRoleFilter] = useState<string[]>([]);
   const [roleFilterOpen, setRoleFilterOpen] = useState(false);
@@ -2897,43 +2897,82 @@ export default function AdminDashboard() {
       )}
 
       {/* Language Deactivate Conflict Modal */}
-      {langDeactivateConflict && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.45)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 200, padding: "16px" }}>
-          <div style={{ background: "var(--card-bg)", borderRadius: "16px", boxShadow: "0 8px 32px rgba(0,0,0,.18)", width: "100%", maxWidth: "440px" }}>
-            <div style={{ padding: "16px 24px", borderBottom: "1.5px solid var(--card-border)" }}>
-              <h3 style={{ fontSize: "0.875rem", fontWeight: 700, color: "var(--gray-900)" }}>Deactivate {langDeactivateConflict.langName}?</h3>
-              <p style={{ fontSize: "0.75rem", color: "var(--gray-400)", marginTop: "2px" }}>This will affect upcoming clinic postings.</p>
-            </div>
-            <div style={{ padding: "16px 24px" }}>
-              <p style={{ fontSize: "0.875rem", color: "var(--gray-600)", marginBottom: "12px" }}>
-                The following upcoming slots use <strong>{langDeactivateConflict.langName}</strong> and will be <strong>deleted</strong> if you proceed. Clinics will be notified.
-              </p>
-              <div style={{ maxHeight: "160px", overflowY: "auto", display: "flex", flexDirection: "column", gap: "4px", marginBottom: "16px" }}>
-                {langDeactivateConflict.conflicts.map((c) => (
-                  <div key={c.id} style={{ fontSize: "0.78rem", color: "var(--gray-600)", padding: "4px 0", borderBottom: "1px solid var(--card-border)" }}>
-                    <span style={{ fontWeight: 600 }}>{c.clinicName}</span> · {new Date(c.date.slice(0,10) + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
-                  </div>
-                ))}
+      {langDeactivateConflict && (() => {
+        const filled = langDeactivateConflict.conflicts.filter((c) => c.isFilled);
+        const unfilled = langDeactivateConflict.conflicts.filter((c) => !c.isFilled);
+        return (
+          <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.45)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 200, padding: "16px" }}>
+            <div style={{ background: "var(--card-bg)", borderRadius: "16px", boxShadow: "0 8px 32px rgba(0,0,0,.18)", width: "100%", maxWidth: "520px", maxHeight: "80vh", overflowY: "auto" }}>
+              <div style={{ padding: "16px 24px", borderBottom: "1.5px solid var(--card-border)" }}>
+                <h3 style={{ fontSize: "0.875rem", fontWeight: 700, color: "var(--gray-900)", margin: "0 0 4px 0" }}>Deactivate {langDeactivateConflict.langName}?</h3>
+                <p style={{ fontSize: "0.75rem", color: "var(--gray-400)", margin: 0 }}>Review slots that will be affected</p>
               </div>
-              <div style={{ display: "flex", gap: "8px" }}>
-                <button
-                  onClick={() => setLangDeactivateConflict(null)}
-                  style={{ flex: 1, padding: "9px", fontSize: "0.875rem", border: "1.5px solid var(--card-border)", color: "var(--gray-600)", borderRadius: "10px", background: "none", cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}
-                >
-                  Cancel
-                </button>
-                <button
-                  disabled={langDeactivateLoading}
-                  onClick={forceDeactivateLanguage}
-                  style={{ flex: 1, padding: "9px", fontSize: "0.875rem", background: "#DC2626", color: "#fff", border: "none", borderRadius: "10px", cursor: "pointer", fontWeight: 600, opacity: langDeactivateLoading ? 0.5 : 1, fontFamily: "'DM Sans', sans-serif" }}
-                >
-                  {langDeactivateLoading ? "Deactivating..." : "Deactivate & Delete Slots"}
-                </button>
+              <div style={{ padding: "16px 24px" }}>
+                {unfilled.length > 0 && (
+                  <div style={{ marginBottom: "16px" }}>
+                    <p style={{ fontSize: "0.85rem", fontWeight: 600, color: "#DC2626", marginBottom: "8px" }}>Unfilled Slots (Will be Cancelled)</p>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "6px", marginBottom: "12px" }}>
+                      {unfilled.map((c) => (
+                        <div key={c.id} style={{ fontSize: "0.75rem", color: "var(--gray-700)", padding: "8px", background: "#FEE2E2", borderRadius: "6px" }}>
+                          <div style={{ fontWeight: 600 }}>{c.clinicName}</div>
+                          <div style={{ color: "var(--gray-600)", marginTop: "2px" }}>{new Date(c.date.slice(0,10) + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</div>
+                          <div style={{ color: "var(--gray-600)", marginTop: "2px" }}>Need: {c.interpreterCount}, Have: {c.signupCount}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {filled.length > 0 && (
+                  <div style={{ marginBottom: "16px" }}>
+                    <p style={{ fontSize: "0.85rem", fontWeight: 600, color: "#059669", marginBottom: "8px" }}>Filled Slots (Will be Preserved)</p>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "6px", marginBottom: "12px" }}>
+                      {filled.map((c) => (
+                        <div key={c.id} style={{ fontSize: "0.75rem", color: "var(--gray-700)", padding: "8px", background: "#ECFDF5", borderRadius: "6px" }}>
+                          <div style={{ fontWeight: 600 }}>{c.clinicName}</div>
+                          <div style={{ color: "var(--gray-600)", marginTop: "2px" }}>{new Date(c.date.slice(0,10) + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</div>
+                          <div style={{ color: "var(--gray-600)", marginTop: "2px" }}>Assigned: {c.assignedVolunteers.map((v) => v.name).join(", ")}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {unfilled.length > 0 && (
+                  <div style={{ marginBottom: "16px", padding: "12px", background: "var(--gray-50)", borderRadius: "8px", border: "1px solid var(--card-border)" }}>
+                    <p style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--gray-700)", margin: "0 0 8px 0" }}>Email Preview (Clinics)</p>
+                    <div style={{ fontSize: "0.7rem", color: "var(--gray-600)", lineHeight: "1.4", fontFamily: "monospace", padding: "8px", background: "var(--card-bg)", borderRadius: "4px" }}>
+                      <div style={{ fontWeight: 600, marginBottom: "4px" }}>Subject: Interpreter Slots Cancelled: {langDeactivateConflict.langName} Language No Longer Supported</div>
+                      <div style={{ marginTop: "8px" }}>The following interpreter slots have been cancelled because the language is currently not supported:</div>
+                      <div style={{ marginTop: "4px", fontStyle: "italic" }}>{unfilled.map((s) => {
+                        const date = new Date(s.date.slice(0,10) + "T12:00:00");
+                        const dateStr = date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+                        return `${dateStr} (${langDeactivateConflict.langName})`;
+                      }).join(", ")}</div>
+                    </div>
+                  </div>
+                )}
+
+                <div style={{ display: "flex", gap: "8px" }}>
+                  <button
+                    onClick={() => setLangDeactivateConflict(null)}
+                    style={{ flex: 1, padding: "9px", fontSize: "0.875rem", border: "1.5px solid var(--card-border)", color: "var(--gray-600)", borderRadius: "10px", background: "none", cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    disabled={langDeactivateLoading}
+                    onClick={forceDeactivateLanguage}
+                    style={{ flex: 1, padding: "9px", fontSize: "0.875rem", background: "#DC2626", color: "#fff", border: "none", borderRadius: "10px", cursor: "pointer", fontWeight: 600, opacity: langDeactivateLoading ? 0.5 : 1, fontFamily: "'DM Sans', sans-serif" }}
+                  >
+                    {langDeactivateLoading ? "Deactivating..." : "Deactivate Language"}
+                  </button>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* Assign Clinic Modal */}
       {assignModal && (

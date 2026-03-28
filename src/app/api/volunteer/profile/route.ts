@@ -25,7 +25,18 @@ export async function GET() {
     return NextResponse.json(profile);
   }
 
-  return NextResponse.json(user.volunteer);
+  // Fetch clearance status
+  const clearance = await prisma.clearanceLog.findFirst({
+    where: { volunteerId: user.id },
+    orderBy: { createdAt: "desc" },
+    select: { isCleared: true, createdAt: true },
+  });
+
+  return NextResponse.json({
+    ...user.volunteer,
+    clearanceStatus: clearance?.isCleared ? "APPROVED" : clearance ? "PENDING" : null,
+    clearanceDate: clearance?.createdAt ?? null,
+  });
 }
 
 export async function PATCH(req: NextRequest) {
