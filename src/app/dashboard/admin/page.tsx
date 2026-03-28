@@ -2182,12 +2182,10 @@ export default function AdminDashboard() {
                               <span style={{ fontSize: "0.72rem", padding: "2px 8px", borderRadius: "99px", fontWeight: 600, background: fb.authorRole === "CLINIC" ? "#EBF3FC" : "#DCFCE7", color: fb.authorRole === "CLINIC" ? "#0D1F3C" : "#15803D" }}>
                                 {fb.authorRole}
                               </span>
-                              {isSuperAdmin && (
-                                <button
-                                  onClick={() => deleteFeedback(fb.id)}
-                                  style={{ fontSize: "0.68rem", padding: "2px 8px", background: "#FEF2F2", color: "#EF4444", border: "none", borderRadius: "5px", cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}
-                                >Delete</button>
-                              )}
+                              <button
+                                onClick={() => deleteFeedback(fb.id)}
+                                style={{ fontSize: "0.68rem", padding: "2px 8px", background: "#FEF2F2", color: "#EF4444", border: "none", borderRadius: "5px", cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}
+                              >Delete</button>
                               {fb.rating != null && (
                                 <span style={{ fontSize: "0.75rem", color: "#F59E0B" }}>
                                   {"★".repeat(fb.rating)}{"☆".repeat(5 - fb.rating)}

@@ -45,7 +45,7 @@ async function getActiveVolunteer() {
     include: { volunteer: true },
   });
   if (!user) return null;
-  const isVolunteerRole = user.role === "VOLUNTEER" || user.role === "ADMIN" || user.role === "SUPER_ADMIN";
+  const isVolunteerRole = user.role === "VOLUNTEER" || user.role === "ADMIN" || user.role === "SUPER_ADMIN" || user.role === "INSTRUCTOR";
   if (!isVolunteerRole || user.status !== "ACTIVE") return null;
   return user;
 }

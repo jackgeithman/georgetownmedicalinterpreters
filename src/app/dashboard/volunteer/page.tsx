@@ -759,7 +759,12 @@ export default function VolunteerDashboard() {
                       {otherLangs.length > 0 && (
                         <select
                           value={otherSelected ? langFilter : ""}
-                          onChange={(e) => { if (e.target.value) setLangFilter(e.target.value); }}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            // Selecting the already-active lang resets to ALL
+                            if (!val || val === langFilter) setLangFilter("ALL");
+                            else setLangFilter(val);
+                          }}
                           style={{
                             padding: "9px 14px", borderRadius: "9px", fontSize: "0.875rem", fontWeight: 500, cursor: "pointer", fontFamily: "'DM Sans', sans-serif", outline: "none",
                             border: otherSelected ? "1.5px solid var(--blue)" : "1.5px solid var(--card-border)",
@@ -767,7 +772,7 @@ export default function VolunteerDashboard() {
                             color: otherSelected ? "#fff" : "var(--gray-900)",
                           }}
                         >
-                          <option value="">Other languages…</option>
+                          <option value="">{otherSelected ? "Clear filter" : "Other languages…"}</option>
                           {otherLangs.map((l) => <option key={l.code} value={l.code}>{l.name}</option>)}
                         </select>
                       )}
