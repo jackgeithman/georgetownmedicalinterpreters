@@ -60,15 +60,29 @@ const LANG_COLORS: Record<string, string> = {
 function MapsLinks({ address }: { address: string }) {
   const [open, setOpen] = useState(false);
   const q = encodeURIComponent(address);
+
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: MouseEvent) => {
+      const t = e.target as HTMLElement;
+      if (!t.closest("[data-maps-dropdown]") && !t.closest("[data-maps-btn]")) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [open]);
+
   return (
     <span style={{ position: "relative", display: "inline-flex", alignItems: "center", marginLeft: "6px" }}>
       <button
+        data-maps-btn
         onClick={(e) => { e.stopPropagation(); setOpen((o) => !o); }}
         className="text-xs text-[#4A90D9] underline"
         style={{ background: "none", border: "none", cursor: "pointer", padding: 0, fontFamily: "inherit" }}
       >Maps ↗</button>
       {open && (
-        <span style={{ position: "absolute", top: "100%", left: 0, zIndex: 50, background: "#fff", border: "1.5px solid #e2e8f0", borderRadius: "8px", boxShadow: "0 4px 12px rgba(0,0,0,.1)", padding: "6px 0", display: "flex", flexDirection: "column", whiteSpace: "nowrap", minWidth: "120px" }}>
+        <span data-maps-dropdown style={{ position: "absolute", top: "100%", left: 0, zIndex: 50, background: "#fff", border: "1.5px solid #e2e8f0", borderRadius: "8px", boxShadow: "0 4px 12px rgba(0,0,0,.1)", padding: "6px 0", display: "flex", flexDirection: "column", whiteSpace: "nowrap", minWidth: "120px" }}>
           <a href={`https://www.google.com/maps/search/?api=1&query=${q}`} target="_blank" rel="noopener noreferrer" onClick={() => setOpen(false)} style={{ padding: "5px 14px", fontSize: "0.78rem", color: "#1a1a1a", textDecoration: "none", display: "block" }}>Google Maps</a>
           <a href={`https://maps.apple.com/?q=${q}`} target="_blank" rel="noopener noreferrer" onClick={() => setOpen(false)} style={{ padding: "5px 14px", fontSize: "0.78rem", color: "#1a1a1a", textDecoration: "none", display: "block" }}>Apple Maps</a>
         </span>
