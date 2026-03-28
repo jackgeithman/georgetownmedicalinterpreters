@@ -55,10 +55,15 @@ export async function PATCH(
     }
 
     if (conflictingSlots.length > 0 && force) {
-      // Delete conflicting slots
-      for (const slot of conflictingSlots) {
-        await prisma.slot.delete({ where: { id: slot.id } });
-      }
+      const slotIds = conflictingSlots.map((s) => s.id);
+      const signups = await prisma.subBlockSignup.findMany({
+        where: { slotId: { in: slotIds } },
+        select: { id: true },
+      });
+      const signupIds = signups.map((s) => s.id);
+      await prisma.feedback.deleteMany({ where: { signupId: { in: signupIds } } });
+      await prisma.subBlockSignup.deleteMany({ where: { slotId: { in: slotIds } } });
+      await prisma.slot.deleteMany({ where: { id: { in: slotIds } } });
     }
   }
 
