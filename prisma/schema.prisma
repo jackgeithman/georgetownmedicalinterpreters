@@ -278,3 +278,23 @@ model FeatureFlag {
   enabled     Boolean  @default(true)
   updatedAt   DateTime @updatedAt
 }
+
+model ActivityLog {
+  id         String   @id @default(uuid())
+  actorId    String?  // null = system
+  actorEmail String?
+  actorName  String?
+  action     String   // e.g. "ROLE_ADDED", "SIGNUP_CREATED", "SLOT_CANCELLED"
+  targetType String?  // e.g. "User", "Slot", "Signup"
+  targetId   String?
+  detail     String?  // human-readable summary
+  createdAt  DateTime @default(now())
+}
+
+model AdminNote {
+  id        String   @id @default(uuid())
+  key       String   @unique  // e.g. "main"
+  content   String
+  updatedBy String?
+  updatedAt DateTime @updatedAt
+}

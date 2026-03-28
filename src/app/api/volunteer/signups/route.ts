@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { notifyVolunteerSignup } from "@/lib/notifications";
+import { logActivity } from "@/lib/activity-log";
 
 async function getActiveVolunteer() {
   const session = await getServerSession(authOptions);
@@ -109,6 +110,16 @@ export async function POST(req: NextRequest) {
       notes: slot.notes,
     }).catch(console.error);
   }
+
+  await logActivity({
+    actorId: user.id,
+    actorEmail: user.email ?? undefined,
+    actorName: user.name ?? undefined,
+    action: "SIGNUP_CREATED",
+    targetType: "Signup",
+    targetId: signup.id,
+    detail: `Signed up for ${slot.language} slot at ${slot.clinic.name} hour ${hour}`,
+  });
 
   return NextResponse.json(signup, { status: 201 });
 }

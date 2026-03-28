@@ -186,28 +186,20 @@ const OTHER_WORLD_LANGUAGES = [
 const ALL_WORLD_LANGUAGES = [...TOP_WORLD_LANGUAGES, ...OTHER_WORLD_LANGUAGES];
 
 function MapsLinks({ address }: { address: string }) {
+  const [open, setOpen] = useState(false);
   const q = encodeURIComponent(address);
   return (
-    <span style={{ display: "inline-flex", gap: "6px", marginLeft: "6px", alignItems: "center" }}>
-      <a
-        href={`https://www.google.com/maps/search/?api=1&query=${q}`}
-        target="_blank"
-        rel="noopener noreferrer"
-        style={{ fontSize: "0.72rem", color: "var(--blue)", textDecoration: "underline" }}
-        title="Google Maps"
-      >
-        G Maps
-      </a>
-      <span style={{ color: "#CBD5E1" }}>·</span>
-      <a
-        href={`https://maps.apple.com/?q=${q}`}
-        target="_blank"
-        rel="noopener noreferrer"
-        style={{ fontSize: "0.72rem", color: "var(--blue)", textDecoration: "underline" }}
-        title="Apple Maps"
-      >
-        Apple Maps
-      </a>
+    <span style={{ position: "relative", display: "inline-flex", alignItems: "center", marginLeft: "6px" }}>
+      <button
+        onClick={(e) => { e.stopPropagation(); setOpen((o) => !o); }}
+        style={{ fontSize: "0.72rem", color: "var(--blue)", background: "none", border: "none", cursor: "pointer", padding: 0, textDecoration: "underline", fontFamily: "inherit" }}
+      >Maps ↗</button>
+      {open && (
+        <span style={{ position: "absolute", top: "100%", left: 0, zIndex: 50, background: "var(--card-bg)", border: "1.5px solid var(--card-border)", borderRadius: "8px", boxShadow: "0 4px 12px rgba(0,0,0,.1)", padding: "6px 0", display: "flex", flexDirection: "column", whiteSpace: "nowrap", minWidth: "120px" }}>
+          <a href={`https://www.google.com/maps/search/?api=1&query=${q}`} target="_blank" rel="noopener noreferrer" onClick={() => setOpen(false)} style={{ padding: "5px 14px", fontSize: "0.78rem", color: "var(--gray-900)", textDecoration: "none", display: "block" }}>Google Maps</a>
+          <a href={`https://maps.apple.com/?q=${q}`} target="_blank" rel="noopener noreferrer" onClick={() => setOpen(false)} style={{ padding: "5px 14px", fontSize: "0.78rem", color: "var(--gray-900)", textDecoration: "none", display: "block" }}>Apple Maps</a>
+        </span>
+      )}
     </span>
   );
 }
@@ -267,6 +259,7 @@ export default function VolunteerDashboard() {
 
   const [langSearch, setLangSearch] = useState("");
   const [availableLanguages, setAvailableLanguages] = useState<{ code: string; name: string }[]>([]);
+  const [langDropdownOpen, setLangDropdownOpen] = useState(false);
   const [trainingForm, setTrainingForm] = useState({ title: "", description: "", type: "LINK" as "LINK" | "FILE", url: "", languageCode: "", category: "General" });
   const [trainingFile, setTrainingFile] = useState<File | null>(null);
   const [trainingFormError, setTrainingFormError] = useState("");
@@ -743,26 +736,44 @@ export default function VolunteerDashboard() {
             <div>
               {/* Filters */}
               <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "10px", marginBottom: "28px" }}>
-                {/* Language */}
-                {["ALL", ...availableLanguages.map((l) => l.code)].map((lang) => (
-                  <button
-                    key={lang}
-                    onClick={() => setLangFilter(lang)}
-                    style={{
-                      padding: "9px 14px",
-                      borderRadius: "9px",
-                      fontSize: "0.875rem",
-                      fontWeight: 500,
-                      border: langFilter === lang ? "1.5px solid var(--blue)" : "1.5px solid var(--card-border)",
-                      background: langFilter === lang ? "var(--blue)" : "var(--card-bg)",
-                      color: langFilter === lang ? "#fff" : "var(--gray-900)",
-                      fontFamily: "'DM Sans', sans-serif",
-                      cursor: "pointer",
-                    }}
-                  >
-                    {lang === "ALL" ? "All Languages" : (availableLanguages.find((l) => l.code === lang)?.name ?? LANG_LABELS[lang] ?? lang)}
-                  </button>
-                ))}
+                {/* Language — fixed: All, Spanish, Mandarin; then dropdown for others */}
+                {(() => {
+                  const FIXED = ["ALL", "ES", "ZH"];
+                  const fixedLabels: Record<string, string> = { ALL: "All Languages", ES: "Spanish", ZH: "Mandarin" };
+                  const otherLangs = availableLanguages.filter((l) => !["ES", "ZH"].includes(l.code));
+                  const otherSelected = !FIXED.includes(langFilter) && langFilter !== "ALL";
+                  return (
+                    <>
+                      {FIXED.map((lang) => (
+                        <button
+                          key={lang}
+                          onClick={() => setLangFilter(lang)}
+                          style={{
+                            padding: "9px 14px", borderRadius: "9px", fontSize: "0.875rem", fontWeight: 500, cursor: "pointer", fontFamily: "'DM Sans', sans-serif",
+                            border: langFilter === lang ? "1.5px solid var(--blue)" : "1.5px solid var(--card-border)",
+                            background: langFilter === lang ? "var(--blue)" : "var(--card-bg)",
+                            color: langFilter === lang ? "#fff" : "var(--gray-900)",
+                          }}
+                        >{fixedLabels[lang]}</button>
+                      ))}
+                      {otherLangs.length > 0 && (
+                        <select
+                          value={otherSelected ? langFilter : ""}
+                          onChange={(e) => { if (e.target.value) setLangFilter(e.target.value); }}
+                          style={{
+                            padding: "9px 14px", borderRadius: "9px", fontSize: "0.875rem", fontWeight: 500, cursor: "pointer", fontFamily: "'DM Sans', sans-serif", outline: "none",
+                            border: otherSelected ? "1.5px solid var(--blue)" : "1.5px solid var(--card-border)",
+                            background: otherSelected ? "var(--blue)" : "var(--card-bg)",
+                            color: otherSelected ? "#fff" : "var(--gray-900)",
+                          }}
+                        >
+                          <option value="">Other languages…</option>
+                          {otherLangs.map((l) => <option key={l.code} value={l.code}>{l.name}</option>)}
+                        </select>
+                      )}
+                    </>
+                  );
+                })()}
 
                 <div style={{ width: "1px", background: "var(--card-border)", alignSelf: "stretch", margin: "0 4px" }} />
 
@@ -970,19 +981,21 @@ export default function VolunteerDashboard() {
 
         {/* Profile */}
         {tab === "profile" && profile && (
-          <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: "20px", maxWidth: "680px" }}>
             {/* Stats */}
-            <div style={{ background: "var(--card-bg)", borderRadius: "14px", border: "1.5px solid var(--card-border)", padding: "20px", textAlign: "center", width: "192px", boxShadow: "0 2px 6px rgba(0,0,0,.05)" }}>
-              <p style={{ fontSize: "1.5rem", fontWeight: 600, color: "var(--gray-900)" }}>{profile.hoursVolunteered}</p>
-              <p style={{ fontSize: "0.72rem", color: "var(--gray-400)", marginTop: "4px" }}>Hours Volunteered</p>
+            <div style={{ display: "flex", gap: "12px" }}>
+              <div style={{ background: "var(--card-bg)", borderRadius: "12px", border: "1.5px solid var(--card-border)", padding: "18px 28px", textAlign: "center" }}>
+                <p style={{ fontSize: "1.75rem", fontWeight: 700, color: "var(--gray-900)", lineHeight: 1 }}>{profile.hoursVolunteered}</p>
+                <p style={{ fontSize: "0.75rem", color: "var(--gray-400)", marginTop: "6px" }}>Hours Volunteered</p>
+              </div>
             </div>
 
             {/* Languages */}
-            <div style={{ background: "var(--card-bg)", borderRadius: "14px", border: "1.5px solid var(--card-border)", padding: "24px", boxShadow: "0 2px 6px rgba(0,0,0,.05)" }}>
-              <h3 style={{ fontSize: "0.9rem", fontWeight: 600, color: "var(--gray-900)", marginBottom: "4px" }}>Languages</h3>
-              <p style={{ fontSize: "0.75rem", color: "var(--gray-400)", marginBottom: "4px" }}>Select the languages you speak and can interpret.</p>
-              <p style={{ fontSize: "0.75rem", color: "#92400e", background: "#fffbeb", border: "1px solid #fde68a", borderRadius: "8px", padding: "8px 12px", marginBottom: "16px" }}>
-                ⚠️ You must have a medical-level vocabulary to effectively translate in a clinical context. Only select languages you are confident interpreting in a healthcare setting.
+            <div style={{ background: "var(--card-bg)", borderRadius: "14px", border: "1.5px solid var(--card-border)", padding: "28px" }}>
+              <h3 style={{ fontSize: "1rem", fontWeight: 600, color: "var(--gray-900)", marginBottom: "6px" }}>Languages</h3>
+              <p style={{ fontSize: "0.825rem", color: "var(--gray-600)", marginBottom: "12px" }}>Select the languages you speak and can interpret.</p>
+              <p style={{ fontSize: "0.8rem", color: "#92400e", background: "#fffbeb", border: "1px solid #fde68a", borderRadius: "8px", padding: "10px 14px", marginBottom: "20px" }}>
+                You must have a medical-level vocabulary to interpret in a clinical context. Only select languages you are fully confident using in a healthcare setting.
               </p>
 
               {/* Search box */}
@@ -998,8 +1011,8 @@ export default function VolunteerDashboard() {
 
               {/* Currently selected languages */}
               {profileForm.languages.length > 0 && (
-                <div style={{ marginBottom: "12px" }}>
-                  <p style={{ fontSize: "0.72rem", fontWeight: 700, color: "var(--gray-400)", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "8px" }}>Selected</p>
+                <div style={{ marginBottom: "14px" }}>
+                  <p style={{ fontSize: "0.72rem", fontWeight: 700, color: "var(--gray-500)", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "8px" }}>Your languages</p>
                   <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
                     {profileForm.languages.map((code) => {
                       const lang = ALL_WORLD_LANGUAGES.find((l) => l.code === code);
@@ -1029,39 +1042,39 @@ export default function VolunteerDashboard() {
                 const unselected = [...top10, ...others].filter((l) => !profileForm.languages.includes(l.code));
 
                 return (
-                  <div style={{ maxHeight: "192px", overflowY: "auto", border: "1.5px solid var(--card-border)", borderRadius: "9px" }}>
+                  <div style={{ maxHeight: "220px", overflowY: "auto", border: "1.5px solid var(--card-border)", borderRadius: "9px", background: "var(--card-bg)" }}>
                     {unselected.length === 0 ? (
-                      <p style={{ fontSize: "0.75rem", color: "var(--gray-400)", padding: "12px", textAlign: "center" }}>No languages match your search.</p>
+                      <p style={{ fontSize: "0.8rem", color: "var(--gray-500)", padding: "14px", textAlign: "center" }}>No languages match your search.</p>
                     ) : (
                       <>
                         {!query && top10.filter((l) => !profileForm.languages.includes(l.code)).length > 0 && (
-                          <div style={{ padding: "8px 12px 4px" }}>
-                            <p style={{ fontSize: "0.72rem", fontWeight: 700, color: "var(--gray-400)", textTransform: "uppercase", letterSpacing: "0.1em" }}>Most Common</p>
+                          <div style={{ padding: "8px 14px 4px" }}>
+                            <p style={{ fontSize: "0.68rem", fontWeight: 700, color: "var(--gray-500)", textTransform: "uppercase", letterSpacing: "0.1em" }}>Most Common</p>
                           </div>
                         )}
                         {!query && top10.filter((l) => !profileForm.languages.includes(l.code)).map((lang) => (
                           <button
                             key={lang.code}
                             onClick={() => toggleLanguage(lang.code)}
-                            style={{ width: "100%", textAlign: "left", padding: "8px 12px", fontSize: "0.875rem", color: "var(--gray-900)", background: "none", border: "none", fontFamily: "'DM Sans', sans-serif", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between" }}
+                            style={{ width: "100%", textAlign: "left", padding: "8px 14px", fontSize: "0.875rem", color: "var(--gray-900)", background: "none", border: "none", fontFamily: "'DM Sans', sans-serif", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between" }}
                           >
                             {lang.name}
-                            <span style={{ fontSize: "0.72rem", color: "var(--gray-400)" }}>+</span>
+                            <span style={{ fontSize: "0.75rem", color: "var(--gray-500)" }}>Add</span>
                           </button>
                         ))}
                         {!query && others.filter((l) => !profileForm.languages.includes(l.code)).length > 0 && (
-                          <div style={{ padding: "8px 12px 4px", borderTop: "1px solid var(--card-border)" }}>
-                            <p style={{ fontSize: "0.72rem", fontWeight: 700, color: "var(--gray-400)", textTransform: "uppercase", letterSpacing: "0.1em" }}>All Languages</p>
+                          <div style={{ padding: "8px 14px 4px", borderTop: "1px solid var(--card-border)" }}>
+                            <p style={{ fontSize: "0.68rem", fontWeight: 700, color: "var(--gray-500)", textTransform: "uppercase", letterSpacing: "0.1em" }}>All Languages</p>
                           </div>
                         )}
                         {(query ? unselected : others.filter((l) => !profileForm.languages.includes(l.code))).map((lang) => (
                           <button
                             key={lang.code}
                             onClick={() => toggleLanguage(lang.code)}
-                            style={{ width: "100%", textAlign: "left", padding: "8px 12px", fontSize: "0.875rem", color: "var(--gray-900)", background: "none", border: "none", fontFamily: "'DM Sans', sans-serif", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between" }}
+                            style={{ width: "100%", textAlign: "left", padding: "8px 14px", fontSize: "0.875rem", color: "var(--gray-900)", background: "none", border: "none", fontFamily: "'DM Sans', sans-serif", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between" }}
                           >
                             {lang.name}
-                            <span style={{ fontSize: "0.72rem", color: "var(--gray-400)" }}>+</span>
+                            <span style={{ fontSize: "0.75rem", color: "var(--gray-500)" }}>Add</span>
                           </button>
                         ))}
                       </>
@@ -1080,16 +1093,16 @@ export default function VolunteerDashboard() {
             </div>
 
             {/* Notification Preferences */}
-            <div style={{ background: "var(--card-bg)", borderRadius: "14px", border: "1.5px solid var(--card-border)", padding: "24px", boxShadow: "0 2px 6px rgba(0,0,0,.05)" }}>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "4px" }}>
-                <h3 style={{ fontSize: "0.9rem", fontWeight: 600, color: "var(--gray-900)" }}>Email Notifications</h3>
-                {notifSaved && <span style={{ fontSize: "0.75rem", color: "var(--green)" }}>Saved ✓</span>}
+            <div style={{ background: "var(--card-bg)", borderRadius: "14px", border: "1.5px solid var(--card-border)", padding: "28px" }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "6px" }}>
+                <h3 style={{ fontSize: "1rem", fontWeight: 600, color: "var(--gray-900)" }}>Email Notifications</h3>
+                {notifSaved && <span style={{ fontSize: "0.8rem", color: "#15803D" }}>Saved</span>}
               </div>
-              <p style={{ fontSize: "0.75rem", color: "var(--gray-400)", marginBottom: "20px" }}>Toggles save instantly. We&apos;ll never send you more than you want.</p>
+              <p style={{ fontSize: "0.825rem", color: "var(--gray-600)", marginBottom: "24px" }}>Toggles save instantly. We&apos;ll never send you more than you want.</p>
 
               <div>
                 {/* Recommended */}
-                <p style={{ fontSize: "0.72rem", fontWeight: 700, color: "var(--gray-400)", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "8px" }}>Recommended</p>
+                <p style={{ fontSize: "0.72rem", fontWeight: 700, color: "var(--gray-500)", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "8px" }}>Recommended</p>
 
                 {([
                   { key: "signupReceipt" as const, label: "Signup confirmation", desc: "Sent after you sign up (2 min delay so quick toggles don't flood your inbox)" },
@@ -1113,7 +1126,7 @@ export default function VolunteerDashboard() {
                 ))}
 
                 <div style={{ paddingTop: "12px", borderTop: "1px solid var(--card-border)", marginTop: "8px" }}>
-                  <p style={{ fontSize: "0.72rem", fontWeight: 700, color: "var(--gray-400)", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "8px" }}>Optional</p>
+                  <p style={{ fontSize: "0.72rem", fontWeight: 700, color: "var(--gray-500)", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "8px" }}>Optional</p>
                   <label style={{ display: "flex", alignItems: "flex-start", gap: "12px", padding: "10px 0", cursor: "pointer" }}>
                     <button
                       role="switch"
@@ -1131,8 +1144,8 @@ export default function VolunteerDashboard() {
                 </div>
 
                 <div style={{ paddingTop: "12px", borderTop: "1px solid var(--card-border)", marginTop: "8px" }}>
-                  <p style={{ fontSize: "0.72rem", fontWeight: 700, color: "var(--gray-400)", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "8px" }}>Always On</p>
-                  <div style={{ display: "flex", flexDirection: "column", gap: "4px", fontSize: "0.75rem", color: "var(--gray-400)", paddingLeft: "4px" }}>
+                  <p style={{ fontSize: "0.72rem", fontWeight: 700, color: "var(--gray-500)", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "8px" }}>Always On</p>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "4px", fontSize: "0.8rem", color: "var(--gray-600)", paddingLeft: "4px" }}>
                     <p>• Removed from a shift by an admin</p>
                     <p>• Slot cancelled by a clinic</p>
                     <p>• Slot edited and your signup was dropped</p>

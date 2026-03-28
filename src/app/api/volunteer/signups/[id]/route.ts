@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { notifyVolunteerCancellation, notifyNoShow } from "@/lib/notifications";
 import { sendGmail } from "@/lib/notifications/gmail";
 import { sendResendEmail } from "@/lib/notifications/resend";
+import { logActivity } from "@/lib/activity-log";
 
 const LANG_NAMES: Record<string, string> = {
   ES: "Spanish", ZH: "Chinese (Mandarin)", KO: "Korean", AR: "Arabic",
@@ -173,6 +174,16 @@ export async function DELETE(
       }
     }
   }
+
+  await logActivity({
+    actorId: user.id,
+    actorEmail: user.email ?? undefined,
+    actorName: user.name ?? undefined,
+    action: "SIGNUP_CANCELLED",
+    targetType: "Signup",
+    targetId: id,
+    detail: `Cancelled ${slot.language} slot at ${clinic.name} hour ${signup.subBlockHour}`,
+  });
 
   return NextResponse.json({ ok: true });
 }

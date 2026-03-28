@@ -16,7 +16,10 @@ export async function GET() {
   const user = await getAuthorizedUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
 
-  const [languages, volunteerProfiles, slots, volunteerCount, activeSlotCount, feedbackRecords] = await Promise.all([
+  const now = new Date();
+  const oneMonthAgo = new Date(now.getTime() - 30 * 24 * 3_600_000);
+
+  const [languages, volunteerProfiles, slots, volunteerCount, activeVolunteerCount, upcomingSlots, feedbackRecords] = await Promise.all([
     prisma.languageConfig.findMany({ orderBy: { name: "asc" } }),
     prisma.volunteerProfile.findMany({
       select: { languages: true, hoursVolunteered: true },
@@ -32,7 +35,25 @@ export async function GET() {
       },
     }),
     prisma.user.count({ where: { role: "VOLUNTEER", status: "ACTIVE" } }),
-    prisma.slot.count({ where: { status: "ACTIVE" } }),
+    // Active volunteers = signed up for at least one slot in the last month
+    prisma.volunteerProfile.count({
+      where: {
+        signups: {
+          some: { createdAt: { gte: oneMonthAgo } },
+        },
+      },
+    }),
+    // Upcoming slots (ACTIVE, future date) with signup counts
+    prisma.slot.findMany({
+      where: { status: "ACTIVE", date: { gte: now } },
+      select: {
+        id: true,
+        interpreterCount: true,
+        startTime: true,
+        endTime: true,
+        signups: { where: { status: "ACTIVE" }, select: { subBlockHour: true } },
+      },
+    }),
     prisma.feedback.findMany({ select: { authorRole: true, rating: true } }),
   ]);
 
@@ -65,6 +86,20 @@ export async function GET() {
     hours: data.hours,
   }));
 
+  // Upcoming filled/unfilled slot-hours
+  let filledSlotHours = 0;
+  let unfilledSlotHours = 0;
+  for (const slot of upcomingSlots) {
+    for (let h = slot.startTime; h < slot.endTime; h++) {
+      const filled = slot.signups.filter((s) => s.subBlockHour === h).length;
+      if (filled >= slot.interpreterCount) {
+        filledSlotHours++;
+      } else {
+        unfilledSlotHours++;
+      }
+    }
+  }
+
   // Feedback stats
   const feedbackCount = feedbackRecords.length;
   const clinicAuthoredRatings = feedbackRecords
@@ -87,7 +122,9 @@ export async function GET() {
     hoursByLanguage,
     hoursByClinic,
     volunteerCount,
-    activeSlotCount,
+    activeVolunteerCount,
+    filledSlotHours,
+    unfilledSlotHours,
     feedbackCount,
     avgVolunteerRating,
     avgClinicRating,
