@@ -2,7 +2,7 @@
 
 import { useSession, signOut } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useState, useCallback, Fragment } from "react";
+import { useEffect, useState, useCallback, Fragment, Suspense } from "react";
 
 type SubBlockSignup = {
   id: string;
@@ -136,7 +136,7 @@ function FieldLabel({ children }: { children: React.ReactNode }) {
   return <label style={{ display: "block", fontSize: "0.72rem", fontWeight: 700, textTransform: "uppercase" as const, letterSpacing: "0.08em", color: "var(--gray-600)", marginBottom: "6px" }}>{children}</label>;
 }
 
-export default function ClinicDashboard() {
+function ClinicDashboardInner() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -519,6 +519,14 @@ export default function ClinicDashboard() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function ClinicDashboard() {
+  return (
+    <Suspense fallback={<div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--page-bg)" }}><p style={{ color: "var(--gray-400)" }}>Loading…</p></div>}>
+      <ClinicDashboardInner />
+    </Suspense>
   );
 }
 
