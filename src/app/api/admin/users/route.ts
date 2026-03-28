@@ -75,11 +75,6 @@ export async function PATCH(req: NextRequest) {
   });
   if (!target) return NextResponse.json({ error: "User not found" }, { status: 404 });
 
-  // Nobody modifies SUPER_ADMIN
-  if (target.role === "SUPER_ADMIN") {
-    return NextResponse.json({ error: "Cannot modify the super admin account" }, { status: 403 });
-  }
-
   // Handle status and clinicId (existing logic, kept for backwards compat)
   if (status !== undefined || clinicId !== undefined) {
     if (!isAdmin) return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
@@ -173,9 +168,6 @@ export async function PATCH(req: NextRequest) {
   if (addRole) {
     if (!isAdmin) return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     // Permission check
-    if ((addRole === "SUPER_ADMIN" || addRole === "ADMIN") && !isSuperAdmin) {
-      return NextResponse.json({ error: "Only SUPER_ADMIN can assign this role" }, { status: 403 });
-    }
     if (target.roles.includes(addRole)) return NextResponse.json({ error: "User already has this role" }, { status: 400 });
 
     const newRoles = [...target.roles.filter((r) => r !== "PENDING"), addRole];
@@ -205,11 +197,6 @@ export async function PATCH(req: NextRequest) {
   // Handle removeRole
   if (removeRole) {
     if (!isAdmin) return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
-    // Permission check
-    if ((removeRole === "SUPER_ADMIN" || removeRole === "ADMIN") && !isSuperAdmin) {
-      return NextResponse.json({ error: "Only SUPER_ADMIN can remove this role" }, { status: 403 });
-    }
-
     // VOLUNTEER removal: check for upcoming signups
     if (removeRole === "VOLUNTEER" && !confirmRemoveVolunteer) {
       const now = new Date();
@@ -256,6 +243,27 @@ export async function PATCH(req: NextRequest) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       data: { roles: newRoles, role: newPrimaryRole as any },
     });
+    return NextResponse.json({ ok: true, roles: newRoles });
+  }
+
+  // Handle addLanguage
+  if (body.addLanguage) {
+    if (!isAdmin) return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+    const langCode = (body.addLanguage as string).toUpperCase();
+    if (target.roles.includes(`LANG_${langCode}`) || target.roles.includes(`LANG_${langCode}_CLEARED`)) {
+      return NextResponse.json({ error: "User already has this language" }, { status: 400 });
+    }
+    const newRoles = [...target.roles, `LANG_${langCode}`];
+    await prisma.user.update({ where: { id: userId }, data: { roles: newRoles } });
+    return NextResponse.json({ ok: true, roles: newRoles });
+  }
+
+  // Handle removeLanguage
+  if (body.removeLanguage) {
+    if (!isAdmin) return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+    const langCode = (body.removeLanguage as string).toUpperCase();
+    const newRoles = target.roles.filter((r) => r !== `LANG_${langCode}` && r !== `LANG_${langCode}_CLEARED`);
+    await prisma.user.update({ where: { id: userId }, data: { roles: newRoles } });
     return NextResponse.json({ ok: true, roles: newRoles });
   }
 

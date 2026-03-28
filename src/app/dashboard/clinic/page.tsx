@@ -1,8 +1,8 @@
 "use client";
 
 import { useSession, signOut } from "next-auth/react";
-import { useRouter } from "next/navigation";
-import { useEffect, useState, useCallback, Fragment } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useState, useCallback, Fragment, Suspense } from "react";
 
 type SubBlockSignup = {
   id: string;
@@ -136,9 +136,12 @@ function FieldLabel({ children }: { children: React.ReactNode }) {
   return <label style={{ display: "block", fontSize: "0.72rem", fontWeight: 700, textTransform: "uppercase" as const, letterSpacing: "0.08em", color: "var(--gray-600)", marginBottom: "6px" }}>{children}</label>;
 }
 
-export default function ClinicDashboard() {
+function ClinicDashboardInner() {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const adminPreviewId = searchParams.get("adminPreview");
+  const isAdminPreview = !!(adminPreviewId && (session?.user?.role === "ADMIN" || session?.user?.role === "SUPER_ADMIN"));
   const [tab, setTab] = useState<Tab>("upcoming");
   const [slots, setSlots] = useState<Slot[]>([]);
   const [loading, setLoading] = useState(true);
@@ -161,10 +164,19 @@ export default function ClinicDashboard() {
 
   useEffect(() => {
     if (status === "unauthenticated") router.push("/login");
-    if (session?.user?.role && session.user.role !== "CLINIC") router.push("/dashboard");
-  }, [status, session, router]);
+    if (session?.user?.role && session.user.role !== "CLINIC" && !isAdminPreview) router.push("/dashboard");
+  }, [status, session, router, isAdminPreview]);
 
   const fetchSlots = useCallback(async () => {
+    if (adminPreviewId) {
+      const res = await fetch(`/api/admin/clinic-preview/${adminPreviewId}`);
+      if (res.ok) {
+        const data = await res.json();
+        setSlots(data.slots);
+      }
+      setLoading(false);
+      return;
+    }
     const [slotsRes, notifRes, statusRes] = await Promise.all([
       fetch("/api/clinic/slots"),
       fetch("/api/clinic/notif-prefs"),
@@ -177,9 +189,11 @@ export default function ClinicDashboard() {
       setFeedbackGiven(new Set<string>(givenKeys ?? []));
     }
     setLoading(false);
-  }, []);
+  }, [adminPreviewId]);
 
-  useEffect(() => { if (session?.user?.role === "CLINIC") fetchSlots(); }, [session, fetchSlots]);
+  useEffect(() => {
+    if (session?.user?.role === "CLINIC" || isAdminPreview) fetchSlots();
+  }, [session, fetchSlots, isAdminPreview]);
 
   const saveNotifPrefs = async (updated: ClinicNotifPrefs) => {
     await fetch("/api/clinic/notif-prefs", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(updated) });
@@ -262,7 +276,7 @@ export default function ClinicDashboard() {
 
   if (status === "loading" || loading) return <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--page-bg)" }}><p style={{ color: "var(--gray-400)" }}>Loading…</p></div>;
 
-  if (!session?.user?.clinicId) return (
+  if (!session?.user?.clinicId && !isAdminPreview) return (
     <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--page-bg)" }}>
       <div style={{ textAlign: "center" }}>
         <p style={{ fontWeight: 600, color: "var(--gray-900)" }}>No clinic assigned</p>
@@ -278,6 +292,15 @@ export default function ClinicDashboard() {
 
   return (
     <div style={{ minHeight: "100vh", background: "var(--page-bg)" }}>
+      {isAdminPreview && (
+        <div style={{ background: "#1E40AF", color: "#fff", padding: "10px 32px", display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: "0.875rem", fontFamily: "'DM Sans', sans-serif" }}>
+          <span>Admin Preview Mode — viewing as clinic</span>
+          <button
+            onClick={() => router.push("/dashboard/admin")}
+            style={{ background: "rgba(255,255,255,.15)", border: "1px solid rgba(255,255,255,.3)", color: "#fff", padding: "5px 14px", borderRadius: "7px", cursor: "pointer", fontSize: "0.8rem", fontFamily: "'DM Sans', sans-serif" }}
+          >← Back to Admin</button>
+        </div>
+      )}
       {/* Topbar */}
       <header style={{ background: "var(--navy)", height: "64px", position: "sticky", top: 0, zIndex: 100, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 32px" }}>
         <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
@@ -307,10 +330,10 @@ export default function ClinicDashboard() {
           {tab === "upcoming" && (
             <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
               <span style={{ fontSize: "0.82rem", color: "var(--gray-400)" }}>{upcoming.length}/100 slots</span>
-              {!showPostForm
+              {!isAdminPreview && (!showPostForm
                 ? <button onClick={() => setShowPostForm(true)} disabled={upcoming.length >= 100} style={{ ...btnPrimary, opacity: upcoming.length >= 100 ? 0.4 : 1 }}>+ Post Slot</button>
                 : <button onClick={() => setShowPostForm(false)} style={{ padding: "10px 22px", borderRadius: "9px", background: "none", border: "1.5px solid var(--card-border)", color: "var(--gray-600)", fontFamily: "inherit", fontSize: "0.875rem", cursor: "pointer" }}>Cancel</button>
-              }
+              )}
             </div>
           )}
         </div>
@@ -358,7 +381,7 @@ export default function ClinicDashboard() {
         {selectedSlotIds.size > 0 && tab !== "settings" && (
           <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "16px", padding: "12px 16px", background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: "10px" }}>
             <span style={{ fontSize: "0.875rem", color: "#B91C1C", fontWeight: 600 }}>{selectedSlotIds.size} slot{selectedSlotIds.size !== 1 ? "s" : ""} selected</span>
-            <button disabled={actionLoading === "batch-delete"} onClick={cancelSelectedSlots} style={{ padding: "6px 14px", fontSize: "0.8rem", background: "#DC2626", color: "#fff", border: "none", borderRadius: "7px", fontFamily: "inherit", cursor: "pointer", opacity: actionLoading === "batch-delete" ? 0.5 : 1 }}>{actionLoading === "batch-delete" ? "Cancelling…" : "Cancel Selected"}</button>
+            {!isAdminPreview && <button disabled={actionLoading === "batch-delete"} onClick={cancelSelectedSlots} style={{ padding: "6px 14px", fontSize: "0.8rem", background: "#DC2626", color: "#fff", border: "none", borderRadius: "7px", fontFamily: "inherit", cursor: "pointer", opacity: actionLoading === "batch-delete" ? 0.5 : 1 }}>{actionLoading === "batch-delete" ? "Cancelling…" : "Cancel Selected"}</button>}
             <button onClick={() => setSelectedSlotIds(new Set())} style={{ background: "none", border: "none", color: "#DC2626", fontFamily: "inherit", fontSize: "0.8rem", cursor: "pointer" }}>Clear</button>
           </div>
         )}
@@ -371,10 +394,10 @@ export default function ClinicDashboard() {
               ? Object.entries(upcomingByDate).map(([label, ds]) => (
                 <div key={label}>
                   <div style={{ fontSize: "0.78rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", color: "var(--gray-900)", margin: "28px 0 12px" }}>{label}</div>
-                  {ds.map((slot) => <SlotCard key={slot.id} slot={slot} isPast={false} selectedSlotIds={selectedSlotIds} actionLoading={actionLoading} onToggleSelect={toggleSelectSlot} onEdit={(s) => { setEditSlot({ ...s }); setEditScope("single"); }} onCancel={(s) => setCancelConfirm({ slotId: s.id, isRecurring: s.isRecurring && !!s.recurrenceGroupId })} onNoShow={reportNoShow} />)}
+                  {ds.map((slot) => <SlotCard key={slot.id} slot={slot} isPast={false} selectedSlotIds={selectedSlotIds} actionLoading={actionLoading} onToggleSelect={toggleSelectSlot} onEdit={(s) => { setEditSlot({ ...s }); setEditScope("single"); }} onCancel={(s) => setCancelConfirm({ slotId: s.id, isRecurring: s.isRecurring && !!s.recurrenceGroupId })} onNoShow={reportNoShow} isAdminPreview={isAdminPreview} />)}
                 </div>
               ))
-              : past.map((slot) => <SlotCard key={slot.id} slot={slot} isPast={!isUpcoming(slot)} selectedSlotIds={selectedSlotIds} actionLoading={actionLoading} onToggleSelect={toggleSelectSlot} onEdit={(s) => { setEditSlot({ ...s }); setEditScope("single"); }} onCancel={(s) => setCancelConfirm({ slotId: s.id, isRecurring: s.isRecurring && !!s.recurrenceGroupId })} onNoShow={reportNoShow} />)
+              : past.map((slot) => <SlotCard key={slot.id} slot={slot} isPast={!isUpcoming(slot)} selectedSlotIds={selectedSlotIds} actionLoading={actionLoading} onToggleSelect={toggleSelectSlot} onEdit={(s) => { setEditSlot({ ...s }); setEditScope("single"); }} onCancel={(s) => setCancelConfirm({ slotId: s.id, isRecurring: s.isRecurring && !!s.recurrenceGroupId })} onNoShow={reportNoShow} isAdminPreview={isAdminPreview} />)
         )}
 
         {/* Notification Settings */}
@@ -499,12 +522,21 @@ export default function ClinicDashboard() {
   );
 }
 
+export default function ClinicDashboard() {
+  return (
+    <Suspense fallback={<div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--page-bg)" }}><p style={{ color: "var(--gray-400)" }}>Loading…</p></div>}>
+      <ClinicDashboardInner />
+    </Suspense>
+  );
+}
+
 // ── Slot Card ─────────────────────────────────────────────────────────────────
 
-function SlotCard({ slot, isPast, selectedSlotIds, actionLoading, onToggleSelect, onEdit, onCancel, onNoShow }: {
+function SlotCard({ slot, isPast, selectedSlotIds, actionLoading, onToggleSelect, onEdit, onCancel, onNoShow, isAdminPreview }: {
   slot: Slot; isPast: boolean; selectedSlotIds: Set<string>; actionLoading: string | null;
   onToggleSelect: (id: string) => void; onEdit: (slot: Slot) => void;
   onCancel: (slot: Slot) => void; onNoShow: (slotId: string, signupId: string) => void;
+  isAdminPreview?: boolean;
 }) {
   const subBlocks = Array.from({ length: slot.endTime - slot.startTime }, (_, i) => slot.startTime + i);
   const totalFilled = slot.signups.filter((s) => s.status === "ACTIVE").length;
@@ -533,7 +565,7 @@ function SlotCard({ slot, isPast, selectedSlotIds, actionLoading, onToggleSelect
         </div>
         <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "8px" }}>
           {!isPast && <div style={{ background: openCount > 0 ? "var(--green-light)" : "var(--gray-200)", color: openCount > 0 ? "var(--green)" : "var(--gray-600)", fontSize: "0.9rem", fontWeight: 700, padding: "9px 18px", borderRadius: "10px", textAlign: "center", lineHeight: 1.2 }}>{openCount} open<span style={{ display: "block", fontSize: "0.72rem", fontWeight: 500, marginTop: "2px", opacity: 0.8 }}>slots</span></div>}
-          {!isPast && slot.status === "ACTIVE" && (
+          {!isPast && slot.status === "ACTIVE" && !isAdminPreview && (
             <div style={{ display: "flex", gap: "8px" }}>
               <button onClick={() => onEdit(slot)} style={{ fontSize: "0.78rem", padding: "6px 14px", background: "var(--page-bg)", color: "var(--gray-600)", border: "1px solid var(--card-border)", borderRadius: "7px", fontFamily: "inherit", cursor: "pointer" }}>Edit</button>
               <button disabled={actionLoading === slot.id} onClick={() => onCancel(slot)} style={{ fontSize: "0.78rem", padding: "6px 14px", background: "#FEF2F2", color: "#DC2626", border: "1px solid #FECACA", borderRadius: "7px", fontFamily: "inherit", cursor: "pointer", opacity: actionLoading === slot.id ? 0.5 : 1 }}>Cancel Slot</button>
