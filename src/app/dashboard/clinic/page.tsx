@@ -304,7 +304,8 @@ function ClinicDashboardInner() {
       {/* Topbar */}
       <header style={{ background: "var(--navy)", height: "64px", position: "sticky", top: 0, zIndex: 100, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 32px" }}>
         <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
-          <div style={{ width: "36px", height: "36px", borderRadius: "9px", background: "linear-gradient(135deg,#2563EB,#60A5FA)", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, color: "#fff", fontSize: "1rem" }}>G</div>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo.svg" alt="GMI" style={{ width: "36px", height: "36px", borderRadius: "9px" }} />
           <div>
             <div style={{ color: "#fff", fontSize: "0.95rem", fontWeight: 600 }}>Georgetown Medical Interpreters</div>
             <div style={{ color: "#94A3B8", fontSize: "0.72rem" }}>Clinic Dashboard{session?.user?.name ? ` — ${session.user.name}` : ""}</div>

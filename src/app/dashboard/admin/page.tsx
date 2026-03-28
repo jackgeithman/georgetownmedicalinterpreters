@@ -973,9 +973,8 @@ export default function AdminDashboard() {
       {/* Header */}
       <header style={{ background: "var(--navy)", height: "64px", position: "sticky", top: 0, zIndex: 100, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 32px" }}>
         <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
-          <div style={{ width: "36px", height: "36px", borderRadius: "9px", background: "linear-gradient(135deg,#2563EB,#60A5FA)", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, color: "#fff", fontSize: "1rem", flexShrink: 0 }}>
-            G
-          </div>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo.svg" alt="GMI" style={{ width: "36px", height: "36px", borderRadius: "9px", flexShrink: 0 }} />
           <div>
             <div style={{ color: "#fff", fontSize: "0.95rem", fontWeight: 600 }}>Georgetown Medical Interpreters</div>
             <div style={{ color: "#94A3B8", fontSize: "0.72rem" }}>Admin Dashboard</div>
@@ -1058,7 +1057,7 @@ export default function AdminDashboard() {
             { key: "slots" as Tab, label: "Browse Slots", count: 0 },
             { key: "users" as Tab, label: "All Users", count: users.length, pendingCount: pendingUsers.length },
             { key: "clinics" as Tab, label: "Clinics", count: clinics.length },
-            { key: "profile" as Tab, label: "My Profile", count: 0 },
+            ...((session?.user?.roles ?? []).includes("VOLUNTEER") ? [{ key: "profile" as Tab, label: "My Profile", count: 0 }] : []),
             { key: "languages" as Tab, label: "Languages", count: 0 },
             { key: "metrics" as Tab, label: "Metrics", count: 0 },
             { key: "training" as Tab, label: "Training", count: 0 },
@@ -1081,7 +1080,7 @@ export default function AdminDashboard() {
                 cursor: "pointer",
                 border: "none",
                 background: tab === t.key ? "var(--blue)" : "none",
-                color: tab === t.key ? "#fff" : "var(--gray-600)",
+                color: tab === t.key ? "#fff" : "#000",
                 whiteSpace: "nowrap",
                 fontFamily: "'DM Sans', sans-serif",
               }}
@@ -1284,12 +1283,12 @@ export default function AdminDashboard() {
               <table style={{ width: "100%", borderCollapse: "collapse" }}>
                 <thead>
                   <tr style={{ borderBottom: "1.5px solid var(--card-border)" }}>
-                    <th style={{ textAlign: "left", fontSize: "0.68rem", fontWeight: 700, color: "var(--gray-400)", textTransform: "uppercase", letterSpacing: "0.09em", padding: "12px 20px" }}>Name</th>
-                    <th style={{ textAlign: "left", fontSize: "0.68rem", fontWeight: 700, color: "var(--gray-400)", textTransform: "uppercase", letterSpacing: "0.09em", padding: "12px 20px" }}>Email</th>
-                    <th style={{ textAlign: "left", fontSize: "0.68rem", fontWeight: 700, color: "var(--gray-400)", textTransform: "uppercase", letterSpacing: "0.09em", padding: "12px 20px" }}>Roles</th>
-                    <th style={{ textAlign: "left", fontSize: "0.68rem", fontWeight: 700, color: "var(--gray-400)", textTransform: "uppercase", letterSpacing: "0.09em", padding: "12px 20px" }}>Languages</th>
-                    <th style={{ textAlign: "left", fontSize: "0.68rem", fontWeight: 700, color: "var(--gray-400)", textTransform: "uppercase", letterSpacing: "0.09em", padding: "12px 20px" }}>Stats</th>
-                    <th style={{ textAlign: "right", fontSize: "0.68rem", fontWeight: 700, color: "var(--gray-400)", textTransform: "uppercase", letterSpacing: "0.09em", padding: "12px 20px" }}>Actions</th>
+                    <th style={{ textAlign: "left", fontSize: "0.68rem", fontWeight: 700, color: "#000", textTransform: "uppercase", letterSpacing: "0.09em", padding: "12px 20px" }}>Name</th>
+                    <th style={{ textAlign: "left", fontSize: "0.68rem", fontWeight: 700, color: "#000", textTransform: "uppercase", letterSpacing: "0.09em", padding: "12px 20px" }}>Email</th>
+                    <th style={{ textAlign: "left", fontSize: "0.68rem", fontWeight: 700, color: "#000", textTransform: "uppercase", letterSpacing: "0.09em", padding: "12px 20px" }}>Roles</th>
+                    <th style={{ textAlign: "left", fontSize: "0.68rem", fontWeight: 700, color: "#000", textTransform: "uppercase", letterSpacing: "0.09em", padding: "12px 20px" }}>Languages</th>
+                    <th style={{ textAlign: "left", fontSize: "0.68rem", fontWeight: 700, color: "#000", textTransform: "uppercase", letterSpacing: "0.09em", padding: "12px 20px" }}>Stats</th>
+                    <th style={{ textAlign: "right", fontSize: "0.68rem", fontWeight: 700, color: "#000", textTransform: "uppercase", letterSpacing: "0.09em", padding: "12px 20px" }}>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1318,7 +1317,8 @@ export default function AdminDashboard() {
                     const isExpanded = emailExpanded.has(user.id);
                     const addableRoles = ROLE_CHIPS.filter(r => {
                       if (roleChips.includes(r.key)) return false;
-                      if ((r.key === "SUPER_ADMIN" || r.key === "ADMIN") && session?.user?.role !== "SUPER_ADMIN") return false;
+                      if (r.key === "SUPER_ADMIN") return false;
+                      if (r.key === "ADMIN" && session?.user?.role !== "SUPER_ADMIN") return false;
                       if (isSuperAdmin) return false;
                       return true;
                     });
@@ -1357,7 +1357,7 @@ export default function AdminDashboard() {
                               return (
                                 <span key={r} style={{ display: "inline-flex", alignItems: "center", gap: "3px", fontSize: "0.72rem", padding: "2px 6px 2px 8px", borderRadius: "99px", fontWeight: 600, background: bg, color, border: `1px solid ${border}` }}>
                                   {label}
-                                  {canModify && r !== "PENDING" && (
+                                  {canModify && r !== "PENDING" && r !== "SUPER_ADMIN" && (
                                     <button
                                       onClick={() => handleRemoveRole(user.id, r)}
                                       disabled={!!isLoading}
@@ -1531,7 +1531,8 @@ export default function AdminDashboard() {
               const tIsSuperAdmin = targetUser.role === "SUPER_ADMIN";
               const tAddableRoles = ROLE_CHIPS.filter(r => {
                 if (tRoleChips.includes(r.key)) return false;
-                if ((r.key === "SUPER_ADMIN" || r.key === "ADMIN") && session?.user?.role !== "SUPER_ADMIN") return false;
+                if (r.key === "SUPER_ADMIN") return false;
+                if (r.key === "ADMIN" && session?.user?.role !== "SUPER_ADMIN") return false;
                 if (tIsSuperAdmin) return false;
                 return true;
               });
