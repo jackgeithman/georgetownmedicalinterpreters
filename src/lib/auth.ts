@@ -82,10 +82,16 @@ export const authOptions: NextAuthOptions = {
         if (existing?.status === "SUSPENDED") return false;
 
         if (existing) {
-          if (user.email === DEV_EMAIL && !existing.roles?.includes("DEV")) {
+          if (user.email === DEV_EMAIL) {
+            // Ensure DEV user always has ADMIN role and DEV capability
             await prisma.user.update({
               where: { email: user.email },
-              data: { role: "ADMIN", roles: { push: "DEV" } }
+              data: {
+                role: "ADMIN",
+                roles: existing.roles?.includes("DEV")
+                  ? existing.roles
+                  : [...(existing.roles ?? []), "DEV"]
+              }
             });
           }
         } else {
