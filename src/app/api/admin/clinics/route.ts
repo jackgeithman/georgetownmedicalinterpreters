@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import bcrypt from "bcryptjs";
 
 async function getAdmin() {
   const session = await getServerSession(authOptions);
@@ -23,9 +22,7 @@ export async function GET() {
     },
   });
 
-  // Never return the hashed PIN over the wire
-  const safe = clinics.map(({ loginPin: _, ...c }) => c);
-  return NextResponse.json(safe);
+  return NextResponse.json(clinics);
 }
 
 function generatePin(): string {
@@ -44,13 +41,10 @@ export async function POST(req: NextRequest) {
   }
 
   const plainPin = generatePin();
-  const hashedPin = await bcrypt.hash(plainPin, 10);
 
   const clinic = await prisma.clinic.create({
-    data: { name, address: address ?? "", contactName: contactName ?? "", contactEmail, loginPin: hashedPin },
+    data: { name, address: address ?? "", contactName: contactName ?? "", contactEmail, loginPin: plainPin },
   });
 
-  const { loginPin: _, ...safe } = clinic;
-  // Return plaintext PIN once — admin must copy it now
-  return NextResponse.json({ ...safe, plainPin });
+  return NextResponse.json({ ...clinic, plainPin: clinic.loginPin });
 }
