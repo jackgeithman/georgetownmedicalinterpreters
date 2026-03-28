@@ -1176,6 +1176,7 @@ export default function AdminDashboard() {
               <span style={{ color: "var(--gray-400)" }}>Click a language chip to toggle clearance.</span>
             </div>
 
+
             <div style={{ background: "var(--card-bg)", borderRadius: "14px", border: "1.5px solid var(--card-border)", overflow: "hidden" }}>
               <table style={{ width: "100%", borderCollapse: "collapse" }}>
                 <thead>
