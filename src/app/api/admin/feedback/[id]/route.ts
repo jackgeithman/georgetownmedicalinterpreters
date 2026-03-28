@@ -12,7 +12,7 @@ export async function DELETE(
   if (!session?.user?.email) return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
 
   const user = await prisma.user.findUnique({ where: { email: session.user.email } });
-  if (!user || (user.role !== "ADMIN" && user.role !== "SUPER_ADMIN")) {
+  if (!user || user.role !== "ADMIN") {
     return NextResponse.json({ error: "Admin only" }, { status: 403 });
   }
 

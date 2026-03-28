@@ -28,7 +28,7 @@ export async function POST(req: NextRequest) {
 
   const role = session.user.role;
   const isClinic = (session.user as { isClinicSession?: boolean }).isClinicSession || role === "CLINIC";
-  const isVolunteerOrAdmin = role === "VOLUNTEER" || role === "ADMIN" || role === "SUPER_ADMIN";
+  const isVolunteerOrAdmin = role === "VOLUNTEER" || role === "ADMIN";
 
   if (!isClinic && !isVolunteerOrAdmin) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 403 });

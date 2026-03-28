@@ -202,7 +202,7 @@ export async function GET(req: Request) {
 
   if (pendingVolunteers.length > 0) {
     const admins = await prisma.user.findMany({
-      where: { role: { in: ["ADMIN", "SUPER_ADMIN"] }, status: "ACTIVE" },
+      where: { role: "ADMIN", status: "ACTIVE" },
     });
     const volList = pendingVolunteers.map((v) => ({
       name: v.name ?? v.email,

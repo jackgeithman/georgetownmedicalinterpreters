@@ -291,13 +291,13 @@ export default function VolunteerDashboard() {
   const [suggSuccess, setSuggSuccess] = useState(false);
   const [suggError, setSuggError] = useState("");
 
-  const isAdmin = session?.user?.role === "ADMIN" || session?.user?.role === "SUPER_ADMIN";
+  const isAdmin = session?.user?.role === "ADMIN";
   const isInstructor = (session?.user?.roles ?? []).includes("INSTRUCTOR");
 
   useEffect(() => {
     if (status === "unauthenticated") router.push("/login");
     const role = session?.user?.role;
-    if (role && role !== "VOLUNTEER" && role !== "ADMIN" && role !== "SUPER_ADMIN" && role !== "INSTRUCTOR") router.push("/dashboard");
+    if (role && role !== "VOLUNTEER" && role !== "ADMIN" && role !== "INSTRUCTOR") router.push("/dashboard");
   }, [status, session, router]);
 
   const fetchAll = useCallback(async () => {
@@ -337,7 +337,7 @@ export default function VolunteerDashboard() {
 
   useEffect(() => {
     const role = session?.user?.role;
-    if (role === "VOLUNTEER" || role === "ADMIN" || role === "SUPER_ADMIN" || role === "INSTRUCTOR") {
+    if (role === "VOLUNTEER" || role === "ADMIN" || role === "INSTRUCTOR") {
       fetchAll();
       fetch("/api/languages")
         .then((r) => r.json())

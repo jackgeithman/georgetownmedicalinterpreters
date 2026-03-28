@@ -5,7 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { logActivity } from "@/lib/activity-log";
 
 function primaryRole(roles: string[]): string {
-  if (roles.includes("SUPER_ADMIN")) return "SUPER_ADMIN";
+  // DEV is a capability (can be added to ADMIN), not a primary role
   if (roles.includes("ADMIN")) return "ADMIN";
   if (roles.includes("INSTRUCTOR")) return "INSTRUCTOR";
   if (roles.includes("VOLUNTEER")) return "VOLUNTEER";
@@ -16,7 +16,7 @@ async function getAdminUser() {
   const session = await getServerSession(authOptions);
   if (!session?.user?.email) return null;
   const user = await prisma.user.findUnique({ where: { email: session.user.email } });
-  if (!user || (user.role !== "ADMIN" && user.role !== "SUPER_ADMIN")) return null;
+  if (!user || user.role !== "ADMIN") return null;
   return user;
 }
 
@@ -59,8 +59,8 @@ export async function PATCH(req: NextRequest) {
   const admin = await prisma.user.findUnique({ where: { email: session.user.email } });
   if (!admin) return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
 
-  const isAdmin = admin.role === "ADMIN" || admin.role === "SUPER_ADMIN";
-  const isSuperAdmin = admin.role === "SUPER_ADMIN";
+  const isAdmin = admin.role === "ADMIN";
+  const isSuperAdmin = admin.roles?.includes("DEV");
   const isInstructor = admin.roles.includes("INSTRUCTOR");
 
   if (!isAdmin && !isInstructor) return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
@@ -80,7 +80,7 @@ export async function PATCH(req: NextRequest) {
   if (status !== undefined || clinicId !== undefined) {
     if (!isAdmin) return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
 
-    // ADMIN cannot modify other ADMINs (only SUPER_ADMIN can)
+    // ADMIN cannot modify other ADMINs (only DEV can)
     if (target.role === "ADMIN" && !isSuperAdmin) {
       return NextResponse.json({ error: "Only the super admin can modify Admin accounts" }, { status: 403 });
     }

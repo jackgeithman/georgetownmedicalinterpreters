@@ -9,9 +9,9 @@ async function getAuthorizedUser(minRole: "instructor" | "admin") {
   const user = await prisma.user.findUnique({ where: { email: session.user.email } });
   if (!user) return null;
   if (minRole === "instructor") {
-    if (user.role !== "ADMIN" && user.role !== "SUPER_ADMIN" && user.role !== "INSTRUCTOR") return null;
+    if (user.role !== "ADMIN" && user.role !== "INSTRUCTOR") return null;
   } else {
-    if (user.role !== "ADMIN" && user.role !== "SUPER_ADMIN") return null;
+    if (user.role !== "ADMIN") return null;
   }
   return user;
 }

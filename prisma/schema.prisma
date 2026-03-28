@@ -9,12 +9,12 @@ datasource db {
 }
 
 enum Role {
-  SUPER_ADMIN
   ADMIN
   INSTRUCTOR
   CLINIC
   VOLUNTEER
   PENDING
+  SUPER_ADMIN // Deprecated: use ADMIN role with DEV in roles array instead
 }
 
 enum UserStatus {

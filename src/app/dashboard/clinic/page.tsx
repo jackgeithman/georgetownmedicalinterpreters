@@ -148,7 +148,7 @@ function ClinicDashboardInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const adminPreviewId = searchParams.get("adminPreview");
-  const isAdminPreview = !!(adminPreviewId && (session?.user?.role === "ADMIN" || session?.user?.role === "SUPER_ADMIN"));
+  const isAdminPreview = !!(adminPreviewId && session?.user?.role === "ADMIN");
   const [tab, setTab] = useState<Tab>("upcoming");
   const [slots, setSlots] = useState<Slot[]>([]);
   const [loading, setLoading] = useState(true);
