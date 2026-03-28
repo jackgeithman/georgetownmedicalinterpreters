@@ -187,7 +187,7 @@ export async function PATCH(req: NextRequest) {
 
   // Handle addRole
   if (addRole) {
-    if (!isAdmin) return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+    if (!isAdmin && !isSuperAdmin) return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     // Permission check
     if (target.roles.includes(addRole)) return NextResponse.json({ error: "User already has this role" }, { status: 400 });
 
@@ -226,7 +226,7 @@ export async function PATCH(req: NextRequest) {
 
   // Handle removeRole
   if (removeRole) {
-    if (!isAdmin) return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+    if (!isAdmin && !isSuperAdmin) return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     // VOLUNTEER removal: check for upcoming signups
     if (removeRole === "VOLUNTEER" && !confirmRemoveVolunteer) {
       const now = new Date();
