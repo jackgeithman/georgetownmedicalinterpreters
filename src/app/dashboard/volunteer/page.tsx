@@ -457,6 +457,15 @@ export default function VolunteerDashboard() {
 
   return (
     <div style={{ minHeight: "100vh", background: "var(--page-bg)", fontFamily: "'DM Sans', system-ui, sans-serif", color: "var(--gray-900)" }}>
+      {isAdmin && (
+        <div style={{ background: "#1E40AF", color: "#fff", padding: "10px 32px", display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: "0.875rem", fontFamily: "'DM Sans', sans-serif" }}>
+          <span>Viewing as Volunteer</span>
+          <button
+            onClick={() => router.push("/dashboard/admin")}
+            style={{ background: "rgba(255,255,255,.15)", border: "1px solid rgba(255,255,255,.3)", color: "#fff", padding: "5px 14px", borderRadius: "7px", cursor: "pointer", fontSize: "0.8rem", fontFamily: "'DM Sans', sans-serif" }}
+          >← Back to Admin</button>
+        </div>
+      )}
       {/* Header */}
       <header style={{ background: "var(--navy)", height: "64px", position: "sticky", top: 0, zIndex: 100, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 32px" }}>
         <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
@@ -476,14 +485,6 @@ export default function VolunteerDashboard() {
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
           <span style={{ color: "#CBD5E1", fontSize: "0.82rem" }}>{session?.user?.email}</span>
-          {isAdmin && (
-            <button
-              onClick={() => router.push("/dashboard/admin")}
-              style={{ background: "rgba(167,139,250,.15)", border: "1px solid rgba(167,139,250,.3)", color: "#ddd6fe", fontFamily: "'DM Sans', sans-serif", fontSize: "0.8rem", fontWeight: 500, padding: "7px 16px", borderRadius: "8px", cursor: "pointer" }}
-            >
-              Admin Dashboard
-            </button>
-          )}
           <button
             onClick={() => signOut({ callbackUrl: "/login" })}
             style={{ background: "rgba(255,255,255,.08)", border: "1px solid rgba(255,255,255,.2)", color: "#fff", fontFamily: "'DM Sans', sans-serif", fontSize: "0.8rem", fontWeight: 500, padding: "7px 16px", borderRadius: "8px", cursor: "pointer" }}

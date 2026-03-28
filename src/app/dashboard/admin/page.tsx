@@ -1313,7 +1313,7 @@ export default function AdminDashboard() {
                   })().map((user) => {
                     const { roleChips, langChips } = parseUserRoles(user.roles ?? []);
                     const isSuperAdmin = user.role === "SUPER_ADMIN";
-                    const canModify = !isSuperAdmin && (session?.user?.role === "SUPER_ADMIN" || user.role !== "ADMIN");
+                    const canModify = session?.user?.role === "SUPER_ADMIN" || (!isSuperAdmin && user.role !== "ADMIN");
                     const emailFull = user.email ?? "";
                     const isExpanded = emailExpanded.has(user.id);
                     const addableRoles = ROLE_CHIPS.filter(r => {
@@ -2305,10 +2305,12 @@ export default function AdminDashboard() {
 
       {/* Assign Volunteer to Shift Modal */}
       {volunteerAssignTarget && (() => {
+        const reqLang = volunteerAssignTarget.language;
         const activeVolunteers = users.filter(
           (u) =>
             (u.role === "VOLUNTEER" || u.role === "ADMIN" || u.role === "SUPER_ADMIN") &&
-            u.status === "ACTIVE"
+            u.status === "ACTIVE" &&
+            (u.roles ?? []).some((r) => r === `LANG_${reqLang}` || r === `LANG_${reqLang}_CLEARED`)
         );
         const searchLower = assignSearch.toLowerCase();
         const filtered = activeVolunteers.filter(
