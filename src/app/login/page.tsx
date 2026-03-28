@@ -54,14 +54,10 @@ function LoginContent() {
     <div style={{ minHeight: "100vh", background: "var(--page-bg)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "24px" }}>
       {/* Brand */}
       <div style={{ textAlign: "center", marginBottom: "32px" }}>
-        <div style={{
-          width: "52px", height: "52px", borderRadius: "14px",
-          background: "var(--navy)", display: "flex", alignItems: "center",
-          justifyContent: "center", fontWeight: 700, color: "#fff",
-          fontSize: "1.4rem", margin: "0 auto 14px",
-        }}>G</div>
-        <h1 style={{ fontSize: "1.3rem", fontWeight: 700, color: "var(--navy)", letterSpacing: "-0.02em" }}>Georgetown Medical Interpreters</h1>
-        <p style={{ fontSize: "0.875rem", color: "var(--gray-600)", marginTop: "4px" }}>GMI Volunteer Platform</p>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/gmi-logo.png" alt="GMI" style={{ width: "72px", height: "72px", borderRadius: "16px", margin: "0 auto 16px", display: "block" }} />
+        <h1 style={{ fontSize: "1.65rem", fontWeight: 700, color: "#000", letterSpacing: "-0.02em" }}>Georgetown Medical Interpreters</h1>
+        <p style={{ fontSize: "1rem", color: "var(--gray-600)", marginTop: "6px" }}>GMI Volunteer Platform</p>
       </div>
 
       {/* Card */}
@@ -77,7 +73,7 @@ function LoginContent() {
         )}
 
         {/* Google sign-in */}
-        <p style={{ fontSize: "0.72rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", color: "var(--gray-600)", marginBottom: "12px" }}>
+        <p style={{ fontSize: "0.82rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", color: "#000", marginBottom: "12px" }}>
           Volunteers &amp; Admins
         </p>
         <button
@@ -86,8 +82,8 @@ function LoginContent() {
             display: "flex", alignItems: "center", justifyContent: "center", gap: "10px",
             width: "100%", padding: "13px 20px", background: "#fff",
             border: "1.5px solid var(--card-border)", borderRadius: "10px",
-            fontFamily: "inherit", fontSize: "0.95rem", fontWeight: 600,
-            color: "var(--gray-900)", cursor: "pointer", transition: "all .18s",
+            fontFamily: "inherit", fontSize: "1.05rem", fontWeight: 600,
+            color: "#000", cursor: "pointer", transition: "all .18s",
           }}
           onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.borderColor = "var(--blue)"; (e.currentTarget as HTMLButtonElement).style.boxShadow = "0 3px 10px rgba(37,99,235,.12)"; }}
           onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.borderColor = "var(--card-border)"; (e.currentTarget as HTMLButtonElement).style.boxShadow = "none"; }}
@@ -102,14 +98,14 @@ function LoginContent() {
         </button>
 
         {/* Divider */}
-        <div style={{ display: "flex", alignItems: "center", gap: "12px", margin: "20px 0", fontSize: "0.8rem", color: "var(--gray-600)" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "12px", margin: "20px 0", fontSize: "0.9rem", color: "var(--gray-400)" }}>
           <span style={{ flex: 1, height: "1px", background: "var(--card-border)", display: "block" }} />
           or
           <span style={{ flex: 1, height: "1px", background: "var(--card-border)", display: "block" }} />
         </div>
 
         {/* Clinic PIN */}
-        <p style={{ fontSize: "0.72rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", color: "var(--gray-600)", marginBottom: "12px" }}>
+        <p style={{ fontSize: "0.82rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", color: "#000", marginBottom: "12px" }}>
           Clinic Staff
         </p>
 
@@ -121,7 +117,7 @@ function LoginContent() {
 
         <form onSubmit={handleClinicSignIn} style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
           <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-            <label style={{ fontSize: "0.75rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--gray-600)" }}>Clinic PIN</label>
+            <label style={{ fontSize: "0.82rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: "#000" }}>Clinic PIN</label>
             <div style={{ position: "relative" }}>
               <input
                 type={pinVisible ? "text" : "password"}
@@ -135,7 +131,7 @@ function LoginContent() {
                 style={{
                   width: "100%", padding: "11px 44px 11px 14px",
                   border: "1.5px solid var(--card-border)", borderRadius: "10px",
-                  fontFamily: "inherit", fontSize: "0.95rem", color: "var(--gray-900)",
+                  fontFamily: "inherit", fontSize: "1.05rem", color: "#000",
                   background: "#fff", outline: "none", boxSizing: "border-box",
                 }}
               />
@@ -159,7 +155,7 @@ function LoginContent() {
             style={{
               width: "100%", padding: "13px", border: "none", borderRadius: "10px",
               background: "var(--blue)", color: "#fff", fontFamily: "inherit",
-              fontSize: "0.95rem", fontWeight: 600, cursor: "pointer",
+              fontSize: "1.05rem", fontWeight: 600, cursor: "pointer",
               opacity: pin.length < 6 || clinicLoading ? 0.5 : 1,
               transition: "all .18s",
             }}
@@ -169,7 +165,7 @@ function LoginContent() {
         </form>
 
         {/* Footer */}
-        <p style={{ textAlign: "center", marginTop: "20px", fontSize: "0.8rem", color: "var(--gray-600)", lineHeight: 1.6 }}>
+        <p style={{ textAlign: "center", marginTop: "20px", fontSize: "0.9rem", color: "var(--gray-600)", lineHeight: 1.6 }}>
           By signing in you agree to our{" "}
           <a href="/terms" style={{ color: "var(--blue)", textDecoration: "none" }}>Terms of Service</a>
           {" "}and{" "}
