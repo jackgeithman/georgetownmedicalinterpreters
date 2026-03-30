@@ -60,12 +60,10 @@ export default function InstructorDashboard() {
   const [trainingForm, setTrainingForm] = useState({
     title: "",
     description: "",
-    type: "LINK" as "LINK" | "FILE",
     url: "",
     languageCode: "",
     category: "General",
   });
-  const [trainingFile, setTrainingFile] = useState<File | null>(null);
   const [trainingFormError, setTrainingFormError] = useState("");
   const [trainingSubmitting, setTrainingSubmitting] = useState(false);
   const [showTrainingForm, setShowTrainingForm] = useState(false);
@@ -111,38 +109,13 @@ export default function InstructorDashboard() {
     setTrainingFormError("");
     setTrainingSubmitting(true);
     try {
-      let url = trainingForm.url;
-      let fileName: string | null = null;
-
-      if (trainingForm.type === "FILE") {
-        if (!trainingFile) {
-          setTrainingFormError("Please select a file.");
-          setTrainingSubmitting(false);
-          return;
-        }
-        const fd = new FormData();
-        fd.append("file", trainingFile);
-        const uploadRes = await fetch("/api/training/upload", { method: "POST", body: fd });
-        if (!uploadRes.ok) {
-          const err = await uploadRes.json().catch(() => ({}));
-          setTrainingFormError(err.error ?? "File upload failed.");
-          setTrainingSubmitting(false);
-          return;
-        }
-        const uploadData = await uploadRes.json();
-        url = uploadData.url;
-        fileName = uploadData.fileName;
-      }
-
       const res = await fetch("/api/training", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           title: trainingForm.title,
           description: trainingForm.description || null,
-          type: trainingForm.type,
-          url,
-          fileName,
+          url: trainingForm.url,
           languageCode: trainingForm.languageCode || null,
           category: trainingForm.category || "General",
         }),
@@ -150,8 +123,7 @@ export default function InstructorDashboard() {
       if (res.ok) {
         const material = await res.json();
         setTrainingMaterials((prev) => [material, ...prev]);
-        setTrainingForm({ title: "", description: "", type: "LINK", url: "", languageCode: "", category: "General" });
-        setTrainingFile(null);
+        setTrainingForm({ title: "", description: "", url: "", languageCode: "", category: "General" });
         setShowTrainingForm(false);
       } else {
         const err = await res.json().catch(() => ({}));
@@ -266,36 +238,12 @@ export default function InstructorDashboard() {
                   rows={2}
                   className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-300 resize-none"
                 />
-                <div className="flex gap-2">
-                  {(["LINK", "FILE"] as const).map((t) => (
-                    <button
-                      key={t}
-                      onClick={() => setTrainingForm({ ...trainingForm, type: t })}
-                      className={`flex-1 py-2 text-sm rounded-md border transition-colors ${
-                        trainingForm.type === t
-                          ? "bg-[#4A90D9] text-white border-[#4A90D9]"
-                          : "border-gray-200 text-gray-600 hover:border-gray-400"
-                      }`}
-                    >
-                      {t === "LINK" ? "Link" : "File Upload"}
-                    </button>
-                  ))}
-                </div>
-                {trainingForm.type === "LINK" ? (
-                  <input
-                    placeholder="URL (https://...)"
-                    value={trainingForm.url}
-                    onChange={(e) => setTrainingForm({ ...trainingForm, url: e.target.value })}
-                    className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-300"
-                  />
-                ) : (
-                  <input
-                    type="file"
-                    accept=".pdf,.doc,.docx,.pptx,.mp4,.mov"
-                    onChange={(e) => setTrainingFile(e.target.files?.[0] ?? null)}
-                    className="w-full text-sm text-gray-600"
-                  />
-                )}
+                <input
+                  placeholder="URL (https://...)"
+                  value={trainingForm.url}
+                  onChange={(e) => setTrainingForm({ ...trainingForm, url: e.target.value })}
+                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-300"
+                />
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="text-xs text-gray-500 mb-1 block">Language</label>
@@ -330,7 +278,7 @@ export default function InstructorDashboard() {
                   <p className="text-sm text-red-600 bg-red-50 border border-red-100 rounded-md px-3 py-2">{trainingFormError}</p>
                 )}
                 <button
-                  disabled={trainingSubmitting || !trainingForm.title || (trainingForm.type === "LINK" && !trainingForm.url)}
+                  disabled={trainingSubmitting || !trainingForm.title || !trainingForm.url}
                   onClick={submitTraining}
                   className="px-4 py-2 text-sm bg-[#4A90D9] text-white hover:bg-[#357ABD] rounded-full transition-colors disabled:opacity-50"
                 >
@@ -355,20 +303,11 @@ export default function InstructorDashboard() {
                           {m.languageCode && (
                             <span className="text-xs px-1.5 py-0.5 rounded bg-[#EBF3FC] text-[#041E42]">{m.languageCode}</span>
                           )}
-                          <span className={`text-xs px-1.5 py-0.5 rounded ${m.type === "FILE" ? "bg-amber-50 text-amber-700" : "bg-emerald-50 text-emerald-700"}`}>
-                            {m.type}
-                          </span>
                         </div>
                         {m.description && <p className="text-xs text-gray-500 mb-2">{m.description}</p>}
-                        {m.type === "FILE" ? (
-                          <a href={m.url} target="_blank" rel="noopener noreferrer" className="text-xs text-gray-600 hover:text-black underline">
-                            {m.fileName ?? "Download"}
-                          </a>
-                        ) : (
-                          <a href={m.url} target="_blank" rel="noopener noreferrer" className="text-xs text-[#4A90D9] hover:text-[#041E42] underline break-all">
-                            {m.url}
-                          </a>
-                        )}
+                        <a href={m.url} target="_blank" rel="noopener noreferrer" className="text-xs text-[#4A90D9] hover:text-[#041E42] underline break-all">
+                          {m.url}
+                        </a>
                         <p className="text-xs text-gray-400 mt-2">
                           by {m.uploadedBy.name ?? m.uploadedBy.email} · {new Date(m.createdAt).toLocaleDateString()}
                         </p>
