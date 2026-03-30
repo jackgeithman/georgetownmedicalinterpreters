@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import bcrypt from "bcryptjs";
 async function getAdmin() {
   const session = await getServerSession(authOptions);
   if (!session?.user?.email) return null;
@@ -62,11 +63,12 @@ export async function PATCH(
   if (!clinic) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   const plainPin = generatePin();
+  const hashedPin = await bcrypt.hash(plainPin, 10);
 
   const updated = await prisma.clinic.update({
     where: { id },
-    data: { loginPin: plainPin },
+    data: { loginPin: hashedPin },
   });
 
-  return NextResponse.json({ ...updated, plainPin: updated.loginPin });
+  return NextResponse.json({ ...updated, plainPin });
 }
