@@ -680,33 +680,43 @@ export default function AdminDashboard() {
   };
 
   const toggleLanguageActive = async (id: string, newIsActive: boolean, langName: string) => {
-    if (!newIsActive) {
-      // Deactivating - check for conflicts first
-      const res = await fetch(`/api/admin/languages/${id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ isActive: false }),
-      });
-      if (res.status === 409) {
-        const data = await res.json();
-        setLangDeactivateConflict({ langId: id, langName, conflicts: data.conflicts });
-        return;
+    try {
+      if (!newIsActive) {
+        // Deactivating - check for conflicts first
+        const res = await fetch(`/api/admin/languages/${id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ isActive: false }),
+        });
+        if (res.status === 409) {
+          const data = await res.json();
+          setLangDeactivateConflict({ langId: id, langName, conflicts: data.conflicts });
+          return;
+        }
+        if (res.ok) {
+          const updated = await res.json();
+          setLanguages((prev) => prev.map((l) => (l.id === id ? updated : l)));
+        } else {
+          const data = await res.json().catch(() => ({}));
+          alert(data.error ?? `Failed to deactivate language (${res.status}). Please try again.`);
+        }
+      } else {
+        // Activating - straightforward
+        const res = await fetch(`/api/admin/languages/${id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ isActive: true }),
+        });
+        if (res.ok) {
+          const updated = await res.json();
+          setLanguages((prev) => prev.map((l) => (l.id === id ? updated : l)));
+        } else {
+          const data = await res.json().catch(() => ({}));
+          alert(data.error ?? `Failed to activate language (${res.status}). Please try again.`);
+        }
       }
-      if (res.ok) {
-        const updated = await res.json();
-        setLanguages((prev) => prev.map((l) => (l.id === id ? updated : l)));
-      }
-    } else {
-      // Activating - straightforward
-      const res = await fetch(`/api/admin/languages/${id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ isActive: true }),
-      });
-      if (res.ok) {
-        const updated = await res.json();
-        setLanguages((prev) => prev.map((l) => (l.id === id ? updated : l)));
-      }
+    } catch {
+      alert("An unexpected error occurred. Please try again.");
     }
   };
 
@@ -1220,7 +1230,7 @@ export default function AdminDashboard() {
             { key: "slots" as Tab, label: "Browse Slots", count: 0 },
             { key: "users" as Tab, label: "All Users", count: users.length, pendingCount: pendingUsers.length },
             { key: "clinics" as Tab, label: "Clinics", count: clinics.length },
-            ...((session?.user?.roles ?? []).includes("VOLUNTEER") ? [{ key: "profile" as Tab, label: "My Profile", count: 0 }] : []),
+            ...((session?.user?.roles ?? []).some(r => r === "VOLUNTEER" || r === "DEV") ? [{ key: "profile" as Tab, label: "My Profile", count: 0 }] : []),
             { key: "languages" as Tab, label: "Languages", count: 0 },
             { key: "metrics" as Tab, label: "Metrics", count: 0 },
             { key: "training" as Tab, label: "Training", count: 0 },
