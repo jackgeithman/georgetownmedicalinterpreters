@@ -64,6 +64,7 @@ export default function InstructorDashboard() {
     languageCode: "",
     category: "General",
   });
+  const [trainingLangFilter, setTrainingLangFilter] = useState("ALL");
   const [trainingFormError, setTrainingFormError] = useState("");
   const [trainingSubmitting, setTrainingSubmitting] = useState(false);
   const [showTrainingForm, setShowTrainingForm] = useState(false);
@@ -287,45 +288,71 @@ export default function InstructorDashboard() {
               </div>
             )}
 
-            {trainingMaterials.length === 0 ? (
-              <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
-                <p className="text-gray-400">No training materials yet.</p>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {trainingMaterials.map((m) => (
-                  <div key={m.id} className="bg-white rounded-xl border border-gray-200 p-5">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2 flex-wrap mb-1">
-                          <span className="font-medium text-black text-sm">{m.title}</span>
-                          <span className="text-xs px-1.5 py-0.5 rounded bg-gray-100 text-gray-600">{m.category}</span>
-                          {m.languageCode && (
-                            <span className="text-xs px-1.5 py-0.5 rounded bg-[#EBF3FC] text-[#041E42]">{m.languageCode}</span>
-                          )}
-                        </div>
-                        {m.description && <p className="text-xs text-gray-500 mb-2">{m.description}</p>}
-                        <a href={m.url} target="_blank" rel="noopener noreferrer" className="text-xs text-[#4A90D9] hover:text-[#041E42] underline break-all">
-                          {m.url}
-                        </a>
-                        <p className="text-xs text-gray-400 mt-2">
-                          by {m.uploadedBy.name ?? m.uploadedBy.email} · {new Date(m.createdAt).toLocaleDateString()}
-                        </p>
-                      </div>
-                      {session?.user?.email === m.uploadedBy.email && (
+            {(() => {
+              const getLangName = (code: string) => languages.find((l) => l.code === code)?.name ?? code;
+              const filterLangs = [{ code: "ALL", name: "All Languages" }, ...languages.filter((l) => l.isActive)];
+              const filtered = trainingLangFilter === "ALL" ? trainingMaterials : trainingMaterials.filter((m) => m.languageCode === trainingLangFilter);
+              return (
+                <>
+                  {languages.length > 0 && (
+                    <div className="flex flex-wrap gap-2">
+                      {filterLangs.map((l) => (
                         <button
-                          onClick={() => deleteTraining(m.id)}
-                          className="shrink-0 text-xs px-2 py-1 bg-red-50 text-red-500 hover:bg-red-100 rounded transition-colors"
-                          title="Delete"
+                          key={l.code}
+                          onClick={() => setTrainingLangFilter(l.code)}
+                          className={`px-3 py-1 text-xs font-medium rounded-full border transition-colors ${
+                            trainingLangFilter === l.code
+                              ? "bg-[#4A90D9] text-white border-[#4A90D9]"
+                              : "border-gray-200 text-gray-500 hover:border-gray-400"
+                          }`}
                         >
-                          Delete
+                          {l.name}
                         </button>
-                      )}
+                      ))}
                     </div>
-                  </div>
-                ))}
-              </div>
-            )}
+                  )}
+                  {filtered.length === 0 ? (
+                    <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
+                      <p className="text-gray-400">No training materials yet.</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {filtered.map((m) => (
+                        <div key={m.id} className="bg-white rounded-xl border border-gray-200 p-5">
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center gap-2 flex-wrap mb-1">
+                                <span className="font-medium text-black text-sm">{m.title}</span>
+                                <span className="text-xs px-1.5 py-0.5 rounded bg-gray-100 text-gray-600">{m.category}</span>
+                                {m.languageCode && (
+                                  <span className="text-xs px-1.5 py-0.5 rounded bg-[#EBF3FC] text-[#041E42]">{getLangName(m.languageCode)}</span>
+                                )}
+                              </div>
+                              {m.description && <p className="text-xs text-gray-500 mb-2">{m.description}</p>}
+                              <a href={m.url} target="_blank" rel="noopener noreferrer" className="text-xs text-[#4A90D9] hover:text-[#041E42] underline break-all">
+                                {m.url}
+                              </a>
+                              <p className="text-xs text-gray-400 mt-2">
+                                by {m.uploadedBy.name ?? m.uploadedBy.email} · {new Date(m.createdAt).toLocaleDateString()}
+                              </p>
+                            </div>
+                            {session?.user?.email === m.uploadedBy.email && (
+                              <button
+                                onClick={() => deleteTraining(m.id)}
+                                className="shrink-0 text-xs px-2 py-1 bg-red-50 text-red-500 hover:bg-red-100 rounded transition-colors"
+                                title="Delete"
+                              >
+                                Delete
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </>
+              );
+            })()}
           </div>
         )}
 

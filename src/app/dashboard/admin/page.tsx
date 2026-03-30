@@ -240,8 +240,8 @@ export default function AdminDashboard() {
   const [langFormError, setLangFormError] = useState("");
   const [metrics, setMetrics] = useState<Metrics | null>(null);
   const [trainingMaterials, setTrainingMaterials] = useState<TrainingMaterial[]>([]);
-  const [trainingForm, setTrainingForm] = useState({ title: "", description: "", type: "LINK" as "LINK" | "FILE", url: "", languageCode: "", category: "General" });
-  const [trainingFile, setTrainingFile] = useState<File | null>(null);
+  const [trainingForm, setTrainingForm] = useState({ title: "", description: "", url: "", languageCode: "", category: "General" });
+  const [trainingLangFilter, setTrainingLangFilter] = useState("ALL");
   const [trainingFormError, setTrainingFormError] = useState("");
   const [trainingSubmitting, setTrainingSubmitting] = useState(false);
   const [showTrainingForm, setShowTrainingForm] = useState(false);
@@ -744,38 +744,13 @@ export default function AdminDashboard() {
     setTrainingFormError("");
     setTrainingSubmitting(true);
     try {
-      let url = trainingForm.url;
-      let fileName: string | null = null;
-
-      if (trainingForm.type === "FILE") {
-        if (!trainingFile) {
-          setTrainingFormError("Please select a file.");
-          setTrainingSubmitting(false);
-          return;
-        }
-        const fd = new FormData();
-        fd.append("file", trainingFile);
-        const uploadRes = await fetch("/api/training/upload", { method: "POST", body: fd });
-        if (!uploadRes.ok) {
-          const err = await uploadRes.json().catch(() => ({}));
-          setTrainingFormError(err.error ?? "File upload failed.");
-          setTrainingSubmitting(false);
-          return;
-        }
-        const uploadData = await uploadRes.json();
-        url = uploadData.url;
-        fileName = uploadData.fileName;
-      }
-
       const res = await fetch("/api/training", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           title: trainingForm.title,
           description: trainingForm.description || null,
-          type: trainingForm.type,
-          url,
-          fileName,
+          url: trainingForm.url,
           languageCode: trainingForm.languageCode || null,
           category: trainingForm.category || "General",
         }),
@@ -783,8 +758,7 @@ export default function AdminDashboard() {
       if (res.ok) {
         const material = await res.json();
         setTrainingMaterials((prev) => [material, ...prev]);
-        setTrainingForm({ title: "", description: "", type: "LINK", url: "", languageCode: "", category: "General" });
-        setTrainingFile(null);
+        setTrainingForm({ title: "", description: "", url: "", languageCode: "", category: "General" });
         setShowTrainingForm(false);
       } else {
         const err = await res.json().catch(() => ({}));
@@ -2299,7 +2273,7 @@ export default function AdminDashboard() {
                 <input
                   placeholder="URL (https://docs.google.com/... or any link)"
                   value={trainingForm.url}
-                  onChange={(e) => setTrainingForm({ ...trainingForm, url: e.target.value, type: "LINK" })}
+                  onChange={(e) => setTrainingForm({ ...trainingForm, url: e.target.value })}
                   style={{ width: "100%", padding: "9px 12px", fontSize: "0.875rem", border: "1.5px solid var(--card-border)", borderRadius: "9px", background: "var(--card-bg)", color: "var(--gray-900)", outline: "none", fontFamily: "'DM Sans', sans-serif", boxSizing: "border-box" }}
                 />
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
@@ -2336,61 +2310,74 @@ export default function AdminDashboard() {
                   <p style={{ fontSize: "0.875rem", color: "#DC2626", background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: "8px", padding: "8px 12px" }}>{trainingFormError}</p>
                 )}
                 <button
-                  disabled={trainingSubmitting || !trainingForm.title || (trainingForm.type === "LINK" && !trainingForm.url)}
+                  disabled={trainingSubmitting || !trainingForm.title || !trainingForm.url}
                   onClick={submitTraining}
-                  style={{ padding: "9px 22px", fontSize: "0.875rem", background: "var(--blue)", color: "#fff", border: "none", borderRadius: "99px", cursor: "pointer", fontWeight: 600, opacity: (trainingSubmitting || !trainingForm.title || (trainingForm.type === "LINK" && !trainingForm.url)) ? 0.5 : 1, fontFamily: "'DM Sans', sans-serif", alignSelf: "flex-start" }}
+                  style={{ padding: "9px 22px", fontSize: "0.875rem", background: "var(--blue)", color: "#fff", border: "none", borderRadius: "99px", cursor: "pointer", fontWeight: 600, opacity: (trainingSubmitting || !trainingForm.title || !trainingForm.url) ? 0.5 : 1, fontFamily: "'DM Sans', sans-serif", alignSelf: "flex-start" }}
                 >
                   {trainingSubmitting ? "Saving..." : "Add Material"}
                 </button>
               </div>
             )}
 
-            {trainingMaterials.length === 0 ? (
-              <div style={{ background: "var(--card-bg)", borderRadius: "14px", border: "1.5px solid var(--card-border)", padding: "48px", textAlign: "center" }}>
-                <p style={{ color: "var(--gray-400)" }}>No training materials yet.</p>
-              </div>
-            ) : (
-              <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-                {trainingMaterials.map((m) => (
-                  <div key={m.id} style={{ background: "var(--card-bg)", borderRadius: "14px", border: "1.5px solid var(--card-border)", padding: "20px" }}>
-                    <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "12px" }}>
-                      <div style={{ minWidth: 0, flex: 1 }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap", marginBottom: "4px" }}>
-                          <span style={{ fontWeight: 600, color: "var(--gray-900)", fontSize: "0.875rem" }}>{m.title}</span>
-                          <span style={{ fontSize: "0.72rem", padding: "2px 6px", borderRadius: "4px", background: "var(--gray-200)", color: "var(--gray-600)" }}>{m.category}</span>
-                          {m.languageCode && (
-                            <span style={{ fontSize: "0.72rem", padding: "2px 6px", borderRadius: "4px", background: "#EBF3FC", color: "#0D1F3C" }}>{m.languageCode}</span>
-                          )}
-                          <span style={{ fontSize: "0.72rem", padding: "2px 6px", borderRadius: "4px", background: m.type === "FILE" ? "#FFFBEB" : "#DCFCE7", color: m.type === "FILE" ? "#B45309" : "#15803D" }}>
-                            {m.type}
-                          </span>
-                        </div>
-                        {m.description && <p style={{ fontSize: "0.78rem", color: "var(--gray-600)", marginBottom: "6px" }}>{m.description}</p>}
-                        {m.type === "FILE" ? (
-                          <a href={m.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: "0.78rem", color: "var(--gray-600)", textDecoration: "underline" }}>
-                            {m.fileName ?? "Download"}
-                          </a>
-                        ) : (
-                          <a href={m.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: "0.78rem", color: "var(--blue)", textDecoration: "underline", wordBreak: "break-all" }}>
-                            {m.url}
-                          </a>
-                        )}
-                        <p style={{ fontSize: "0.72rem", color: "var(--gray-400)", marginTop: "8px" }}>
-                          by {m.uploadedBy.name ?? m.uploadedBy.email} · {new Date(m.createdAt).toLocaleDateString()}
-                        </p>
-                      </div>
-                      <button
-                        onClick={() => deleteTraining(m.id)}
-                        style={{ flexShrink: 0, fontSize: "0.75rem", padding: "4px 12px", background: "#FEF2F2", color: "#EF4444", border: "none", borderRadius: "8px", cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}
-                        title="Delete"
-                      >
-                        Delete
-                      </button>
+            {(() => {
+              const getLangName = (code: string) => languages.find((l) => l.code === code)?.name ?? code;
+              const filterLangs = [{ code: "ALL", name: "All Languages" }, ...languages.filter((l) => l.isActive)];
+              const filtered = trainingLangFilter === "ALL" ? trainingMaterials : trainingMaterials.filter((m) => m.languageCode === trainingLangFilter);
+              return (
+                <>
+                  {languages.length > 0 && (
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+                      {filterLangs.map((l) => (
+                        <button
+                          key={l.code}
+                          onClick={() => setTrainingLangFilter(l.code)}
+                          style={{ padding: "5px 14px", fontSize: "0.78rem", fontWeight: 500, border: "1.5px solid", borderRadius: "99px", cursor: "pointer", fontFamily: "'DM Sans', sans-serif", borderColor: trainingLangFilter === l.code ? "var(--blue)" : "var(--card-border)", background: trainingLangFilter === l.code ? "var(--blue)" : "var(--card-bg)", color: trainingLangFilter === l.code ? "#fff" : "var(--gray-600)", transition: "all 0.15s" }}
+                        >
+                          {l.name}
+                        </button>
+                      ))}
                     </div>
-                  </div>
-                ))}
-              </div>
-            )}
+                  )}
+                  {filtered.length === 0 ? (
+                    <div style={{ background: "var(--card-bg)", borderRadius: "14px", border: "1.5px solid var(--card-border)", padding: "48px", textAlign: "center" }}>
+                      <p style={{ color: "var(--gray-400)" }}>No training materials yet.</p>
+                    </div>
+                  ) : (
+                    <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                      {filtered.map((m) => (
+                        <div key={m.id} style={{ background: "var(--card-bg)", borderRadius: "14px", border: "1.5px solid var(--card-border)", padding: "20px" }}>
+                          <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "12px" }}>
+                            <div style={{ minWidth: 0, flex: 1 }}>
+                              <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap", marginBottom: "4px" }}>
+                                <span style={{ fontWeight: 600, color: "var(--gray-900)", fontSize: "0.875rem" }}>{m.title}</span>
+                                <span style={{ fontSize: "0.72rem", padding: "2px 6px", borderRadius: "4px", background: "var(--gray-200)", color: "var(--gray-600)" }}>{m.category}</span>
+                                {m.languageCode && (
+                                  <span style={{ fontSize: "0.72rem", padding: "2px 6px", borderRadius: "4px", background: "#EBF3FC", color: "#0D1F3C" }}>{getLangName(m.languageCode)}</span>
+                                )}
+                              </div>
+                              {m.description && <p style={{ fontSize: "0.78rem", color: "var(--gray-600)", marginBottom: "6px" }}>{m.description}</p>}
+                              <a href={m.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: "0.78rem", color: "var(--blue)", textDecoration: "underline", wordBreak: "break-all" }}>
+                                {m.url}
+                              </a>
+                              <p style={{ fontSize: "0.72rem", color: "var(--gray-400)", marginTop: "8px" }}>
+                                by {m.uploadedBy.name ?? m.uploadedBy.email} · {new Date(m.createdAt).toLocaleDateString()}
+                              </p>
+                            </div>
+                            <button
+                              onClick={() => deleteTraining(m.id)}
+                              style={{ flexShrink: 0, fontSize: "0.75rem", padding: "4px 12px", background: "#FEF2F2", color: "#EF4444", border: "none", borderRadius: "8px", cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}
+                              title="Delete"
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </>
+              );
+            })()}
           </div>
         )}
 
@@ -2632,7 +2619,7 @@ export default function AdminDashboard() {
                 value={adminNotesContent}
                 onChange={(e) => setAdminNotesContent(e.target.value)}
                 rows={20}
-                placeholder={"## Notification Defaults\n\n...\n\n## Page Breakdown\n\n..."}
+                placeholder={"## Role Permissions\n\nVOLUNTEER\n- Access: Browse Slots, My Signups, My Profile, Training, Suggestions\n- Can sign up for and cancel interpretation slots\n- Has a volunteer record (languages, hours, clearance status)\n\nINSTRUCTOR\n- Access: all VOLUNTEER pages + Clearance tab\n- Can add/delete training materials\n- Can mark volunteers cleared/uncleared for their language(s)\n- Assigned language clearances via LANG_XX and LANG_XX_CLEARED roles\n\nADMIN\n- Access: full admin dashboard (Users, Slots, Clinics, Training, Languages, Metrics, Feedback, Suggestions, Email Rules, Notes, Docs)\n- Can manage users, roles, slots, clinics, languages, and all system settings\n\nDEV (capability added to ADMIN accounts)\n- role: \"ADMIN\", roles includes \"DEV\"\n- Additional access: Access Control tab (feature flags), My Profile tab\n- Can toggle feature flags to enable/disable site features\n- Identified by DEV_EMAIL env var — role is auto-assigned on sign-in if missing\n- Does not revert other admin changes; guard condition only sets role when missing\n\n## Notification Defaults\n\n...\n\n## Page Breakdown\n\n..."}
                 style={{ width: "100%", padding: "12px 14px", fontSize: "0.875rem", border: "1.5px solid var(--card-border)", borderRadius: "10px", background: "rgba(0,0,0,.02)", color: "var(--gray-900)", outline: "none", fontFamily: "monospace", resize: "vertical", boxSizing: "border-box", lineHeight: 1.6 }}
               />
               <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>

@@ -276,8 +276,8 @@ export default function VolunteerDashboard() {
   const [langSearch, setLangSearch] = useState("");
   const [availableLanguages, setAvailableLanguages] = useState<{ code: string; name: string }[]>([]);
   const [langDropdownOpen, setLangDropdownOpen] = useState(false);
-  const [trainingForm, setTrainingForm] = useState({ title: "", description: "", type: "LINK" as "LINK" | "FILE", url: "", languageCode: "", category: "General" });
-  const [trainingFile, setTrainingFile] = useState<File | null>(null);
+  const [trainingForm, setTrainingForm] = useState({ title: "", description: "", url: "", languageCode: "", category: "General" });
+  const [trainingLangFilter, setTrainingLangFilter] = useState("ALL");
   const [trainingFormError, setTrainingFormError] = useState("");
   const [trainingSubmitting, setTrainingSubmitting] = useState(false);
   const [showTrainingForm, setShowTrainingForm] = useState(false);
@@ -435,28 +435,15 @@ export default function VolunteerDashboard() {
     setTrainingFormError("");
     setTrainingSubmitting(true);
     try {
-      let url = trainingForm.url;
-      let fileName: string | null = null;
-      if (trainingForm.type === "FILE") {
-        if (!trainingFile) { setTrainingFormError("Please select a file."); setTrainingSubmitting(false); return; }
-        const fd = new FormData();
-        fd.append("file", trainingFile);
-        const uploadRes = await fetch("/api/training/upload", { method: "POST", body: fd });
-        if (!uploadRes.ok) { const err = await uploadRes.json().catch(() => ({})); setTrainingFormError(err.error ?? "File upload failed."); setTrainingSubmitting(false); return; }
-        const uploadData = await uploadRes.json();
-        url = uploadData.url;
-        fileName = uploadData.fileName;
-      }
       const res = await fetch("/api/training", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title: trainingForm.title, description: trainingForm.description || null, type: trainingForm.type, url, fileName, languageCode: trainingForm.languageCode || null, category: trainingForm.category || "General" }),
+        body: JSON.stringify({ title: trainingForm.title, description: trainingForm.description || null, url: trainingForm.url, languageCode: trainingForm.languageCode || null, category: trainingForm.category || "General" }),
       });
       if (res.ok) {
         const material = await res.json();
         setTrainingMaterials((prev) => [material, ...prev]);
-        setTrainingForm({ title: "", description: "", type: "LINK", url: "", languageCode: "", category: "General" });
-        setTrainingFile(null);
+        setTrainingForm({ title: "", description: "", url: "", languageCode: "", category: "General" });
         setShowTrainingForm(false);
       } else {
         const err = await res.json().catch(() => ({}));
@@ -1249,16 +1236,7 @@ export default function VolunteerDashboard() {
                 <h3 style={{ fontSize: "0.875rem", fontWeight: 600, color: "var(--gray-900)", margin: 0 }}>New Training Material</h3>
                 <input placeholder="Title" value={trainingForm.title} onChange={(e) => setTrainingForm({ ...trainingForm, title: e.target.value })} style={{ padding: "9px 12px", fontSize: "0.875rem", border: "1.5px solid var(--card-border)", borderRadius: "9px", fontFamily: "'DM Sans', sans-serif", background: "var(--card-bg)", color: "var(--gray-900)", outline: "none" }} />
                 <textarea placeholder="Description (optional)" value={trainingForm.description} onChange={(e) => setTrainingForm({ ...trainingForm, description: e.target.value })} rows={2} style={{ padding: "9px 12px", fontSize: "0.875rem", border: "1.5px solid var(--card-border)", borderRadius: "9px", fontFamily: "'DM Sans', sans-serif", background: "var(--card-bg)", color: "var(--gray-900)", outline: "none", resize: "none" }} />
-                <div style={{ display: "flex", gap: "8px" }}>
-                  {(["LINK", "FILE"] as const).map((t) => (
-                    <button key={t} onClick={() => setTrainingForm({ ...trainingForm, type: t })} style={{ flex: 1, padding: "8px", fontSize: "0.875rem", borderRadius: "9px", border: trainingForm.type === t ? "none" : "1.5px solid var(--card-border)", background: trainingForm.type === t ? "var(--blue)" : "none", color: trainingForm.type === t ? "#fff" : "var(--gray-600)", cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>{t === "LINK" ? "Link" : "File Upload"}</button>
-                  ))}
-                </div>
-                {trainingForm.type === "LINK" ? (
-                  <input placeholder="URL (https://...)" value={trainingForm.url} onChange={(e) => setTrainingForm({ ...trainingForm, url: e.target.value })} style={{ padding: "9px 12px", fontSize: "0.875rem", border: "1.5px solid var(--card-border)", borderRadius: "9px", fontFamily: "'DM Sans', sans-serif", background: "var(--card-bg)", color: "var(--gray-900)", outline: "none" }} />
-                ) : (
-                  <input type="file" accept=".pdf,.doc,.docx,.pptx,.mp4,.mov" onChange={(e) => setTrainingFile(e.target.files?.[0] ?? null)} style={{ fontSize: "0.875rem", color: "var(--gray-600)" }} />
-                )}
+                <input placeholder="URL (https://...)" value={trainingForm.url} onChange={(e) => setTrainingForm({ ...trainingForm, url: e.target.value })} style={{ padding: "9px 12px", fontSize: "0.875rem", border: "1.5px solid var(--card-border)", borderRadius: "9px", fontFamily: "'DM Sans', sans-serif", background: "var(--card-bg)", color: "var(--gray-900)", outline: "none" }} />
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
                   <div>
                     <label style={{ display: "block", fontSize: "0.72rem", color: "var(--gray-400)", marginBottom: "4px" }}>Language</label>
@@ -1274,7 +1252,7 @@ export default function VolunteerDashboard() {
                   </div>
                 </div>
                 {trainingFormError && <p style={{ fontSize: "0.875rem", color: "#DC2626", background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: "8px", padding: "8px 12px" }}>{trainingFormError}</p>}
-                <button disabled={trainingSubmitting || !trainingForm.title || (trainingForm.type === "LINK" && !trainingForm.url)} onClick={submitTraining} style={{ padding: "9px 22px", fontSize: "0.875rem", background: "var(--blue)", color: "#fff", border: "none", borderRadius: "99px", cursor: "pointer", fontWeight: 600, fontFamily: "'DM Sans', sans-serif", opacity: trainingSubmitting || !trainingForm.title ? 0.5 : 1, alignSelf: "flex-start" }}>
+                <button disabled={trainingSubmitting || !trainingForm.title || !trainingForm.url} onClick={submitTraining} style={{ padding: "9px 22px", fontSize: "0.875rem", background: "var(--blue)", color: "#fff", border: "none", borderRadius: "99px", cursor: "pointer", fontWeight: 600, fontFamily: "'DM Sans', sans-serif", opacity: trainingSubmitting || !trainingForm.title ? 0.5 : 1, alignSelf: "flex-start" }}>
                   {trainingSubmitting ? "Saving..." : "Add Material"}
                 </button>
               </div>
@@ -1283,55 +1261,66 @@ export default function VolunteerDashboard() {
               <div style={{ background: "var(--card-bg)", borderRadius: "14px", border: "1.5px solid var(--card-border)", padding: "48px", textAlign: "center" }}>
                 <p style={{ color: "var(--gray-400)" }}>Loading training materials...</p>
               </div>
-            ) : trainingMaterials.length === 0 ? (
-              <div style={{ background: "var(--card-bg)", borderRadius: "14px", border: "1.5px solid var(--card-border)", padding: "48px", textAlign: "center" }}>
-                <p style={{ color: "var(--gray-400)" }}>No training materials available yet.</p>
-              </div>
             ) : (() => {
-              const categories = Array.from(new Set(trainingMaterials.map((m) => m.category))).sort();
+              const getLangName = (code: string) => availableLanguages.find((l) => l.code === code)?.name ?? code;
+              const filterLangs = [{ code: "ALL", name: "All Languages" }, ...availableLanguages];
+              const filtered = trainingLangFilter === "ALL" ? trainingMaterials : trainingMaterials.filter((m) => m.languageCode === trainingLangFilter);
+              const categories = Array.from(new Set(filtered.map((m) => m.category))).sort();
               return (
-                <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
-                  {categories.map((cat) => (
-                    <div key={cat}>
-                      <h3 style={{ fontSize: "0.72rem", fontWeight: 700, color: "var(--gray-400)", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "12px" }}>{cat}</h3>
-                      <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-                        {trainingMaterials.filter((m) => m.category === cat).map((m) => (
-                          <div key={m.id} style={{ background: "var(--card-bg)", borderRadius: "14px", border: "1.5px solid var(--card-border)", padding: "20px", boxShadow: "0 2px 6px rgba(0,0,0,.05)" }}>
-                            <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "12px" }}>
-                              <div style={{ minWidth: 0, flex: 1 }}>
-                                <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap", marginBottom: "4px" }}>
-                                  <span style={{ fontWeight: 600, color: "var(--gray-900)", fontSize: "0.875rem" }}>{m.title}</span>
-                                  {isInstructor && session?.user?.email === m.uploadedBy.email && (
-                                    <button onClick={() => deleteTraining(m.id)} style={{ fontSize: "0.72rem", padding: "2px 8px", background: "#FEF2F2", color: "#DC2626", border: "none", borderRadius: "6px", cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>Delete</button>
-                                  )}
-                                  {m.languageCode && (
-                                    <span style={{ fontSize: "0.72rem", padding: "2px 6px", borderRadius: "4px", background: "var(--blue-light)", color: "var(--navy)" }}>{m.languageCode}</span>
-                                  )}
-                                  <span style={{ fontSize: "0.72rem", padding: "2px 6px", borderRadius: "4px", background: m.type === "FILE" ? "#fffbeb" : "var(--green-light)", color: m.type === "FILE" ? "#92400e" : "var(--green)" }}>
-                                    {m.type}
-                                  </span>
-                                </div>
-                                {m.description && <p style={{ fontSize: "0.75rem", color: "var(--gray-600)", marginBottom: "8px" }}>{m.description}</p>}
-                                {m.type === "FILE" ? (
-                                  <a href={m.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: "0.75rem", color: "var(--gray-600)", textDecoration: "underline" }}>
-                                    {m.fileName ?? "Download"}
-                                  </a>
-                                ) : (
-                                  <a href={m.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: "0.75rem", color: "var(--blue)", textDecoration: "underline", wordBreak: "break-all" }}>
-                                    {m.url}
-                                  </a>
-                                )}
-                                <p style={{ fontSize: "0.72rem", color: "var(--gray-400)", marginTop: "8px" }}>
-                                  by {m.uploadedBy.name ?? m.uploadedBy.email} · {new Date(m.createdAt).toLocaleDateString()}
-                                </p>
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
+                <>
+                  {availableLanguages.length > 0 && (
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+                      {filterLangs.map((l) => (
+                        <button
+                          key={l.code}
+                          onClick={() => setTrainingLangFilter(l.code)}
+                          style={{ padding: "5px 14px", fontSize: "0.78rem", fontWeight: 500, border: "1.5px solid", borderRadius: "99px", cursor: "pointer", fontFamily: "'DM Sans', sans-serif", borderColor: trainingLangFilter === l.code ? "var(--blue)" : "var(--card-border)", background: trainingLangFilter === l.code ? "var(--blue)" : "var(--card-bg)", color: trainingLangFilter === l.code ? "#fff" : "var(--gray-600)", transition: "all 0.15s" }}
+                        >
+                          {l.name}
+                        </button>
+                      ))}
                     </div>
-                  ))}
-                </div>
+                  )}
+                  {filtered.length === 0 ? (
+                    <div style={{ background: "var(--card-bg)", borderRadius: "14px", border: "1.5px solid var(--card-border)", padding: "48px", textAlign: "center" }}>
+                      <p style={{ color: "var(--gray-400)" }}>No training materials available yet.</p>
+                    </div>
+                  ) : (
+                    <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+                      {categories.map((cat) => (
+                        <div key={cat}>
+                          <h3 style={{ fontSize: "0.72rem", fontWeight: 700, color: "var(--gray-400)", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "12px" }}>{cat}</h3>
+                          <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                            {filtered.filter((m) => m.category === cat).map((m) => (
+                              <div key={m.id} style={{ background: "var(--card-bg)", borderRadius: "14px", border: "1.5px solid var(--card-border)", padding: "20px", boxShadow: "0 2px 6px rgba(0,0,0,.05)" }}>
+                                <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "12px" }}>
+                                  <div style={{ minWidth: 0, flex: 1 }}>
+                                    <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap", marginBottom: "4px" }}>
+                                      <span style={{ fontWeight: 600, color: "var(--gray-900)", fontSize: "0.875rem" }}>{m.title}</span>
+                                      {isInstructor && session?.user?.email === m.uploadedBy.email && (
+                                        <button onClick={() => deleteTraining(m.id)} style={{ fontSize: "0.72rem", padding: "2px 8px", background: "#FEF2F2", color: "#DC2626", border: "none", borderRadius: "6px", cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>Delete</button>
+                                      )}
+                                      {m.languageCode && (
+                                        <span style={{ fontSize: "0.72rem", padding: "2px 6px", borderRadius: "4px", background: "var(--blue-light)", color: "var(--navy)" }}>{getLangName(m.languageCode)}</span>
+                                      )}
+                                    </div>
+                                    {m.description && <p style={{ fontSize: "0.75rem", color: "var(--gray-600)", marginBottom: "8px" }}>{m.description}</p>}
+                                    <a href={m.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: "0.75rem", color: "var(--blue)", textDecoration: "underline", wordBreak: "break-all" }}>
+                                      {m.url}
+                                    </a>
+                                    <p style={{ fontSize: "0.72rem", color: "var(--gray-400)", marginTop: "8px" }}>
+                                      by {m.uploadedBy.name ?? m.uploadedBy.email} · {new Date(m.createdAt).toLocaleDateString()}
+                                    </p>
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </>
               );
             })()}
           </div>
