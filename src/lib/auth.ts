@@ -82,8 +82,8 @@ export const authOptions: NextAuthOptions = {
         if (existing?.status === "SUSPENDED") return false;
 
         if (existing) {
-          if (user.email === DEV_EMAIL) {
-            // Ensure DEV user always has ADMIN role and DEV capability
+          if (user.email === DEV_EMAIL && (existing.role !== "ADMIN" || !existing.roles?.includes("DEV"))) {
+            // Only update if role or DEV capability is missing (not on every sign-in)
             await prisma.user.update({
               where: { email: user.email },
               data: {
