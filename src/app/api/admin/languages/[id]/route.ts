@@ -33,7 +33,8 @@ export async function PATCH(
 
   // If deactivating, check for upcoming clinic slots
   if (!isActive) {
-    const today = new Date().toISOString().slice(0, 10);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
     const allSlots = await prisma.slot.findMany({
       where: {
         language: lang.code,
