@@ -882,10 +882,13 @@ export default function VolunteerDashboard() {
               <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
                 {Object.entries(signupsBySlot).map(([slotId, sigs]) => {
                   const slot = sigs[0].slot;
+                  const slotEndTime = new Date(slot.date.slice(0, 10) + "T" + String(slot.endTime).padStart(2, "0") + ":00:00");
+                  const isPast = slotEndTime <= new Date();
                   return (
-                    <div key={slotId} style={{ background: "var(--card-bg)", borderRadius: "14px", border: "1.5px solid var(--card-border)", overflow: "hidden", boxShadow: "0 2px 6px rgba(0,0,0,.05)" }}>
+                    <div key={slotId} style={{ background: "var(--card-bg)", borderRadius: "14px", border: "1.5px solid var(--card-border)", overflow: "hidden", boxShadow: "0 2px 6px rgba(0,0,0,.05)", opacity: isPast ? 0.5 : 1 }}>
                       {/* Card header */}
-                      <div style={{ padding: "16px 22px 14px", borderBottom: "1.5px solid var(--card-border)" }}>
+                      <div style={{ padding: "16px 22px 14px", borderBottom: "1.5px solid var(--card-border)", display: "grid", gridTemplateColumns: "1fr auto", gap: "16px", alignItems: "center" }}>
+                        <div>
                         <div style={{ fontSize: "1.15rem", fontWeight: 700, color: "var(--navy)" }}>{slot.clinic.name}</div>
                         <div style={{ fontSize: "0.875rem", fontWeight: 500, color: "var(--gray-600)", marginTop: "3px" }}>
                           {LANG_LABELS[slot.language] ?? slot.language}
@@ -909,6 +912,10 @@ export default function VolunteerDashboard() {
                             </div>
                           )}
                         </div>
+                        </div>
+                        {isPast && (
+                          <span style={{ background: "var(--gray-200)", color: "var(--gray-600)", fontSize: "0.7rem", fontWeight: 600, padding: "4px 10px", borderRadius: "99px", textTransform: "uppercase", alignSelf: "flex-start" }}>Past</span>
+                        )}
                       </div>
                       {/* Hour rows */}
                       {sigs
@@ -918,10 +925,13 @@ export default function VolunteerDashboard() {
                             key={sig.id}
                             style={{ display: "flex", alignItems: "center", padding: "13px 22px", borderBottom: "1px solid var(--card-border)", gap: "16px" }}
                           >
-                            <div style={{ width: "9px", height: "9px", borderRadius: "50%", background: "var(--green)", flexShrink: 0 }} />
+                            <div style={{ width: "9px", height: "9px", borderRadius: "50%", background: isPast ? "var(--gray-400)" : "var(--green)", flexShrink: 0 }} />
                             <span style={{ fontSize: "0.95rem", fontWeight: 600, color: "var(--gray-900)", flex: 1 }}>
                               {formatHour(sig.subBlockHour)} – {formatHour(sig.subBlockHour + 1)}
                             </span>
+                            {isPast ? (
+                              <span style={{ fontSize: "0.75rem", padding: "4px 10px", background: "var(--gray-200)", color: "var(--gray-600)", borderRadius: "6px" }}>Past</span>
+                            ) : (
                             <button
                               disabled={actionLoading === sig.id}
                               onClick={() => cancelSignup(sig.id, `${sig.slot.id}-${sig.subBlockHour}`)}
@@ -929,6 +939,7 @@ export default function VolunteerDashboard() {
                             >
                               Cancel
                             </button>
+                            )}
                           </div>
                         ))}
                       {/* Inline feedback for past slots */}
