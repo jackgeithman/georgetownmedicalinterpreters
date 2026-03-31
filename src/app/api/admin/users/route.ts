@@ -66,7 +66,7 @@ export async function PATCH(req: NextRequest) {
   if (!isAdmin && !isInstructor) return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
 
   const body = await req.json();
-  const { userId, addRole, removeRole, toggleLanguageClearance, confirmRemoveVolunteer, status, clinicId } = body;
+  const { userId, addRole, removeRole, confirmRemoveVolunteer, status, clinicId } = body;
 
   if (!userId) return NextResponse.json({ error: "userId required" }, { status: 400 });
 
@@ -139,49 +139,103 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ ok: true });
   }
 
-  // Handle language clearance toggle
-  if (toggleLanguageClearance) {
-    const langCode = toggleLanguageClearance.toUpperCase();
-    // Permission: must be admin or instructor cleared for this language
+  // Handle explicit language clearance actions: approve / deny / revoke / override
+  const { approveLanguage, denyLanguage, revokeLanguage, overrideLanguage } = body;
+  const langActionValue = approveLanguage ?? denyLanguage ?? revokeLanguage ?? overrideLanguage;
+  if (langActionValue) {
+    const langCode = (langActionValue as string).toUpperCase();
+    const action: "approve" | "deny" | "revoke" | "override" =
+      approveLanguage ? "approve" : denyLanguage ? "deny" : revokeLanguage ? "revoke" : "override";
+
+    // Admins can act on any language. Instructors can only act on languages they are cleared for.
     if (!isAdmin) {
-      const adminClearedForLang = admin.roles.includes(`LANG_${langCode}_CLEARED`);
-      if (!adminClearedForLang) return NextResponse.json({ error: "You are not cleared for this language" }, { status: 403 });
+      const clearedForLang = admin.roles.includes(`LANG_${langCode}_CLEARED`);
+      if (!clearedForLang) return NextResponse.json({ error: "You are not cleared for this language" }, { status: 403 });
     }
-    const currentRoles = target.roles;
-    const hasCleared = currentRoles.includes(`LANG_${langCode}_CLEARED`);
-    const hasUncleared = currentRoles.includes(`LANG_${langCode}`);
+
+    // Note is required for deny, revoke, override
+    if ((action === "deny" || action === "revoke" || action === "override") && !body.note?.trim()) {
+      return NextResponse.json({ error: "A note is required for this action" }, { status: 400 });
+    }
+
+    const base = target.roles.filter(
+      (r) => r !== `LANG_${langCode}` && r !== `LANG_${langCode}_CLEARED` && r !== `LANG_${langCode}_DENIED`,
+    );
     let newRoles: string[];
     let nowCleared: boolean;
-    if (hasCleared) {
-      // Remove clearance: LANG_XX_CLEARED → LANG_XX
-      newRoles = currentRoles.filter((r) => r !== `LANG_${langCode}_CLEARED`).concat(`LANG_${langCode}`);
-      nowCleared = false;
-    } else if (hasUncleared) {
-      // Grant clearance: LANG_XX → LANG_XX_CLEARED
-      newRoles = currentRoles.filter((r) => r !== `LANG_${langCode}`).concat(`LANG_${langCode}_CLEARED`);
-      nowCleared = true;
-    } else {
-      return NextResponse.json({ error: "User does not have this language" }, { status: 400 });
+    let activityAction: string;
+
+    switch (action) {
+      case "approve":
+        newRoles = [...base, `LANG_${langCode}_CLEARED`];
+        nowCleared = true;
+        activityAction = "LANG_CLEARANCE_GRANTED";
+        break;
+      case "deny":
+        newRoles = [...base, `LANG_${langCode}_DENIED`];
+        nowCleared = false;
+        activityAction = "LANG_CLEARANCE_DENIED";
+        break;
+      case "revoke":
+        newRoles = [...base, `LANG_${langCode}_DENIED`];
+        nowCleared = false;
+        activityAction = "LANG_CLEARANCE_REVOKED";
+        break;
+      case "override":
+        newRoles = [...base, `LANG_${langCode}_CLEARED`];
+        nowCleared = true;
+        activityAction = "LANG_CLEARANCE_OVERRIDE";
+        break;
     }
-    // Get volunteer profile for audit log
+
+    // Look up language name for emails
+    const langConfig = await prisma.languageConfig.findUnique({ where: { code: langCode } });
+    const languageName = langConfig?.name ?? langCode;
+
     const vp = await prisma.volunteerProfile.findUnique({ where: { userId: target.id } });
     await prisma.$transaction(async (tx) => {
       await tx.user.update({ where: { id: userId }, data: { roles: newRoles } });
       if (vp) {
         await tx.clearanceLog.create({
-          data: { volunteerId: vp.id, clearedById: admin.id, isCleared: nowCleared, languageCode: langCode },
+          data: {
+            volunteerId: vp.id,
+            clearedById: admin.id,
+            isCleared: nowCleared,
+            note: body.note ?? null,
+            languageCode: langCode,
+          },
         });
       }
     });
+
     await logActivity({
       actorId: admin.id,
       actorEmail: admin.email ?? undefined,
       actorName: admin.name ?? undefined,
-      action: nowCleared ? "LANG_CLEARANCE_GRANTED" : "LANG_CLEARANCE_REVOKED",
+      action: activityAction,
       targetType: "User",
       targetId: userId,
-      detail: `${nowCleared ? "Granted" : "Revoked"} ${langCode} clearance for ${target.email}`,
+      detail: `${activityAction.replace(/_/g, " ")} for ${langCode} on ${target.email}${body.note ? ` — note: ${body.note}` : ""}`,
     });
+
+    if (target.email) {
+      if (action === "approve" || action === "override") {
+        const { notifyLanguageCleared } = await import("@/lib/notifications");
+        await notifyLanguageCleared({
+          volunteerEmail: target.email,
+          volunteerName: target.name ?? target.email,
+          languageName,
+        }).catch(console.error);
+      } else {
+        const { notifyLanguageDenied } = await import("@/lib/notifications");
+        await notifyLanguageDenied({
+          volunteerEmail: target.email,
+          volunteerName: target.name ?? target.email,
+          languageName,
+        }).catch(console.error);
+      }
+    }
+
     return NextResponse.json({ ok: true, roles: newRoles });
   }
 
@@ -292,7 +346,11 @@ export async function PATCH(req: NextRequest) {
     if (target.roles.includes(`LANG_${langCode}`) || target.roles.includes(`LANG_${langCode}_CLEARED`)) {
       return NextResponse.json({ error: "User already has this language" }, { status: 400 });
     }
-    const newRoles = [...target.roles, `LANG_${langCode}`];
+    // If previously denied, reset to pending instead of erroring
+    const newRoles = [
+      ...target.roles.filter((r) => r !== `LANG_${langCode}_DENIED`),
+      `LANG_${langCode}`,
+    ];
     await prisma.user.update({ where: { id: userId }, data: { roles: newRoles } });
     return NextResponse.json({ ok: true, roles: newRoles });
   }
@@ -301,7 +359,9 @@ export async function PATCH(req: NextRequest) {
   if (body.removeLanguage) {
     if (!isAdmin) return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     const langCode = (body.removeLanguage as string).toUpperCase();
-    const newRoles = target.roles.filter((r) => r !== `LANG_${langCode}` && r !== `LANG_${langCode}_CLEARED`);
+    const newRoles = target.roles.filter(
+      (r) => r !== `LANG_${langCode}` && r !== `LANG_${langCode}_CLEARED` && r !== `LANG_${langCode}_DENIED`,
+    );
     await prisma.user.update({ where: { id: userId }, data: { roles: newRoles } });
     return NextResponse.json({ ok: true, roles: newRoles });
   }

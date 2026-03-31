@@ -62,5 +62,39 @@ export async function PATCH(req: NextRequest) {
     data: updateData,
   });
 
+  // Sync LANG_ roles on the User when languages change
+  if (languages !== undefined) {
+    const newLangs = languages as string[];
+    const oldLangs = user.volunteer.languages ?? [];
+    let currentRoles = [...(user.roles ?? [])];
+
+    // Remove roles for languages removed from profile
+    for (const lang of oldLangs) {
+      if (!newLangs.includes(lang)) {
+        currentRoles = currentRoles.filter(
+          (r) => r !== `LANG_${lang}` && r !== `LANG_${lang}_CLEARED` && r !== `LANG_${lang}_DENIED`,
+        );
+      }
+    }
+
+    // For newly added languages, add LANG_XX (pending) unless already has a role for this lang
+    for (const lang of newLangs) {
+      if (!oldLangs.includes(lang)) {
+        const hasDenied = currentRoles.includes(`LANG_${lang}_DENIED`);
+        const hasCleared = currentRoles.includes(`LANG_${lang}_CLEARED`);
+        const hasPending = currentRoles.includes(`LANG_${lang}`);
+        if (hasDenied) {
+          // Re-requesting after denial — reset to pending
+          currentRoles = currentRoles.filter((r) => r !== `LANG_${lang}_DENIED`);
+          currentRoles.push(`LANG_${lang}`);
+        } else if (!hasCleared && !hasPending) {
+          currentRoles.push(`LANG_${lang}`);
+        }
+      }
+    }
+
+    await prisma.user.update({ where: { id: user.id }, data: { roles: currentRoles } });
+  }
+
   return NextResponse.json(profile);
 }
