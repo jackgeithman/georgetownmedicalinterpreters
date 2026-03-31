@@ -371,7 +371,7 @@ export async function PATCH(req: NextRequest) {
 
   // Handle removeLanguage
   if (body.removeLanguage) {
-    if (!isAdmin) return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+    if (!isAdmin && !isInstructor) return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     const langCode = (body.removeLanguage as string).toUpperCase();
     const newRoles = target.roles.filter(
       (r) => r !== `LANG_${langCode}` && r !== `LANG_${langCode}_CLEARED` && r !== `LANG_${langCode}_DENIED`,

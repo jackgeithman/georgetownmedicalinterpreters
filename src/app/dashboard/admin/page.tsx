@@ -1257,8 +1257,8 @@ export default function AdminDashboard() {
               ...((session?.user?.roles ?? []).some(r => r === "VOLUNTEER" || r === "DEV") ? [{ key: "profile" as Tab, label: "My Profile", count: 0 }] : []),
               ...(viewerIsAdmin ? [
                 { key: "languages" as Tab, label: "Languages", count: 0 },
-                { key: "metrics" as Tab, label: "Metrics", count: 0 },
               ] : []),
+              { key: "metrics" as Tab, label: "Metrics", count: 0 },
               { key: "training" as Tab, label: "Training", count: 0 },
               { key: "suggestions" as Tab, label: "Messages", count: suggestions.filter((s) => s.status === "OPEN").length },
               { key: "activity-log" as Tab, label: "Activity Log", count: 0 },
@@ -1632,7 +1632,7 @@ export default function AdminDashboard() {
                                   {state === "denied" && (
                                     <button onClick={() => setLangActionModal({ userId: user.id, langCode: code, action: "override", note: "" })} disabled={isLoading} title="Override denial" style={{ fontSize: "0.68rem", padding: "1px 6px", borderRadius: "4px", border: "none", background: "#BBF7D0", color: "#15803D", cursor: "pointer", fontFamily: "'DM Sans', sans-serif", marginRight: "3px" }}>Override</button>
                                   )}
-                                  {state !== "pending" && state !== "cleared" && canAdminModify && (
+                                  {state !== "pending" && state !== "cleared" && canModify && (
                                     <button onClick={() => handleRemoveLanguage(user.id, code)} disabled={roleActionLoading === `removelang-${user.id}-${code}`} title={`Remove ${getLangLabel(code)}`} style={{ background: "none", border: "none", cursor: "pointer", color: "inherit", opacity: 0.55, fontSize: "0.9rem", lineHeight: 1, padding: "0 5px 0 1px", fontFamily: "'DM Sans', sans-serif" }}>×</button>
                                   )}
                                 </span>
