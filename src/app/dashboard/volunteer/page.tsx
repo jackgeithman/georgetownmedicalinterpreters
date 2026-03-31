@@ -649,7 +649,6 @@ export default function VolunteerDashboard() {
             { key: "signups" as Tab, label: "My Signups", count: mySignups.length },
             { key: "profile" as Tab, label: "Profile", count: 0 },
             { key: "training" as Tab, label: "Training", count: 0 },
-            ...(isInstructor ? [{ key: "clearance" as Tab, label: "Clearance", count: 0 }] : []),
             { key: "suggestions" as Tab, label: "Messages", count: 0 },
           ].map((t) => (
             <button
@@ -665,12 +664,6 @@ export default function VolunteerDashboard() {
                     .then((r) => r.json())
                     .then((data) => { setTrainingMaterials(data); setTrainingLoaded(true); })
                     .catch(() => setTrainingLoaded(true));
-                }
-                if (t.key === "clearance" && !clearanceLoaded) {
-                  fetch("/api/admin/users")
-                    .then((r) => r.json())
-                    .then((data) => { setClearanceVolunteers(data.filter((u: ClearanceVolunteer) => (u.roles ?? []).some((r: string) => r.startsWith("LANG_")))); setClearanceLoaded(true); })
-                    .catch(() => setClearanceLoaded(true));
                 }
               }}
               style={{
@@ -694,6 +687,19 @@ export default function VolunteerDashboard() {
               )}
             </button>
           ))}
+          {isInstructor && (
+            <button
+              onClick={() => router.push("/dashboard/admin")}
+              style={{
+                padding: "9px 20px", borderRadius: "9px", fontSize: "0.9rem",
+                fontWeight: 500, cursor: "pointer", border: "none",
+                background: "none", color: "var(--gray-600)", whiteSpace: "nowrap",
+                fontFamily: "'DM Sans', sans-serif",
+              }}
+            >
+              All Users
+            </button>
+          )}
         </div>
 
         {/* Browse Slots */}
