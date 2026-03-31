@@ -341,7 +341,7 @@ export async function PATCH(req: NextRequest) {
 
   // Handle addLanguage
   if (body.addLanguage) {
-    if (!isAdmin) return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+    if (!isAdmin && !isInstructor) return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     const langCode = (body.addLanguage as string).toUpperCase();
     if (target.roles.includes(`LANG_${langCode}`) || target.roles.includes(`LANG_${langCode}_CLEARED`)) {
       return NextResponse.json({ error: "User already has this language" }, { status: 400 });

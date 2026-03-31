@@ -1258,9 +1258,11 @@ export default function AdminDashboard() {
               ...(viewerIsAdmin ? [
                 { key: "languages" as Tab, label: "Languages", count: 0 },
                 { key: "metrics" as Tab, label: "Metrics", count: 0 },
-                { key: "training" as Tab, label: "Training", count: 0 },
-                { key: "suggestions" as Tab, label: "Messages", count: suggestions.filter((s) => s.status === "OPEN").length },
-                { key: "activity-log" as Tab, label: "Activity Log", count: 0 },
+              ] : []),
+              { key: "training" as Tab, label: "Training", count: 0 },
+              { key: "suggestions" as Tab, label: "Messages", count: suggestions.filter((s) => s.status === "OPEN").length },
+              { key: "activity-log" as Tab, label: "Activity Log", count: 0 },
+              ...(viewerIsAdmin ? [
                 { key: "notes" as Tab, label: "Notes", count: 0 },
               ] : []),
               ...(session?.user?.roles?.includes("DEV")
@@ -1637,7 +1639,7 @@ export default function AdminDashboard() {
                               );
                             })}
                             {langChips.length === 0 && <span style={{ fontSize: "0.78rem", color: "var(--gray-400)" }}>—</span>}
-                            {canAdminModify && (
+                            {canModify && (
                               <button
                                 data-lang-add-btn="true"
                                 onClick={(e) => {
