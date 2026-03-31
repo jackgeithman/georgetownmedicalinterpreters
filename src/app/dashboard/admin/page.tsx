@@ -336,7 +336,9 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     if (status === "unauthenticated") router.push("/login");
-    if (session?.user?.role && session.user.role !== "ADMIN" && !session.user.roles?.includes("DEV")) router.push("/dashboard");
+    if (session?.user?.role && session.user.role !== "ADMIN" && session.user.role !== "INSTRUCTOR" && !session.user.roles?.includes("DEV")) router.push("/dashboard");
+    // Default instructors to the Users tab (they only see Users + My Profile)
+    if (session?.user?.role === "INSTRUCTOR" && !session.user.roles?.includes("ADMIN")) setTab("users");
   }, [status, session, router]);
 
   const fetchData = useCallback(async (isSuperAdmin?: boolean) => {
@@ -380,7 +382,7 @@ export default function AdminDashboard() {
   }, []);
 
   useEffect(() => {
-    if (session?.user?.role === "ADMIN") {
+    if (session?.user?.role === "ADMIN" || session?.user?.role === "INSTRUCTOR") {
       fetchData(session.user.roles?.includes("DEV"));
     } else if (session?.user && !session.user.role) {
       // Session loaded but role not set - show error
@@ -1246,24 +1248,32 @@ export default function AdminDashboard() {
       {/* Tabs */}
       <div style={{ maxWidth: "1100px", margin: "0 auto", padding: "28px 32px 0" }}>
         <div style={{ display: "flex", gap: "4px", marginBottom: "28px", background: "var(--card-bg)", padding: "5px", borderRadius: "12px", width: "fit-content", border: "1px solid var(--card-border)", flexWrap: "wrap" }}>
-          {[
-            { key: "slots" as Tab, label: "Browse Slots", count: 0 },
-            { key: "users" as Tab, label: "All Users", count: users.length, pendingCount: pendingUsers.length + pendingLangCount },
-            { key: "clinics" as Tab, label: "Clinics", count: clinics.length },
-            ...((session?.user?.roles ?? []).some(r => r === "VOLUNTEER" || r === "DEV") ? [{ key: "profile" as Tab, label: "My Profile", count: 0 }] : []),
-            { key: "languages" as Tab, label: "Languages", count: 0 },
-            { key: "metrics" as Tab, label: "Metrics", count: 0 },
-            { key: "training" as Tab, label: "Training", count: 0 },
-            { key: "suggestions" as Tab, label: "Messages", count: suggestions.filter((s) => s.status === "OPEN").length },
-            { key: "activity-log" as Tab, label: "Activity Log", count: 0 },
-            { key: "notes" as Tab, label: "Notes", count: 0 },
-            ...(session?.user?.roles?.includes("DEV")
-              ? [
-                  { key: "access" as Tab, label: "Access Control", count: 0 },
-                  { key: "flags" as Tab, label: "Feature Flags", count: 0 },
-                ]
-              : []),
-          ].map((t) => (
+          {(() => {
+            const viewerIsAdmin = session?.user?.role === "ADMIN" || session?.user?.roles?.includes("DEV");
+            const allTabs = [
+              ...(viewerIsAdmin ? [{ key: "slots" as Tab, label: "Browse Slots", count: 0 }] : []),
+              { key: "users" as Tab, label: "All Users", count: users.length, pendingCount: pendingUsers.length + pendingLangCount },
+              ...(viewerIsAdmin ? [{ key: "clinics" as Tab, label: "Clinics", count: clinics.length }] : []),
+              ...((session?.user?.roles ?? []).some(r => r === "VOLUNTEER" || r === "DEV") ? [{ key: "profile" as Tab, label: "My Profile", count: 0 }] : []),
+              ...(viewerIsAdmin ? [
+                { key: "languages" as Tab, label: "Languages", count: 0 },
+              ] : []),
+              { key: "metrics" as Tab, label: "Metrics", count: 0 },
+              { key: "training" as Tab, label: "Training", count: 0 },
+              { key: "suggestions" as Tab, label: "Messages", count: suggestions.filter((s) => s.status === "OPEN").length },
+              { key: "activity-log" as Tab, label: "Activity Log", count: 0 },
+              ...(viewerIsAdmin ? [
+                { key: "notes" as Tab, label: "Notes", count: 0 },
+              ] : []),
+              ...(session?.user?.roles?.includes("DEV")
+                ? [
+                    { key: "access" as Tab, label: "Access Control", count: 0 },
+                    { key: "flags" as Tab, label: "Feature Flags", count: 0 },
+                  ]
+                : []),
+            ];
+            return allTabs;
+          })().map((t) => (
             <button
               key={t.key}
               onClick={() => setTab(t.key)}
@@ -1514,7 +1524,9 @@ export default function AdminDashboard() {
                   })().map((user) => {
                     const { roleChips, langChips } = parseUserRoles(user.roles ?? []);
                     const isUserSuperAdmin = user.roles?.includes("DEV");
+                    const viewerIsAdmin = session?.user?.role === "ADMIN" || session?.user?.roles?.includes("DEV");
                     const canModify = session?.user?.roles?.includes("DEV") || (!isUserSuperAdmin && user.role !== "ADMIN");
+                    const canAdminModify = viewerIsAdmin && canModify;
                     const emailFull = user.email ?? "";
                     const isExpanded = emailExpanded.has(user.id);
                     const addableRoles = ROLE_CHIPS.filter(r => {
@@ -1559,7 +1571,7 @@ export default function AdminDashboard() {
                               return (
                                 <span key={r} style={{ display: "inline-flex", alignItems: "center", gap: "3px", fontSize: "0.72rem", padding: "2px 6px 2px 8px", borderRadius: "99px", fontWeight: 600, background: bg, color, border: `1px solid ${border}` }}>
                                   {label}
-                                  {canModify && r !== "PENDING" && r !== "DEV" && (
+                                  {canAdminModify && r !== "PENDING" && r !== "DEV" && (
                                     <button
                                       onClick={() => handleRemoveRole(user.id, r)}
                                       disabled={!!isLoading}
@@ -1571,7 +1583,7 @@ export default function AdminDashboard() {
                               );
                             })}
                             {/* + Add role */}
-                            {canModify && addableRoles.length > 0 && (
+                            {canAdminModify && addableRoles.length > 0 && (
                               <button
                                 data-role-add-btn="true"
                                 onClick={(e) => {
@@ -1691,7 +1703,7 @@ export default function AdminDashboard() {
                                     {user.volunteer.cancellationsWithin2h > 0 && `2h ${user.volunteer.cancellationsWithin2h}`}
                                   </span>
                                 )}
-                                <button
+                                {canAdminModify && <button
                                   onClick={() => {
                                     setCounterEditTarget(user.id);
                                     setCounterEditValues({
@@ -1701,7 +1713,7 @@ export default function AdminDashboard() {
                                     });
                                   }}
                                   style={{ fontSize: "0.68rem", color: "var(--gray-400)", background: "none", border: "none", padding: 0, cursor: "pointer", textAlign: "left", fontFamily: "'DM Sans', sans-serif", marginTop: "2px" }}
-                                >Edit</button>
+                                >Edit</button>}
                               </div>
                             )
                           ) : (
@@ -1711,7 +1723,7 @@ export default function AdminDashboard() {
 
                         {/* Actions */}
                         <td style={{ padding: "14px 20px", textAlign: "right" }}>
-                          {user.status === "PENDING_APPROVAL" ? (
+                          {canAdminModify && user.status === "PENDING_APPROVAL" ? (
                             <div style={{ display: "flex", gap: "4px", justifyContent: "flex-end" }}>
                               <button
                                 disabled={actionLoading === user.id}
@@ -1724,7 +1736,7 @@ export default function AdminDashboard() {
                                 style={{ padding: "6px 12px", fontSize: "0.75rem", background: "#FEF2F2", color: "#DC2626", border: "none", borderRadius: "6px", cursor: "pointer", opacity: actionLoading === user.id ? 0.5 : 1, fontFamily: "'DM Sans', sans-serif" }}
                               >Reject</button>
                             </div>
-                          ) : !isUserSuperAdmin && (
+                          ) : canAdminModify && !isUserSuperAdmin && (
                             <div style={{ display: "flex", gap: "4px", justifyContent: "flex-end" }}>
                               {user.status === "ACTIVE" ? (
                                 <button

@@ -341,7 +341,7 @@ export async function PATCH(req: NextRequest) {
 
   // Handle addLanguage
   if (body.addLanguage) {
-    if (!isAdmin) return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+    if (!isAdmin && !isInstructor) return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     const langCode = (body.addLanguage as string).toUpperCase();
     if (target.roles.includes(`LANG_${langCode}`) || target.roles.includes(`LANG_${langCode}_CLEARED`)) {
       return NextResponse.json({ error: "User already has this language" }, { status: 400 });
@@ -351,18 +351,42 @@ export async function PATCH(req: NextRequest) {
       ...target.roles.filter((r) => r !== `LANG_${langCode}_DENIED`),
       `LANG_${langCode}`,
     ];
-    await prisma.user.update({ where: { id: userId }, data: { roles: newRoles } });
+    // Sync VolunteerProfile.languages so the volunteer's profile page reflects the change
+    const vpAdd = await prisma.volunteerProfile.findUnique({ where: { userId: target.id } });
+    await prisma.$transaction(async (tx) => {
+      await tx.user.update({ where: { id: userId }, data: { roles: newRoles } });
+      if (vpAdd) {
+        if (!vpAdd.languages.includes(langCode)) {
+          await tx.volunteerProfile.update({
+            where: { id: vpAdd.id },
+            data: { languages: [...vpAdd.languages, langCode] },
+          });
+        }
+      } else {
+        await tx.volunteerProfile.create({ data: { userId: target.id, languages: [langCode] } });
+      }
+    });
     return NextResponse.json({ ok: true, roles: newRoles });
   }
 
   // Handle removeLanguage
   if (body.removeLanguage) {
-    if (!isAdmin) return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+    if (!isAdmin && !isInstructor) return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     const langCode = (body.removeLanguage as string).toUpperCase();
     const newRoles = target.roles.filter(
       (r) => r !== `LANG_${langCode}` && r !== `LANG_${langCode}_CLEARED` && r !== `LANG_${langCode}_DENIED`,
     );
-    await prisma.user.update({ where: { id: userId }, data: { roles: newRoles } });
+    // Sync VolunteerProfile.languages so the language is removed from the volunteer's profile page
+    const vpRemove = await prisma.volunteerProfile.findUnique({ where: { userId: target.id } });
+    await prisma.$transaction(async (tx) => {
+      await tx.user.update({ where: { id: userId }, data: { roles: newRoles } });
+      if (vpRemove) {
+        await tx.volunteerProfile.update({
+          where: { id: vpRemove.id },
+          data: { languages: vpRemove.languages.filter((l) => l !== langCode) },
+        });
+      }
+    });
     return NextResponse.json({ ok: true, roles: newRoles });
   }
 

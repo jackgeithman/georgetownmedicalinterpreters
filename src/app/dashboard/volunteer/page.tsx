@@ -1107,9 +1107,9 @@ export default function VolunteerDashboard() {
                 {/* Identity card */}
                 <div style={{ background: "var(--card-bg)", borderRadius: "16px", border: "1.5px solid var(--card-border)", boxShadow: "0 1px 4px rgba(0,0,0,.04)", padding: "20px" }}>
                   <p style={{ fontSize: "1rem", fontWeight: 700, color: "#111827" }}>{session?.user?.name}</p>
-                  <p style={{ fontSize: "0.75rem", color: "#9CA3AF", marginTop: "3px" }}>{session?.user?.email}</p>
+                  <p style={{ fontSize: "0.75rem", color: "#111827", marginTop: "3px" }}>{session?.user?.email}</p>
                   {profile.userCreatedAt && (
-                    <p style={{ fontSize: "0.7rem", color: "#D1D5DB", marginTop: "6px" }}>
+                    <p style={{ fontSize: "0.7rem", color: "#111827", marginTop: "6px" }}>
                       Member since {new Date(profile.userCreatedAt).toLocaleDateString("en-US", { month: "short", year: "numeric" })}
                     </p>
                   )}
@@ -1136,7 +1136,7 @@ export default function VolunteerDashboard() {
                       <div key={key} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "11px 0", borderBottom: i < arr.length - 1 ? "1px solid #F3F4F6" : "none" }}>
                         <div>
                           <p style={{ fontSize: "0.875rem", fontWeight: 500, color: "#111827" }}>{label}</p>
-                          <p style={{ fontSize: "0.72rem", color: "#9CA3AF", marginTop: "2px" }}>{desc}</p>
+                          <p style={{ fontSize: "0.72rem", color: "#111827", marginTop: "2px" }}>{desc}</p>
                         </div>
                         <button
                           role="switch"
@@ -1158,7 +1158,7 @@ export default function VolunteerDashboard() {
                 <div style={{ background: "var(--card-bg)", borderRadius: "16px", border: "1.5px solid var(--card-border)", overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,.04)" }}>
                   <div style={{ padding: "16px 20px 14px", borderBottom: "1.5px solid #F3F4F6", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                     <h3 style={{ fontSize: "0.8rem", fontWeight: 700, color: "#111827", textTransform: "uppercase", letterSpacing: "0.07em" }}>Languages</h3>
-                    <span style={{ fontSize: "0.72rem", fontWeight: 500, color: "#9CA3AF" }}>Medical-level proficiency only</span>
+                    <span style={{ fontSize: "0.72rem", fontWeight: 500, color: "#111827" }}>Medical-level proficiency only</span>
                   </div>
                   <div style={{ padding: "18px 20px" }}>
 
@@ -1170,7 +1170,7 @@ export default function VolunteerDashboard() {
                     {/* Current languages */}
                     {profileForm.languages.length > 0 && (
                       <div style={{ marginBottom: "18px" }}>
-                        <p style={{ fontSize: "0.68rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", color: "#9CA3AF", marginBottom: "10px" }}>Your languages</p>
+                        <p style={{ fontSize: "0.68rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", color: "#111827", marginBottom: "10px" }}>Your languages</p>
                         <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
                           {profileForm.languages.map((code) => {
                             const lang = ALL_WORLD_LANGUAGES.find((l) => l.code === code);
@@ -1223,11 +1223,11 @@ export default function VolunteerDashboard() {
                       return (
                         <div style={{ border: "1.5px solid var(--card-border)", borderRadius: "10px", overflow: "hidden", maxHeight: "180px", overflowY: "auto" }}>
                           {unselected.length === 0 ? (
-                            <p style={{ fontSize: "0.8rem", color: "var(--gray-500)", padding: "14px", textAlign: "center" }}>No languages match your search.</p>
+                            <p style={{ fontSize: "0.8rem", color: "#111827", padding: "14px", textAlign: "center" }}>No languages match your search.</p>
                           ) : (
                             <>
                               {!query && top10.filter((l) => !profileForm.languages.includes(l.code)).length > 0 && (
-                                <div style={{ padding: "7px 14px 4px", fontSize: "0.65rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", color: "#9CA3AF", background: "#FAFAFA", borderBottom: "1px solid #F3F4F6" }}>
+                                <div style={{ padding: "7px 14px 4px", fontSize: "0.65rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", color: "#111827", background: "#FAFAFA", borderBottom: "1px solid #F3F4F6" }}>
                                   Most Common
                                 </div>
                               )}
@@ -1238,11 +1238,11 @@ export default function VolunteerDashboard() {
                                   style={{ width: "100%", textAlign: "left", padding: "8px 14px", fontSize: "0.875rem", color: "var(--gray-900)", background: "none", border: "none", borderBottom: "1px solid #F9FAFB", fontFamily: "'DM Sans', sans-serif", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between" }}
                                 >
                                   {lang.name}
-                                  <span style={{ fontSize: "0.72rem", color: "#9CA3AF", fontWeight: 500 }}>+ Add</span>
+                                  <span style={{ fontSize: "0.72rem", color: "#111827", fontWeight: 500 }}>+ Add</span>
                                 </button>
                               ))}
                               {!query && others.filter((l) => !profileForm.languages.includes(l.code)).length > 0 && (
-                                <div style={{ padding: "7px 14px 4px", fontSize: "0.65rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", color: "#9CA3AF", background: "#FAFAFA", borderBottom: "1px solid #F3F4F6", borderTop: "1px solid #F3F4F6" }}>
+                                <div style={{ padding: "7px 14px 4px", fontSize: "0.65rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", color: "#111827", background: "#FAFAFA", borderBottom: "1px solid #F3F4F6", borderTop: "1px solid #F3F4F6" }}>
                                   All Languages
                                 </div>
                               )}
@@ -1253,7 +1253,7 @@ export default function VolunteerDashboard() {
                                   style={{ width: "100%", textAlign: "left", padding: "8px 14px", fontSize: "0.875rem", color: "var(--gray-900)", background: "none", border: "none", borderBottom: "1px solid #F9FAFB", fontFamily: "'DM Sans', sans-serif", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between" }}
                                 >
                                   {lang.name}
-                                  <span style={{ fontSize: "0.72rem", color: "#9CA3AF", fontWeight: 500 }}>+ Add</span>
+                                  <span style={{ fontSize: "0.72rem", color: "#111827", fontWeight: 500 }}>+ Add</span>
                                 </button>
                               ))}
                             </>
