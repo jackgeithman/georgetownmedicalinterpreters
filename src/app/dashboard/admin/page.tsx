@@ -1598,7 +1598,7 @@ export default function AdminDashboard() {
                               const isLoading = roleActionLoading === `lang-${user.id}-${code}`;
                               const chipStyle =
                                 state === "cleared"
-                                  ? { bg: "#F0FDFA", color: "#0F766E", border: "1px solid #99F6E4", dot: "#10B981" }
+                                  ? { bg: "#BBF7D0", color: "#15803D", border: "1px solid #86EFAC", dot: "#10B981" }
                                   : state === "denied"
                                   ? { bg: "#FEF2F2", color: "#DC2626", border: "1px solid #FECACA", dot: "#EF4444" }
                                   : { bg: "#FFFBEB", color: "#92400E", border: "1px solid #FDE68A", dot: "#F59E0B" };
@@ -1611,16 +1611,16 @@ export default function AdminDashboard() {
                                   {state === "pending" && (
                                     <>
                                       <button onClick={() => handleLangAction(user.id, code, "approve")} disabled={isLoading} title="Approve clearance" style={{ fontSize: "0.68rem", padding: "1px 6px", borderRadius: "4px", border: "none", background: "#BBF7D0", color: "#15803D", cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>Approve</button>
-                                      <button onClick={() => setLangActionModal({ userId: user.id, langCode: code, action: "deny", note: "" })} disabled={isLoading} title="Deny clearance" style={{ fontSize: "0.68rem", padding: "1px 6px", borderRadius: "4px", border: "none", background: "#FECACA", color: "#DC2626", cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>Deny</button>
+                                      <button onClick={() => setLangActionModal({ userId: user.id, langCode: code, action: "deny", note: "" })} disabled={isLoading} title="Deny clearance" style={{ fontSize: "0.68rem", padding: "1px 6px", borderRadius: "4px", border: "none", background: "#FECACA", color: "#DC2626", cursor: "pointer", fontFamily: "'DM Sans', sans-serif", marginRight: "3px" }}>Deny</button>
                                     </>
                                   )}
-                                  {state === "cleared" && (
-                                    <button onClick={() => setLangActionModal({ userId: user.id, langCode: code, action: "revoke", note: "" })} disabled={isLoading} title="Revoke clearance" style={{ fontSize: "0.68rem", padding: "1px 6px", borderRadius: "4px", border: "none", background: "#FED7AA", color: "#C2410C", cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>Revoke</button>
+                                  {state === "cleared" && canModify && (
+                                    <button onClick={() => setLangActionModal({ userId: user.id, langCode: code, action: "revoke", note: "" })} disabled={isLoading} title="Revoke clearance" style={{ background: "none", border: "none", cursor: "pointer", color: "inherit", opacity: 0.6, fontSize: "0.9rem", lineHeight: 1, padding: "0 5px 0 1px", fontFamily: "'DM Sans', sans-serif" }}>×</button>
                                   )}
                                   {state === "denied" && (
-                                    <button onClick={() => setLangActionModal({ userId: user.id, langCode: code, action: "override", note: "" })} disabled={isLoading} title="Override denial" style={{ fontSize: "0.68rem", padding: "1px 6px", borderRadius: "4px", border: "none", background: "#BBF7D0", color: "#15803D", cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>Override</button>
+                                    <button onClick={() => setLangActionModal({ userId: user.id, langCode: code, action: "override", note: "" })} disabled={isLoading} title="Override denial" style={{ fontSize: "0.68rem", padding: "1px 6px", borderRadius: "4px", border: "none", background: "#BBF7D0", color: "#15803D", cursor: "pointer", fontFamily: "'DM Sans', sans-serif", marginRight: "3px" }}>Override</button>
                                   )}
-                                  {canModify && (
+                                  {state !== "pending" && state !== "cleared" && canModify && (
                                     <button onClick={() => handleRemoveLanguage(user.id, code)} disabled={roleActionLoading === `removelang-${user.id}-${code}`} title={`Remove ${getLangLabel(code)}`} style={{ background: "none", border: "none", cursor: "pointer", color: "inherit", opacity: 0.55, fontSize: "0.9rem", lineHeight: 1, padding: "0 5px 0 1px", fontFamily: "'DM Sans', sans-serif" }}>×</button>
                                   )}
                                 </span>

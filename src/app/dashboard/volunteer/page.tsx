@@ -268,8 +268,12 @@ export default function VolunteerDashboard() {
   const [easterOpen, setEasterOpen] = useState(false);
   const [easterCount, setEasterCount] = useState(0);
 
-  // Clearance banner
-  const [clearanceBanner, setClearanceBanner] = useState<{ id: string; languageCode: string; isCleared: boolean }[] | null>(null);
+  // Clearance ribbon — true if there are any unseen clearance events
+  const [showClearanceRibbon, setShowClearanceRibbon] = useState(false);
+  const [ribbonEventIds, setRibbonEventIds] = useState<string[]>([]);
+
+  // Unsaved profile changes guard
+  const [profileDirty, setProfileDirty] = useState(false);
 
   // Feedback state — inline (no modal)
   const [feedbackGiven, setFeedbackGiven] = useState<Set<string>>(new Set()); // slotIds
@@ -303,6 +307,17 @@ export default function VolunteerDashboard() {
     if (role && role !== "VOLUNTEER" && role !== "ADMIN" && role !== "INSTRUCTOR") router.push("/dashboard");
   }, [status, session, router]);
 
+  useEffect(() => {
+    const handler = (e: BeforeUnloadEvent) => {
+      if (profileDirty) {
+        e.preventDefault();
+        e.returnValue = "";
+      }
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [profileDirty]);
+
   const fetchAll = useCallback(async () => {
     const [slotsRes, signupsRes, profileRes, notifRes] = await Promise.all([
       fetch("/api/volunteer/slots"),
@@ -324,14 +339,17 @@ export default function VolunteerDashboard() {
     if (notifRes.ok) setNotifPrefs(await notifRes.json());
     setLoading(false);
 
-    // Load recent language clearance events for banner (last 48h)
+    // Load clearance events — show ribbon if any are unseen (dismissed tracked in localStorage)
     const eventsRes = await fetch("/api/volunteer/lang-clearance-events");
     if (eventsRes.ok) {
-      const events: { id: string; languageCode: string; isCleared: boolean }[] = await eventsRes.json();
+      const events: { id: string }[] = await eventsRes.json();
       if (events.length > 0) {
         const dismissed: string[] = JSON.parse(localStorage.getItem("gmi_dismissed_clearance") ?? "[]");
         const unseen = events.filter((e) => !dismissed.includes(e.id));
-        if (unseen.length > 0) setClearanceBanner(unseen);
+        if (unseen.length > 0) {
+          setShowClearanceRibbon(true);
+          setRibbonEventIds(unseen.map((e) => e.id));
+        }
       }
     }
 
@@ -418,7 +436,10 @@ export default function VolunteerDashboard() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ languages: profileForm.languages }),
     });
-    if (res.ok) setProfile(await res.json());
+    if (res.ok) {
+      setProfile(await res.json());
+      setProfileDirty(false);
+    }
     setActionLoading(null);
   };
 
@@ -443,6 +464,7 @@ export default function VolunteerDashboard() {
       ? profileForm.languages.filter((l) => l !== lang)
       : [...profileForm.languages, lang];
     setProfileForm({ languages: langs });
+    setProfileDirty(true);
   };
 
   const submitTraining = async () => {
@@ -581,7 +603,10 @@ export default function VolunteerDashboard() {
         <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
           <span style={{ color: "#CBD5E1", fontSize: "0.82rem" }}>{session?.user?.email}</span>
           <button
-            onClick={() => signOut({ callbackUrl: "/login" })}
+            onClick={() => {
+              if (profileDirty && !confirm("You have unsaved language changes. Leave without saving?")) return;
+              void signOut({ callbackUrl: "/login" });
+            }}
             style={{ background: "rgba(255,255,255,.08)", border: "1px solid rgba(255,255,255,.2)", color: "#fff", fontFamily: "'DM Sans', sans-serif", fontSize: "0.8rem", fontWeight: 500, padding: "7px 16px", borderRadius: "8px", cursor: "pointer" }}
           >
             Sign Out
@@ -589,29 +614,27 @@ export default function VolunteerDashboard() {
         </div>
       </header>
 
-      {/* Clearance banner */}
-      {clearanceBanner && clearanceBanner.length > 0 && (
-        <div style={{ maxWidth: "920px", margin: "0 auto", padding: "16px 24px 0" }}>
-          {clearanceBanner.map((event) => {
-            const langLabel = LANG_LABELS[event.languageCode] ?? event.languageCode;
-            return (
-              <div key={event.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px", padding: "12px 18px", borderRadius: "10px", marginBottom: "8px", background: event.isCleared ? "#F0FDF4" : "#FFFBEB", border: event.isCleared ? "1.5px solid #86EFAC" : "1.5px solid #FDE68A" }}>
-                <span style={{ fontSize: "0.875rem", fontWeight: 500, color: event.isCleared ? "#15803D" : "#92400E" }}>
-                  {event.isCleared
-                    ? `You've been cleared for ${langLabel}. You can now sign up for ${langLabel} shifts.`
-                    : `Your ${langLabel} clearance request was not approved. You may re-request at any time.`}
-                </span>
-                <button
-                  onClick={() => {
-                    const dismissed: string[] = JSON.parse(localStorage.getItem("gmi_dismissed_clearance") ?? "[]");
-                    localStorage.setItem("gmi_dismissed_clearance", JSON.stringify([...dismissed, event.id]));
-                    setClearanceBanner((prev) => prev?.filter((e) => e.id !== event.id) ?? null);
-                  }}
-                  style={{ background: "none", border: "none", cursor: "pointer", color: "inherit", opacity: 0.6, fontSize: "1.1rem", lineHeight: 1, flexShrink: 0, fontFamily: "'DM Sans', sans-serif" }}
-                >×</button>
-              </div>
-            );
-          })}
+      {/* Clearance ribbon — slim single bar */}
+      {showClearanceRibbon && (
+        <div style={{ background: "#EFF6FF", borderBottom: "1px solid #BFDBFE", padding: "9px 32px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px" }}>
+          <span style={{ fontSize: "0.82rem", fontWeight: 500, color: "#1D4ED8" }}>
+            Your language clearance status has been updated —{" "}
+            <button
+              onClick={() => setTab("profile")}
+              style={{ fontWeight: 700, textDecoration: "underline", background: "none", border: "none", cursor: "pointer", color: "#1D4ED8", fontFamily: "'DM Sans', sans-serif", fontSize: "inherit", padding: 0 }}
+            >
+              see your Profile
+            </button>
+            {" "}for details.
+          </span>
+          <button
+            onClick={() => {
+              const dismissed: string[] = JSON.parse(localStorage.getItem("gmi_dismissed_clearance") ?? "[]");
+              localStorage.setItem("gmi_dismissed_clearance", JSON.stringify([...dismissed, ...ribbonEventIds]));
+              setShowClearanceRibbon(false);
+            }}
+            style={{ background: "none", border: "none", cursor: "pointer", color: "#1D4ED8", opacity: 0.6, fontSize: "1.1rem", lineHeight: 1, flexShrink: 0, fontFamily: "'DM Sans', sans-serif" }}
+          >×</button>
         </div>
       )}
 
@@ -631,6 +654,10 @@ export default function VolunteerDashboard() {
             <button
               key={t.key}
               onClick={() => {
+                if (profileDirty && tab === "profile" && t.key !== "profile") {
+                  if (!confirm("You have unsaved language changes. Leave without saving?")) return;
+                  setProfileDirty(false);
+                }
                 setTab(t.key);
                 if (t.key === "training" && !trainingLoaded) {
                   fetch("/api/training")
@@ -1464,7 +1491,7 @@ export default function VolunteerDashboard() {
                                   const isDenied = vRoles.includes(`LANG_${lang}_DENIED`);
                                   const loadingKey = `${v.id}-${lang}`;
                                   const chipStyle = isCleared
-                                    ? { bg: "#F0FDFA", color: "#0F766E", border: "1px solid #99F6E4", dot: "#10B981" }
+                                    ? { bg: "#BBF7D0", color: "#15803D", border: "1px solid #86EFAC", dot: "#10B981" }
                                     : isDenied
                                     ? { bg: "#FEF2F2", color: "#DC2626", border: "1px solid #FECACA", dot: "#EF4444" }
                                     : { bg: "#FFFBEB", color: "#92400E", border: "1px solid #FDE68A", dot: "#F59E0B" };
@@ -1479,7 +1506,7 @@ export default function VolunteerDashboard() {
                                         <button disabled={clearanceActionLoading === loadingKey} onClick={() => setInstrLangModal({ userId: v.id, langCode: lang, action: "deny", note: "" })} style={{ fontSize: "0.68rem", padding: "1px 6px", borderRadius: "4px", border: "none", background: "#FECACA", color: "#DC2626", cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>Deny</button>
                                       )}
                                       {isCleared && (
-                                        <button disabled={clearanceActionLoading === loadingKey} onClick={() => setInstrLangModal({ userId: v.id, langCode: lang, action: "revoke", note: "" })} style={{ fontSize: "0.68rem", padding: "1px 6px", borderRadius: "4px", border: "none", background: "#FED7AA", color: "#C2410C", cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>Revoke</button>
+                                        <button disabled={clearanceActionLoading === loadingKey} onClick={() => setInstrLangModal({ userId: v.id, langCode: lang, action: "revoke", note: "" })} style={{ background: "none", border: "none", cursor: "pointer", color: "inherit", opacity: 0.6, fontSize: "0.9rem", lineHeight: 1, padding: "0 2px", fontFamily: "'DM Sans', sans-serif" }}>×</button>
                                       )}
                                       {isDenied && (
                                         <button disabled={clearanceActionLoading === loadingKey} onClick={() => setInstrLangModal({ userId: v.id, langCode: lang, action: "override", note: "" })} style={{ fontSize: "0.68rem", padding: "1px 6px", borderRadius: "4px", border: "none", background: "#BBF7D0", color: "#15803D", cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>Override</button>
