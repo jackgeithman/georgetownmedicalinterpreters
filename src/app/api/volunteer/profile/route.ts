@@ -36,6 +36,7 @@ export async function GET() {
     ...user.volunteer,
     clearanceStatus: clearance?.isCleared ? "APPROVED" : clearance ? "PENDING" : null,
     clearanceDate: clearance?.createdAt ?? null,
+    userCreatedAt: user.createdAt,
   });
 }
 
