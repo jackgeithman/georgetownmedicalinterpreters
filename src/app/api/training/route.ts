@@ -34,27 +34,23 @@ export async function POST(req: NextRequest) {
   if (!canUpload(user.role)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const body = await req.json();
-  const { title, description, type, url, fileName, languageCode, category } = body as {
+  const { title, description, url, languageCode, category } = body as {
     title: string;
     description?: string;
-    type: "FILE" | "LINK";
     url: string;
-    fileName?: string;
     languageCode?: string;
     category?: string;
   };
 
   if (!title?.trim()) return NextResponse.json({ error: "Title is required" }, { status: 400 });
   if (!url?.trim()) return NextResponse.json({ error: "URL is required" }, { status: 400 });
-  if (type !== "FILE" && type !== "LINK") return NextResponse.json({ error: "Type must be FILE or LINK" }, { status: 400 });
 
   const material = await prisma.trainingMaterial.create({
     data: {
       title: title.trim(),
       description: description?.trim() ?? null,
-      type,
+      type: "LINK",
       url,
-      fileName: fileName ?? null,
       languageCode: languageCode?.trim() || null,
       category: category?.trim() || "General",
       uploadedById: user.id,
