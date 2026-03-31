@@ -63,10 +63,26 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Slot not found or inactive" }, { status: 404 });
   }
 
-  if (!profile.languages.includes(slot.language)) {
+  const langCode = slot.language;
+  const isCleared = user.roles.includes(`LANG_${langCode}_CLEARED`);
+  if (!isCleared) {
+    const isDenied = user.roles.includes(`LANG_${langCode}_DENIED`);
+    const isPending = user.roles.includes(`LANG_${langCode}`);
+    if (isDenied) {
+      return NextResponse.json(
+        { error: "Your clearance request for this language was not approved. Please contact your coordinator." },
+        { status: 403 },
+      );
+    }
+    if (isPending) {
+      return NextResponse.json(
+        { error: "You are awaiting language clearance. You cannot sign up until you have been cleared." },
+        { status: 403 },
+      );
+    }
     return NextResponse.json(
       { error: "Your language profile does not include this slot's language. Update your profile first." },
-      { status: 403 }
+      { status: 403 },
     );
   }
 

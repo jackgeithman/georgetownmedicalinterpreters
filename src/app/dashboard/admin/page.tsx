@@ -831,6 +831,9 @@ export default function AdminDashboard() {
   };
 
   const pendingUsers = users.filter((u) => u.status === "PENDING_APPROVAL");
+  const pendingLangCount = users.filter((u) =>
+    (u.roles ?? []).some((r) => r.startsWith("LANG_") && !r.endsWith("_CLEARED") && !r.endsWith("_DENIED")),
+  ).length;
 
   // ── Role chip helpers ────────────────────────────────────────────
   const ROLE_CHIPS = [
@@ -854,17 +857,17 @@ export default function AdminDashboard() {
 
   function parseUserRoles(roles: string[]) {
     const roleChips: string[] = [];
-    const langMap: Record<string, boolean> = {};
+    const langMap: Record<string, "pending" | "cleared" | "denied"> = {};
     for (const r of roles) {
       if (r.startsWith("LANG_")) {
-        const cleared = r.endsWith("_CLEARED");
-        const code = cleared ? r.slice(5, -8) : r.slice(5);
-        langMap[code] = cleared;
+        if (r.endsWith("_CLEARED")) langMap[r.slice(5, -8)] = "cleared";
+        else if (r.endsWith("_DENIED")) langMap[r.slice(5, -7)] = "denied";
+        else langMap[r.slice(5)] = "pending";
       } else {
         roleChips.push(r);
       }
     }
-    const langChips = Object.entries(langMap).map(([code, cleared]) => ({ code, cleared }));
+    const langChips = Object.entries(langMap).map(([code, state]) => ({ code, state }));
     return { roleChips, langChips };
   }
 
@@ -900,12 +903,26 @@ export default function AdminDashboard() {
     setRoleActionLoading(null);
   };
 
-  const handleToggleLangClearance = async (userId: string, langCode: string) => {
-    setRoleActionLoading(`lang-${userId}-${langCode}`);
+  const [langActionModal, setLangActionModal] = useState<{
+    userId: string;
+    langCode: string;
+    action: "deny" | "revoke" | "override";
+    note: string;
+  } | null>(null);
+
+  const handleLangAction = async (userId: string, langCode: string, action: "approve" | "deny" | "revoke" | "override", note?: string) => {
+    const key = `lang-${userId}-${langCode}`;
+    setRoleActionLoading(key);
+    const body: Record<string, string> = { userId };
+    if (action === "approve") body.approveLanguage = langCode;
+    else if (action === "deny") body.denyLanguage = langCode;
+    else if (action === "revoke") body.revokeLanguage = langCode;
+    else body.overrideLanguage = langCode;
+    if (note) body.note = note;
     const res = await fetch("/api/admin/users", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ userId, toggleLanguageClearance: langCode }),
+      body: JSON.stringify(body),
     });
     if (res.ok) await fetchData();
     setRoleActionLoading(null);
@@ -1231,7 +1248,7 @@ export default function AdminDashboard() {
         <div style={{ display: "flex", gap: "4px", marginBottom: "28px", background: "var(--card-bg)", padding: "5px", borderRadius: "12px", width: "fit-content", border: "1px solid var(--card-border)", flexWrap: "wrap" }}>
           {[
             { key: "slots" as Tab, label: "Browse Slots", count: 0 },
-            { key: "users" as Tab, label: "All Users", count: users.length, pendingCount: pendingUsers.length },
+            { key: "users" as Tab, label: "All Users", count: users.length, pendingCount: pendingUsers.length + pendingLangCount },
             { key: "clinics" as Tab, label: "Clinics", count: clinics.length },
             ...((session?.user?.roles ?? []).some(r => r === "VOLUNTEER" || r === "DEV") ? [{ key: "profile" as Tab, label: "My Profile", count: 0 }] : []),
             { key: "languages" as Tab, label: "Languages", count: 0 },
@@ -1450,14 +1467,17 @@ export default function AdminDashboard() {
             <div style={{ display: "flex", alignItems: "center", gap: "20px", marginBottom: "10px", padding: "10px 16px", background: "var(--card-bg)", border: "1.5px solid var(--card-border)", borderRadius: "10px", flexWrap: "wrap" }}>
               <span style={{ fontSize: "0.8rem", fontWeight: 600, color: "var(--gray-700)" }}>Language chips:</span>
               <span style={{ display: "inline-flex", alignItems: "center", gap: "6px", fontSize: "0.8rem", color: "var(--gray-700)" }}>
+                <span style={{ width: "9px", height: "9px", borderRadius: "50%", background: "#F59E0B", flexShrink: 0 }} />
+                Amber — pending clearance
+              </span>
+              <span style={{ display: "inline-flex", alignItems: "center", gap: "6px", fontSize: "0.8rem", color: "var(--gray-700)" }}>
                 <span style={{ width: "9px", height: "9px", borderRadius: "50%", background: "#10B981", flexShrink: 0 }} />
                 Green — cleared to interpret
               </span>
               <span style={{ display: "inline-flex", alignItems: "center", gap: "6px", fontSize: "0.8rem", color: "var(--gray-700)" }}>
-                <span style={{ width: "9px", height: "9px", borderRadius: "50%", background: "#94A3B8", flexShrink: 0 }} />
-                Gray — not yet cleared
+                <span style={{ width: "9px", height: "9px", borderRadius: "50%", background: "#EF4444", flexShrink: 0 }} />
+                Red — clearance denied
               </span>
-              <span style={{ fontSize: "0.78rem", color: "var(--gray-400)" }}>Click a chip to toggle clearance.</span>
             </div>
 
 
@@ -1574,29 +1594,34 @@ export default function AdminDashboard() {
                         {/* Languages */}
                         <td style={{ padding: "14px 20px" }}>
                           <div style={{ display: "flex", flexWrap: "wrap", gap: "4px" }}>
-                            {langChips.map(({ code, cleared }) => {
+                            {langChips.map(({ code, state }) => {
                               const isLoading = roleActionLoading === `lang-${user.id}-${code}`;
+                              const chipStyle =
+                                state === "cleared"
+                                  ? { bg: "#F0FDFA", color: "#0F766E", border: "1px solid #99F6E4", dot: "#10B981" }
+                                  : state === "denied"
+                                  ? { bg: "#FEF2F2", color: "#DC2626", border: "1px solid #FECACA", dot: "#EF4444" }
+                                  : { bg: "#FFFBEB", color: "#92400E", border: "1px solid #FDE68A", dot: "#F59E0B" };
                               return (
-                                <span
-                                  key={code}
-                                  style={{ display: "inline-flex", alignItems: "center", gap: "2px", fontSize: "0.72rem", borderRadius: "99px", fontWeight: 600, background: cleared ? "#F0FDFA" : "#FAFAFA", color: cleared ? "#0F766E" : "#64748B", border: cleared ? "1px solid #99F6E4" : "1px solid #CBD5E1" }}
-                                >
-                                  <button
-                                    onClick={() => handleToggleLangClearance(user.id, code)}
-                                    disabled={isLoading}
-                                    title={cleared ? `${getLangLabel(code)} — Cleared. Click to revoke.` : `${getLangLabel(code)} — Not cleared. Click to clear.`}
-                                    style={{ display: "inline-flex", alignItems: "center", gap: "5px", padding: "2px 6px 2px 8px", background: "none", border: "none", cursor: "pointer", color: "inherit", fontFamily: "'DM Sans', sans-serif", fontSize: "inherit", fontWeight: "inherit", opacity: isLoading ? 0.5 : 1 }}
-                                  >
-                                    <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: cleared ? "#10B981" : "#94A3B8", flexShrink: 0 }} />
+                                <span key={code} style={{ display: "inline-flex", alignItems: "center", gap: "3px", fontSize: "0.72rem", borderRadius: "99px", fontWeight: 600, background: chipStyle.bg, color: chipStyle.color, border: chipStyle.border, opacity: isLoading ? 0.5 : 1 }}>
+                                  <span style={{ display: "inline-flex", alignItems: "center", gap: "4px", padding: "2px 6px 2px 8px" }}>
+                                    <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: chipStyle.dot, flexShrink: 0 }} />
                                     {getLangLabel(code)}
-                                  </button>
+                                  </span>
+                                  {state === "pending" && (
+                                    <>
+                                      <button onClick={() => handleLangAction(user.id, code, "approve")} disabled={isLoading} title="Approve clearance" style={{ fontSize: "0.68rem", padding: "1px 6px", borderRadius: "4px", border: "none", background: "#BBF7D0", color: "#15803D", cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>Approve</button>
+                                      <button onClick={() => setLangActionModal({ userId: user.id, langCode: code, action: "deny", note: "" })} disabled={isLoading} title="Deny clearance" style={{ fontSize: "0.68rem", padding: "1px 6px", borderRadius: "4px", border: "none", background: "#FECACA", color: "#DC2626", cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>Deny</button>
+                                    </>
+                                  )}
+                                  {state === "cleared" && (
+                                    <button onClick={() => setLangActionModal({ userId: user.id, langCode: code, action: "revoke", note: "" })} disabled={isLoading} title="Revoke clearance" style={{ fontSize: "0.68rem", padding: "1px 6px", borderRadius: "4px", border: "none", background: "#FED7AA", color: "#C2410C", cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>Revoke</button>
+                                  )}
+                                  {state === "denied" && (
+                                    <button onClick={() => setLangActionModal({ userId: user.id, langCode: code, action: "override", note: "" })} disabled={isLoading} title="Override denial" style={{ fontSize: "0.68rem", padding: "1px 6px", borderRadius: "4px", border: "none", background: "#BBF7D0", color: "#15803D", cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>Override</button>
+                                  )}
                                   {canModify && (
-                                    <button
-                                      onClick={() => handleRemoveLanguage(user.id, code)}
-                                      disabled={roleActionLoading === `removelang-${user.id}-${code}`}
-                                      title={`Remove ${getLangLabel(code)}`}
-                                      style={{ background: "none", border: "none", cursor: "pointer", color: "inherit", opacity: 0.55, fontSize: "0.9rem", lineHeight: 1, padding: "0 5px 0 1px", fontFamily: "'DM Sans', sans-serif" }}
-                                    >×</button>
+                                    <button onClick={() => handleRemoveLanguage(user.id, code)} disabled={roleActionLoading === `removelang-${user.id}-${code}`} title={`Remove ${getLangLabel(code)}`} style={{ background: "none", border: "none", cursor: "pointer", color: "inherit", opacity: 0.55, fontSize: "0.9rem", lineHeight: 1, padding: "0 5px 0 1px", fontFamily: "'DM Sans', sans-serif" }}>×</button>
                                   )}
                                 </span>
                               );
@@ -1743,6 +1768,51 @@ export default function AdminDashboard() {
                       }}
                       style={{ padding: "8px 16px", fontSize: "0.875rem", background: "#DC2626", color: "#fff", border: "none", borderRadius: "8px", cursor: "pointer", fontFamily: "'DM Sans', sans-serif", fontWeight: 600 }}
                     >Remove &amp; Cancel Shifts</button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Lang action modal — deny / revoke / override */}
+            {langActionModal && (
+              <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.45)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <div style={{ background: "var(--card-bg)", borderRadius: "16px", border: "1.5px solid var(--card-border)", padding: "28px", maxWidth: "440px", width: "90%", boxShadow: "0 20px 60px rgba(0,0,0,.2)" }}>
+                  <h3 style={{ fontSize: "1rem", fontWeight: 700, color: "var(--gray-900)", marginBottom: "6px" }}>
+                    {langActionModal.action === "deny" && "Deny Language Clearance"}
+                    {langActionModal.action === "revoke" && "Revoke Language Clearance"}
+                    {langActionModal.action === "override" && "Override Denial"}
+                  </h3>
+                  <p style={{ fontSize: "0.82rem", color: "var(--gray-600)", marginBottom: "16px" }}>
+                    {langActionModal.action === "deny" && `Deny clearance for ${getLangLabel(langActionModal.langCode)}. The volunteer will receive an email but will not see this note.`}
+                    {langActionModal.action === "revoke" && `Revoke clearance for ${getLangLabel(langActionModal.langCode)}. The volunteer will receive an email but will not see this note.`}
+                    {langActionModal.action === "override" && `Override the denial and clear ${getLangLabel(langActionModal.langCode)}. The volunteer will receive an approval email. This note is internal only.`}
+                  </p>
+                  <div style={{ background: "#FEF3C7", border: "1px solid #FDE68A", borderRadius: "8px", padding: "8px 12px", marginBottom: "14px", display: "flex", alignItems: "flex-start", gap: "8px" }}>
+                    <span style={{ fontSize: "0.9rem", flexShrink: 0 }}>🔒</span>
+                    <span style={{ fontSize: "0.78rem", color: "#92400E", fontWeight: 500 }}>Internal note — the volunteer will <strong>not</strong> see this.</span>
+                  </div>
+                  <textarea
+                    placeholder="Reason (required)..."
+                    value={langActionModal.note}
+                    onChange={(e) => setLangActionModal({ ...langActionModal, note: e.target.value })}
+                    rows={3}
+                    style={{ width: "100%", padding: "9px 12px", fontSize: "0.875rem", border: "1.5px solid var(--card-border)", borderRadius: "9px", fontFamily: "'DM Sans', sans-serif", background: "var(--card-bg)", color: "var(--gray-900)", outline: "none", resize: "none", boxSizing: "border-box", marginBottom: "16px" }}
+                  />
+                  <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end" }}>
+                    <button onClick={() => setLangActionModal(null)} style={{ padding: "8px 18px", fontSize: "0.875rem", background: "var(--gray-100)", color: "var(--gray-700)", border: "1.5px solid var(--card-border)", borderRadius: "9px", cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>Cancel</button>
+                    <button
+                      disabled={!langActionModal.note.trim()}
+                      onClick={async () => {
+                        const { userId, langCode, action, note } = langActionModal;
+                        setLangActionModal(null);
+                        await handleLangAction(userId, langCode, action, note);
+                      }}
+                      style={{ padding: "8px 18px", fontSize: "0.875rem", background: langActionModal.action === "override" ? "var(--blue)" : "#DC2626", color: "#fff", border: "none", borderRadius: "9px", cursor: "pointer", fontFamily: "'DM Sans', sans-serif", opacity: langActionModal.note.trim() ? 1 : 0.4 }}
+                    >
+                      {langActionModal.action === "deny" && "Deny"}
+                      {langActionModal.action === "revoke" && "Revoke"}
+                      {langActionModal.action === "override" && "Approve"}
+                    </button>
                   </div>
                 </div>
               </div>

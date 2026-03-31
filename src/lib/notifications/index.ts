@@ -295,6 +295,53 @@ Repeated no-shows may affect your standing as a volunteer.</p>`,
   ).catch(console.error);
 }
 
+// ─── Language Clearance Notifications ───────────────────────────────────────
+
+/**
+ * Volunteer is cleared for a language. Sends a Gmail notification.
+ */
+export async function notifyLanguageCleared(params: {
+  volunteerEmail: string;
+  volunteerName: string;
+  languageName: string;
+}): Promise<void> {
+  const { volunteerEmail, volunteerName, languageName } = params;
+
+  const html = wrap(
+    `Language Clearance Approved — ${languageName}`,
+    `<p>Hi ${volunteerName},</p>
+<p>You have been <strong>cleared</strong> to interpret in <strong>${languageName}</strong>. You can now sign up for ${languageName} interpreter shifts.</p>
+<p><a href="${process.env.NEXTAUTH_URL ?? "https://georgetownmedicalinterpreters.org"}/dashboard/volunteer"
+   style="display:inline-block;background:#002147;color:#fff;padding:10px 20px;border-radius:6px;text-decoration:none;font-size:14px;font-weight:600">
+  Browse Available Shifts
+</a></p>`,
+  );
+
+  await sendGmail(volunteerEmail, `Clearance Approved: ${languageName} Interpreter`, html).catch(console.error);
+}
+
+/**
+ * Volunteer's language clearance is denied or revoked.
+ * NOTE: The internal reason is NEVER included in this email.
+ */
+export async function notifyLanguageDenied(params: {
+  volunteerEmail: string;
+  volunteerName: string;
+  languageName: string;
+}): Promise<void> {
+  const { volunteerEmail, volunteerName, languageName } = params;
+
+  const html = wrap(
+    `Language Clearance Not Approved — ${languageName}`,
+    `<p>Hi ${volunteerName},</p>
+<p>Your clearance request for <strong>${languageName}</strong> has not been approved at this time.</p>
+<p style="font-size:13px;color:#6b7280">If you have questions, please contact your program coordinator.</p>
+<p style="font-size:13px;color:#6b7280">You may resubmit your request at any time through the volunteer portal.</p>`,
+  );
+
+  await sendGmail(volunteerEmail, `Clearance Not Approved: ${languageName}`, html).catch(console.error);
+}
+
 // ─── Admin User Status Notifications ────────────────────────────────────────
 
 /**
