@@ -13,7 +13,7 @@ export async function GET() {
   });
   if (!user?.volunteer) return NextResponse.json([]);
 
-  const since = new Date(Date.now() - 48 * 60 * 60 * 1000);
+  const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
 
   const events = await prisma.clearanceLog.findMany({
     where: {
