@@ -273,9 +273,6 @@ export default function VolunteerDashboard() {
   const [showClearanceRibbon, setShowClearanceRibbon] = useState(false);
   const [ribbonEventIds, setRibbonEventIds] = useState<string[]>([]);
 
-  // Unsaved profile changes guard
-  const [profileDirty, setProfileDirty] = useState(false);
-
   // Feedback state — inline (no modal)
   const [feedbackGiven, setFeedbackGiven] = useState<Set<string>>(new Set()); // slotIds
   const [feedbackForms, setFeedbackForms] = useState<Record<string, { rating: number; note: string }>>({});
@@ -307,17 +304,6 @@ export default function VolunteerDashboard() {
     const role = session?.user?.role;
     if (role && role !== "VOLUNTEER" && role !== "ADMIN" && role !== "INSTRUCTOR") router.push("/dashboard");
   }, [status, session, router]);
-
-  useEffect(() => {
-    const handler = (e: BeforeUnloadEvent) => {
-      if (profileDirty) {
-        e.preventDefault();
-        e.returnValue = "";
-      }
-    };
-    window.addEventListener("beforeunload", handler);
-    return () => window.removeEventListener("beforeunload", handler);
-  }, [profileDirty]);
 
   const fetchAll = useCallback(async () => {
     const [slotsRes, signupsRes, profileRes, notifRes] = await Promise.all([
@@ -430,20 +416,6 @@ export default function VolunteerDashboard() {
     void doCancel(id, slotHourKey);
   };
 
-  const saveProfile = async () => {
-    setActionLoading("profile");
-    const res = await fetch("/api/volunteer/profile", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ languages: profileForm.languages }),
-    });
-    if (res.ok) {
-      setProfile(await res.json());
-      setProfileDirty(false);
-    }
-    setActionLoading(null);
-  };
-
   const saveNotifPrefs = async (updated: VolunteerNotifPrefs) => {
     await fetch("/api/volunteer/notif-prefs", {
       method: "PATCH",
@@ -460,12 +432,28 @@ export default function VolunteerDashboard() {
     saveNotifPrefs(updated);
   };
 
-  const toggleLanguage = (lang: string) => {
-    const langs = profileForm.languages.includes(lang)
+  const toggleLanguage = async (lang: string) => {
+    const langName = ALL_WORLD_LANGUAGES.find((l) => l.code === lang)?.name ?? lang;
+    const isRemoving = profileForm.languages.includes(lang);
+    const message = isRemoving
+      ? `Remove ${langName} from your languages?`
+      : `You are requesting clearance to volunteer in ${langName}.`;
+    if (!confirm(message)) return;
+    const langs = isRemoving
       ? profileForm.languages.filter((l) => l !== lang)
       : [...profileForm.languages, lang];
-    setProfileForm({ languages: langs });
-    setProfileDirty(true);
+    setActionLoading("profile");
+    const res = await fetch("/api/volunteer/profile", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ languages: langs }),
+    });
+    if (res.ok) {
+      const updated = await res.json();
+      setProfile(updated);
+      setProfileForm({ languages: langs });
+    }
+    setActionLoading(null);
   };
 
   const submitTraining = async () => {
@@ -604,10 +592,7 @@ export default function VolunteerDashboard() {
         <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
           <span style={{ color: "#CBD5E1", fontSize: "0.82rem" }}>{session?.user?.email}</span>
           <button
-            onClick={() => {
-              if (profileDirty && !confirm("You have unsaved language changes. Leave without saving?")) return;
-              void signOut({ callbackUrl: "/login" });
-            }}
+            onClick={() => void signOut({ callbackUrl: "/login" })}
             style={{ background: "rgba(255,255,255,.08)", border: "1px solid rgba(255,255,255,.2)", color: "#fff", fontFamily: "'DM Sans', sans-serif", fontSize: "0.8rem", fontWeight: 500, padding: "7px 16px", borderRadius: "8px", cursor: "pointer" }}
           >
             Sign Out
@@ -649,28 +634,17 @@ export default function VolunteerDashboard() {
             { key: "signups" as Tab, label: "My Signups", count: mySignups.length },
             { key: "profile" as Tab, label: "Profile", count: 0 },
             { key: "training" as Tab, label: "Training", count: 0 },
-            ...(isInstructor ? [{ key: "clearance" as Tab, label: "Clearance", count: 0 }] : []),
             { key: "suggestions" as Tab, label: "Messages", count: 0 },
           ].map((t) => (
             <button
               key={t.key}
               onClick={() => {
-                if (profileDirty && tab === "profile" && t.key !== "profile") {
-                  if (!confirm("You have unsaved language changes. Leave without saving?")) return;
-                  setProfileDirty(false);
-                }
                 setTab(t.key);
                 if (t.key === "training" && !trainingLoaded) {
                   fetch("/api/training")
                     .then((r) => r.json())
                     .then((data) => { setTrainingMaterials(data); setTrainingLoaded(true); })
                     .catch(() => setTrainingLoaded(true));
-                }
-                if (t.key === "clearance" && !clearanceLoaded) {
-                  fetch("/api/admin/users")
-                    .then((r) => r.json())
-                    .then((data) => { setClearanceVolunteers(data.filter((u: ClearanceVolunteer) => (u.roles ?? []).some((r: string) => r.startsWith("LANG_")))); setClearanceLoaded(true); })
-                    .catch(() => setClearanceLoaded(true));
                 }
               }}
               style={{
@@ -694,6 +668,19 @@ export default function VolunteerDashboard() {
               )}
             </button>
           ))}
+          {isInstructor && (
+            <button
+              onClick={() => router.push("/dashboard/admin")}
+              style={{
+                padding: "9px 20px", borderRadius: "9px", fontSize: "0.9rem",
+                fontWeight: 500, cursor: "pointer", border: "none",
+                background: "none", color: "var(--gray-600)", whiteSpace: "nowrap",
+                fontFamily: "'DM Sans', sans-serif",
+              }}
+            >
+              All Users
+            </button>
+          )}
         </div>
 
         {/* Browse Slots */}
@@ -1092,13 +1079,6 @@ export default function VolunteerDashboard() {
         {/* Profile */}
         {tab === "profile" && profile && (
           <div>
-            {/* Unsaved warning */}
-            {profileDirty && (
-              <div style={{ background: "#FFFBEB", border: "1.5px solid #FDE68A", borderRadius: "10px", padding: "9px 14px", fontSize: "0.78rem", fontWeight: 500, color: "#92400E", display: "flex", alignItems: "center", gap: "8px", marginBottom: "16px" }}>
-                &#x26A0; Unsaved language changes — click Save Languages before leaving.
-              </div>
-            )}
-
             <div style={{ display: "grid", gridTemplateColumns: "240px 1fr", gap: "20px", alignItems: "start" }}>
 
               {/* Left sidebar */}
@@ -1262,13 +1242,9 @@ export default function VolunteerDashboard() {
                       );
                     })()}
 
-                    <button
-                      disabled={actionLoading === "profile"}
-                      onClick={saveProfile}
-                      style={{ marginTop: "14px", padding: "9px 22px", fontSize: "0.875rem", background: "var(--blue)", color: "#fff", border: "none", borderRadius: "9px", fontFamily: "'DM Sans', sans-serif", fontWeight: 600, cursor: "pointer", opacity: actionLoading === "profile" ? 0.5 : 1 }}
-                    >
-                      {actionLoading === "profile" ? "Saving..." : "Save Languages"}
-                    </button>
+                    {actionLoading === "profile" && (
+                      <p style={{ marginTop: "10px", fontSize: "0.78rem", color: "#111827" }}>Saving…</p>
+                    )}
                   </div>
                 </div>
               </div>

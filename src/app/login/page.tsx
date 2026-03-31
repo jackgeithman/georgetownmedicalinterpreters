@@ -52,18 +52,18 @@ function LoginContent() {
 
   return (
     <div style={{ minHeight: "100vh", background: "var(--page-bg)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "24px" }}>
+
       {/* Brand */}
-      <div style={{ textAlign: "center", marginBottom: "32px" }}>
+      <div style={{ textAlign: "center", marginBottom: "24px" }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/logo.svg" alt="GMI" style={{ width: "72px", height: "72px", borderRadius: "16px", margin: "0 auto 16px", display: "block" }} />
-        <h1 style={{ fontSize: "1.65rem", fontWeight: 700, color: "#000", letterSpacing: "-0.02em" }}>Georgetown Medical Interpreters</h1>
-        <p style={{ fontSize: "1rem", color: "var(--gray-600)", marginTop: "6px" }}>GMI Volunteer Platform</p>
+        <img src="/logo.svg" alt="GMI" style={{ width: "48px", height: "48px", borderRadius: "11px", margin: "0 auto 12px", display: "block" }} />
+        <h1 style={{ fontSize: "1.5rem", fontWeight: 700, color: "#000", letterSpacing: "-0.02em" }}>Georgetown Medical Interpreters</h1>
       </div>
 
       {/* Card */}
       <div style={{
         background: "var(--card-bg)", border: "1.5px solid var(--card-border)",
-        borderRadius: "16px", padding: "32px", width: "100%", maxWidth: "400px",
+        borderRadius: "16px", padding: "28px", width: "100%", maxWidth: "400px",
         boxShadow: "0 4px 20px rgba(0,0,0,.08)",
       }}>
         {errorKey && (
@@ -73,42 +73,36 @@ function LoginContent() {
         )}
 
         {/* Google sign-in */}
-        <p style={{ fontSize: "0.82rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", color: "#000", marginBottom: "12px" }}>
-          Volunteers &amp; Admins
-        </p>
         <button
           onClick={() => signIn("google", { callbackUrl: "/dashboard" })}
           style={{
-            display: "flex", alignItems: "center", justifyContent: "center", gap: "10px",
-            width: "100%", padding: "13px 20px", background: "#fff",
-            border: "1.5px solid var(--card-border)", borderRadius: "10px",
+            display: "flex", alignItems: "center", justifyContent: "center", gap: "12px",
+            width: "100%", padding: "15px 20px",
+            background: "linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)",
+            border: "none", borderRadius: "12px",
             fontFamily: "inherit", fontSize: "1.05rem", fontWeight: 600,
-            color: "#000", cursor: "pointer", transition: "all .18s",
+            color: "#fff", cursor: "pointer",
+            boxShadow: "0 4px 14px rgba(37,99,235,.35)",
+            transition: "box-shadow .15s, transform .1s",
           }}
-          onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.borderColor = "var(--blue)"; (e.currentTarget as HTMLButtonElement).style.boxShadow = "0 3px 10px rgba(37,99,235,.12)"; }}
-          onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.borderColor = "var(--card-border)"; (e.currentTarget as HTMLButtonElement).style.boxShadow = "none"; }}
+          onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.boxShadow = "0 6px 20px rgba(37,99,235,.45)"; (e.currentTarget as HTMLButtonElement).style.transform = "translateY(-1px)"; }}
+          onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.boxShadow = "0 4px 14px rgba(37,99,235,.35)"; (e.currentTarget as HTMLButtonElement).style.transform = "translateY(0)"; }}
         >
-          <svg width="20" height="20" viewBox="0 0 24 24">
-            <path fill="#4285F4" d="M23.745 12.27c0-.79-.07-1.54-.19-2.27h-11.3v4.51h6.47c-.29 1.48-1.14 2.73-2.4 3.58v3h3.86c2.26-2.09 3.56-5.17 3.56-8.82z"/>
-            <path fill="#34A853" d="M12.255 24c3.24 0 5.95-1.08 7.93-2.91l-3.86-3c-1.08.72-2.45 1.16-4.07 1.16-3.13 0-5.78-2.11-6.73-4.96h-3.98v3.09C3.515 21.3 7.615 24 12.255 24z"/>
-            <path fill="#FBBC05" d="M5.525 14.29c-.25-.72-.38-1.49-.38-2.29s.14-1.57.38-2.29V6.62h-3.98a11.86 11.86 0 0 0 0 10.76l3.98-3.09z"/>
-            <path fill="#EA4335" d="M12.255 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C18.205 1.19 15.495 0 12.255 0c-4.64 0-8.74 2.7-10.71 6.62l3.98 3.09c.95-2.85 3.6-4.96 6.73-4.96z"/>
-          </svg>
-          Sign in with Google
+          <div style={{ width: "28px", height: "28px", borderRadius: "6px", background: "#fff", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+            <svg width="18" height="18" viewBox="0 0 24 24">
+              <path fill="#4285F4" d="M23.745 12.27c0-.79-.07-1.54-.19-2.27h-11.3v4.51h6.47c-.29 1.48-1.14 2.73-2.4 3.58v3h3.86c2.26-2.09 3.56-5.17 3.56-8.82z"/>
+              <path fill="#34A853" d="M12.255 24c3.24 0 5.95-1.08 7.93-2.91l-3.86-3c-1.08.72-2.45 1.16-4.07 1.16-3.13 0-5.78-2.11-6.73-4.96h-3.98v3.09C3.515 21.3 7.615 24 12.255 24z"/>
+              <path fill="#FBBC05" d="M5.525 14.29c-.25-.72-.38-1.49-.38-2.29s.14-1.57.38-2.29V6.62h-3.98a11.86 11.86 0 0 0 0 10.76l3.98-3.09z"/>
+              <path fill="#EA4335" d="M12.255 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C18.205 1.19 15.495 0 12.255 0c-4.64 0-8.74 2.7-10.71 6.62l3.98 3.09c.95-2.85 3.6-4.96 6.73-4.96z"/>
+            </svg>
+          </div>
+          Volunteer &amp; Admin Login
         </button>
 
-        {/* Divider */}
-        <div style={{ display: "flex", alignItems: "center", gap: "12px", margin: "20px 0", fontSize: "0.9rem", color: "var(--gray-400)" }}>
-          <span style={{ flex: 1, height: "1px", background: "var(--card-border)", display: "block" }} />
-          or
-          <span style={{ flex: 1, height: "1px", background: "var(--card-border)", display: "block" }} />
-        </div>
+        {/* Separator */}
+        <div style={{ height: "1px", background: "var(--card-border)", margin: "20px 0" }} />
 
         {/* Clinic PIN */}
-        <p style={{ fontSize: "0.82rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", color: "#000", marginBottom: "12px" }}>
-          Clinic Staff
-        </p>
-
         {clinicError && (
           <div style={{ marginBottom: "12px", padding: "10px 14px", background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: "10px", fontSize: "0.875rem", color: "#DC2626" }}>
             {clinicError}
@@ -116,18 +110,19 @@ function LoginContent() {
         )}
 
         <form onSubmit={handleClinicSignIn} style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-          <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-            <label style={{ fontSize: "0.82rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: "#000" }}>Clinic PIN</label>
+          <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+            <label style={{ fontSize: "1rem", fontWeight: 700, color: "#000" }}>Clinic PIN</label>
             <div style={{ position: "relative" }}>
               <input
                 type={pinVisible ? "text" : "password"}
                 inputMode="numeric"
                 pattern="[0-9]{6,8}"
                 maxLength={8}
-                placeholder="Enter your clinic PIN"
+                placeholder="# # # # # # # # #"
                 value={pin}
                 onChange={(e) => setPin(e.target.value.replace(/\D/g, ""))}
                 disabled={clinicLoading}
+                autoFocus={false}
                 style={{
                   width: "100%", padding: "11px 44px 11px 14px",
                   border: "1.5px solid var(--card-border)", borderRadius: "10px",
@@ -163,18 +158,18 @@ function LoginContent() {
             {clinicLoading ? "Signing in…" : "Sign In"}
           </button>
         </form>
-
-        {/* Footer */}
-        <p style={{ textAlign: "center", marginTop: "20px", fontSize: "0.9rem", color: "var(--gray-600)", lineHeight: 1.6 }}>
-          By signing in you agree to our{" "}
-          <a href="/terms" style={{ color: "var(--blue)", textDecoration: "none" }}>Terms of Service</a>
-          {" "}and{" "}
-          <a href="/privacy" style={{ color: "var(--blue)", textDecoration: "none" }}>Privacy Policy</a>.
-          <br />
-          Questions?{" "}
-          <a href="mailto:georgetownmedicalinterpreters@gmail.com" style={{ color: "var(--blue)", textDecoration: "none" }}>Contact Us</a>
-        </p>
       </div>
+
+      {/* Footer — outside card */}
+      <p style={{ textAlign: "center", marginTop: "20px", fontSize: "0.8rem", color: "var(--gray-600)", lineHeight: 1.7 }}>
+        By signing in you agree to our{" "}
+        <a href="/terms" style={{ color: "var(--blue)", textDecoration: "none" }}>Terms of Service</a>
+        {" "}and{" "}
+        <a href="/privacy" style={{ color: "var(--blue)", textDecoration: "none" }}>Privacy Policy</a>.
+        <br />
+        Questions?{" "}
+        <a href="mailto:georgetownmedicalinterpreters@gmail.com" style={{ color: "var(--blue)", textDecoration: "none" }}>Contact Us</a>
+      </p>
     </div>
   );
 }
