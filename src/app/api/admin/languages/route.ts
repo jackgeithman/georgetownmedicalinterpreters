@@ -57,23 +57,30 @@ export async function POST(req: NextRequest) {
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
 
   const body = await req.json();
-  const { name } = body as { name: string };
+  const { name, code: providedCode } = body as { name: string; code?: string };
 
   if (!name || !name.trim()) {
     return NextResponse.json({ error: "Name is required" }, { status: 400 });
   }
 
   // Check by name (case-insensitive)
-  const existing = await prisma.languageConfig.findFirst({
+  const existingByName = await prisma.languageConfig.findFirst({
     where: { name: { equals: name.trim(), mode: "insensitive" } },
   });
-  if (existing) {
+  if (existingByName) {
     return NextResponse.json({ error: "A language with that name already exists" }, { status: 409 });
   }
 
   const allLangs = await prisma.languageConfig.findMany({ select: { code: true } });
   const existingCodes = allLangs.map((l) => l.code);
-  const code = generateCode(name.trim(), existingCodes);
+
+  // Use the provided code if given and not already taken, otherwise generate one
+  let code: string;
+  if (providedCode && !existingCodes.includes(providedCode)) {
+    code = providedCode.toUpperCase();
+  } else {
+    code = generateCode(name.trim(), existingCodes);
+  }
 
   const lang = await prisma.languageConfig.create({
     data: { code, name: name.trim() },
