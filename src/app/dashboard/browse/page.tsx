@@ -1,7 +1,7 @@
 "use client";
 
 import { useSession } from "next-auth/react";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { langName } from "@/lib/languages";
 
 type BrowseSlot = {
@@ -132,6 +132,11 @@ export default function BrowsePage() {
   const [assignLoading, setAssignLoading] = useState(false);
   const [assignError, setAssignError] = useState("");
   const [users, setUsers] = useState<{ id: string; name: string; email: string; role: string; status: string; roles: string[]; volunteer?: { languages: string[] } | null }[]>([]);
+  // Language "Other" dropdown open state + click-away refs
+  const [otherDropdownOpen, setOtherDropdownOpen] = useState(false);
+  const [adminOtherDropdownOpen, setAdminOtherDropdownOpen] = useState(false);
+  const otherDropdownRef = useRef<HTMLDivElement>(null);
+  const adminOtherDropdownRef = useRef<HTMLDivElement>(null);
   // Anti-spam cancel tracking
   const [cancelCounts, setCancelCounts] = useState<Record<string, number>>({});
   const [spamModal, setSpamModal] = useState<{ onProceed: (() => void) | null; isBlocked: boolean } | null>(null);
@@ -194,6 +199,20 @@ export default function BrowsePage() {
   useEffect(() => {
     if (profile) fetchBrowseFilter();
   }, [langFilter, fetchBrowseFilter, profile]);
+
+  // Close "Other languages" dropdowns when clicking outside
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (otherDropdownRef.current && !otherDropdownRef.current.contains(e.target as Node)) {
+        setOtherDropdownOpen(false);
+      }
+      if (adminOtherDropdownRef.current && !adminOtherDropdownRef.current.contains(e.target as Node)) {
+        setAdminOtherDropdownOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
 
   // Volunteer sign up
   const signUp = async (slotId: string, subBlockHour: number) => {
@@ -364,16 +383,18 @@ export default function BrowsePage() {
       const st = adminLangStats[code];
       return st && st.total > 0 ? ` (${st.filled}/${st.total})` : "";
     };
-    const ADMIN_FIXED = ["ALL", "ES", "ZH"];
-    const adminFixedLabels: Record<string, string> = {
-      ALL: "All Languages",
-      ES: `Spanish${adminStatLabel("ES")}`,
-      ZH: `Mandarin${adminStatLabel("ZH")}`,
-    };
+    const adminSpanishLang = languages.find((l) => l.isActive && /\bspanish\b/i.test(l.name));
+    const adminMandarinLang = languages.find((l) => l.isActive && /\bmandarin\b/i.test(l.name));
+    const adminFixedLangs: { code: string; label: string }[] = [
+      { code: "ALL", label: "All Languages" },
+      ...(adminSpanishLang ? [{ code: adminSpanishLang.code, label: `Spanish${adminStatLabel(adminSpanishLang.code)}` }] : []),
+      ...(adminMandarinLang ? [{ code: adminMandarinLang.code, label: `Mandarin${adminStatLabel(adminMandarinLang.code)}` }] : []),
+    ];
+    const adminFixedCodes = adminFixedLangs.map((l) => l.code);
     const adminOtherLangs = languages
-      .filter((l) => l.isActive && !["ES", "ZH"].includes(l.code) && (adminLangStats[l.code]?.total ?? 0) > 0)
+      .filter((l) => l.isActive && !adminFixedCodes.includes(l.code))
       .sort((a, b) => a.name.localeCompare(b.name));
-    const adminOtherSelected = !ADMIN_FIXED.includes(langFilter) && langFilter !== "ALL";
+    const adminOtherSelected = langFilter !== "ALL" && !adminFixedCodes.includes(langFilter);
 
     const selectedSlots = upcomingAdminSlots.filter((s) => adminSelectedSlotIds.has(s.id));
     const deleteConfirmText = selectedSlots.length === 1
@@ -537,26 +558,40 @@ export default function BrowsePage() {
 
         {/* Filters */}
         <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "10px", marginBottom: "28px" }}>
-          {ADMIN_FIXED.map((lang) => (
+          {adminFixedLangs.map((lang) => (
             <button
-              key={lang}
-              onClick={() => setLangFilter(lang)}
-              style={{ padding: "9px 14px", borderRadius: "9px", fontSize: "0.875rem", fontWeight: 500, cursor: "pointer", fontFamily: "'DM Sans', sans-serif", border: langFilter === lang ? "1.5px solid var(--blue)" : "1.5px solid var(--card-border)", background: langFilter === lang ? "var(--blue)" : "var(--card-bg)", color: langFilter === lang ? "#fff" : "var(--gray-900)" }}
-            >{adminFixedLabels[lang]}</button>
+              key={lang.code}
+              onClick={() => { setLangFilter(lang.code); setAdminOtherDropdownOpen(false); }}
+              style={{ padding: "9px 14px", borderRadius: "9px", fontSize: "0.875rem", fontWeight: 500, cursor: "pointer", fontFamily: "'DM Sans', sans-serif", border: langFilter === lang.code ? "1.5px solid var(--blue)" : "1.5px solid var(--card-border)", background: langFilter === lang.code ? "var(--blue)" : "var(--card-bg)", color: langFilter === lang.code ? "#fff" : "#111827" }}
+            >{lang.label}</button>
           ))}
           {adminOtherLangs.length > 0 && (
-            <select
-              value={adminOtherSelected ? langFilter : ""}
-              onChange={(e) => {
-                const val = e.target.value;
-                if (!val || val === langFilter) setLangFilter("ALL");
-                else setLangFilter(val);
-              }}
-              style={{ padding: "9px 14px", borderRadius: "9px", fontSize: "0.875rem", fontWeight: 500, cursor: "pointer", fontFamily: "'DM Sans', sans-serif", outline: "none", border: adminOtherSelected ? "1.5px solid var(--blue)" : "1.5px solid var(--card-border)", background: adminOtherSelected ? "var(--blue)" : "var(--card-bg)", color: adminOtherSelected ? "#fff" : "var(--gray-900)" }}
-            >
-              <option value="">{adminOtherSelected ? "Clear filter" : "Other languages…"}</option>
-              {adminOtherLangs.map((l) => <option key={l.code} value={l.code}>{l.name}{adminStatLabel(l.code)}</option>)}
-            </select>
+            <div ref={adminOtherDropdownRef} style={{ position: "relative" }}>
+              <button
+                onClick={() => setAdminOtherDropdownOpen((o) => !o)}
+                style={{ padding: "9px 14px", borderRadius: "9px", fontSize: "0.875rem", fontWeight: 500, cursor: "pointer", fontFamily: "'DM Sans', sans-serif", border: adminOtherSelected ? "1.5px solid var(--blue)" : "1.5px solid var(--card-border)", background: adminOtherSelected ? "var(--blue)" : "var(--card-bg)", color: adminOtherSelected ? "#fff" : "#111827", display: "flex", alignItems: "center", gap: "6px" }}
+              >
+                {adminOtherSelected ? (languages.find((l) => l.code === langFilter)?.name ?? langFilter) : "Other languages…"}
+                <span style={{ fontSize: "0.7rem", opacity: 0.7 }}>{adminOtherDropdownOpen ? "▲" : "▼"}</span>
+              </button>
+              {adminOtherDropdownOpen && (
+                <div style={{ position: "absolute", top: "calc(100% + 6px)", left: 0, zIndex: 50, background: "var(--card-bg)", border: "1.5px solid var(--card-border)", borderRadius: "10px", boxShadow: "0 4px 16px rgba(0,0,0,.10)", minWidth: "200px", maxHeight: "260px", overflowY: "auto" }}>
+                  {adminOtherSelected && (
+                    <button
+                      onClick={() => { setLangFilter("ALL"); setAdminOtherDropdownOpen(false); }}
+                      style={{ display: "block", width: "100%", textAlign: "left", padding: "9px 14px", fontSize: "0.875rem", background: "none", border: "none", borderBottom: "1px solid var(--card-border)", cursor: "pointer", color: "#111827", fontFamily: "'DM Sans', sans-serif" }}
+                    >Clear filter</button>
+                  )}
+                  {adminOtherLangs.map((l) => (
+                    <button
+                      key={l.code}
+                      onClick={() => { setLangFilter(l.code); setAdminOtherDropdownOpen(false); }}
+                      style={{ display: "block", width: "100%", textAlign: "left", padding: "9px 14px", fontSize: "0.875rem", background: langFilter === l.code ? "var(--blue)" : "none", color: langFilter === l.code ? "#fff" : "#111827", border: "none", cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}
+                    >{l.name}{adminStatLabel(l.code)}</button>
+                  ))}
+                </div>
+              )}
+            </div>
           )}
           <div style={{ width: "1px", background: "var(--card-border)", alignSelf: "stretch", margin: "0 4px" }} />
           <select value={clinicFilter} onChange={(e) => setClinicFilter(e.target.value)} style={{ padding: "9px 14px", borderRadius: "9px", fontSize: "0.875rem", fontWeight: 500, border: "1.5px solid var(--card-border)", background: "var(--card-bg)", color: "var(--gray-900)", fontFamily: "'DM Sans', sans-serif", cursor: "pointer", outline: "none" }}>
@@ -791,17 +826,21 @@ export default function BrowsePage() {
     return s && s.total > 0 ? ` (${s.filled}/${s.total})` : "";
   };
 
-  const FIXED = ["ALL", "ES", "ZH"];
-  const fixedLabels: Record<string, string> = {
-    ALL: "All Languages",
-    ES: `Spanish${statLabel("ES")}`,
-    ZH: `Mandarin${statLabel("ZH")}`,
-  };
-  // Other languages: active, not ES/ZH, and have at least 1 upcoming slot — sorted alphabetically
+  // Dynamically resolve Spanish and Mandarin by name so the code works regardless
+  // of whatever short code was auto-generated in the database
+  const spanishLang = availableLanguages.find((l) => /\bspanish\b/i.test(l.name));
+  const mandarinLang = availableLanguages.find((l) => /\bmandarin\b/i.test(l.name));
+  const fixedLangs: { code: string; label: string }[] = [
+    { code: "ALL", label: "All Languages" },
+    ...(spanishLang ? [{ code: spanishLang.code, label: `Spanish${statLabel(spanishLang.code)}` }] : []),
+    ...(mandarinLang ? [{ code: mandarinLang.code, label: `Mandarin${statLabel(mandarinLang.code)}` }] : []),
+  ];
+  const fixedCodes = fixedLangs.map((l) => l.code);
+  // Other languages: all active languages not in the fixed set, sorted alphabetically
   const otherLangs = availableLanguages
-    .filter((l) => !["ES", "ZH"].includes(l.code) && (langStats[l.code]?.total ?? 0) > 0)
+    .filter((l) => !fixedCodes.includes(l.code))
     .sort((a, b) => a.name.localeCompare(b.name));
-  const otherSelected = !FIXED.includes(langFilter) && langFilter !== "ALL";
+  const otherSelected = langFilter !== "ALL" && !fixedCodes.includes(langFilter);
 
   const renderVolunteerSlot = (slot: BrowseSlot, isPast: boolean) => {
     const subBlocks = Array.from({ length: slot.endTime - slot.startTime }, (_, i) => slot.startTime + i);
@@ -909,26 +948,40 @@ export default function BrowsePage() {
     <div>
       {/* Filters */}
       <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "10px", marginBottom: "28px" }}>
-        {FIXED.map((lang) => (
+        {fixedLangs.map((lang) => (
           <button
-            key={lang}
-            onClick={() => setLangFilter(lang)}
-            style={{ padding: "9px 14px", borderRadius: "9px", fontSize: "0.875rem", fontWeight: 500, cursor: "pointer", fontFamily: "'DM Sans', sans-serif", border: langFilter === lang ? "1.5px solid var(--blue)" : "1.5px solid var(--card-border)", background: langFilter === lang ? "var(--blue)" : "var(--card-bg)", color: langFilter === lang ? "#fff" : "var(--gray-900)" }}
-          >{fixedLabels[lang]}</button>
+            key={lang.code}
+            onClick={() => { setLangFilter(lang.code); setOtherDropdownOpen(false); }}
+            style={{ padding: "9px 14px", borderRadius: "9px", fontSize: "0.875rem", fontWeight: 500, cursor: "pointer", fontFamily: "'DM Sans', sans-serif", border: langFilter === lang.code ? "1.5px solid var(--blue)" : "1.5px solid var(--card-border)", background: langFilter === lang.code ? "var(--blue)" : "var(--card-bg)", color: langFilter === lang.code ? "#fff" : "#111827" }}
+          >{lang.label}</button>
         ))}
         {otherLangs.length > 0 && (
-          <select
-            value={otherSelected ? langFilter : ""}
-            onChange={(e) => {
-              const val = e.target.value;
-              if (!val || val === langFilter) setLangFilter("ALL");
-              else setLangFilter(val);
-            }}
-            style={{ padding: "9px 14px", borderRadius: "9px", fontSize: "0.875rem", fontWeight: 500, cursor: "pointer", fontFamily: "'DM Sans', sans-serif", outline: "none", border: otherSelected ? "1.5px solid var(--blue)" : "1.5px solid var(--card-border)", background: otherSelected ? "var(--blue)" : "var(--card-bg)", color: otherSelected ? "#fff" : "var(--gray-900)" }}
-          >
-            <option value="">{otherSelected ? "Clear filter" : "Other languages…"}</option>
-            {otherLangs.map((l) => <option key={l.code} value={l.code}>{l.name}{statLabel(l.code)}</option>)}
-          </select>
+          <div ref={otherDropdownRef} style={{ position: "relative" }}>
+            <button
+              onClick={() => setOtherDropdownOpen((o) => !o)}
+              style={{ padding: "9px 14px", borderRadius: "9px", fontSize: "0.875rem", fontWeight: 500, cursor: "pointer", fontFamily: "'DM Sans', sans-serif", border: otherSelected ? "1.5px solid var(--blue)" : "1.5px solid var(--card-border)", background: otherSelected ? "var(--blue)" : "var(--card-bg)", color: otherSelected ? "#fff" : "#111827", display: "flex", alignItems: "center", gap: "6px" }}
+            >
+              {otherSelected ? (availableLanguages.find((l) => l.code === langFilter)?.name ?? langFilter) : "Other languages…"}
+              <span style={{ fontSize: "0.7rem", opacity: 0.7 }}>{otherDropdownOpen ? "▲" : "▼"}</span>
+            </button>
+            {otherDropdownOpen && (
+              <div style={{ position: "absolute", top: "calc(100% + 6px)", left: 0, zIndex: 50, background: "var(--card-bg)", border: "1.5px solid var(--card-border)", borderRadius: "10px", boxShadow: "0 4px 16px rgba(0,0,0,.10)", minWidth: "200px", maxHeight: "260px", overflowY: "auto" }}>
+                {otherSelected && (
+                  <button
+                    onClick={() => { setLangFilter("ALL"); setOtherDropdownOpen(false); }}
+                    style={{ display: "block", width: "100%", textAlign: "left", padding: "9px 14px", fontSize: "0.875rem", background: "none", border: "none", borderBottom: "1px solid var(--card-border)", cursor: "pointer", color: "#111827", fontFamily: "'DM Sans', sans-serif" }}
+                  >Clear filter</button>
+                )}
+                {otherLangs.map((l) => (
+                  <button
+                    key={l.code}
+                    onClick={() => { setLangFilter(l.code); setOtherDropdownOpen(false); }}
+                    style={{ display: "block", width: "100%", textAlign: "left", padding: "9px 14px", fontSize: "0.875rem", background: langFilter === l.code ? "var(--blue)" : "none", color: langFilter === l.code ? "#fff" : "#111827", border: "none", cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}
+                  >{l.name}{statLabel(l.code)}</button>
+                ))}
+              </div>
+            )}
+          </div>
         )}
         <div style={{ width: "1px", background: "var(--card-border)", alignSelf: "stretch", margin: "0 4px" }} />
         <select value={clinicFilter} onChange={(e) => setClinicFilter(e.target.value)} style={{ padding: "9px 14px", borderRadius: "9px", fontSize: "0.875rem", fontWeight: 500, border: "1.5px solid var(--card-border)", background: "var(--card-bg)", color: "var(--gray-900)", fontFamily: "'DM Sans', sans-serif", cursor: "pointer", outline: "none" }}>
