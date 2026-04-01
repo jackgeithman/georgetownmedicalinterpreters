@@ -351,6 +351,30 @@ export default function BrowsePage() {
     const pastAdminSlots = filteredAdminSlots.filter((s) => slotEnd(s) <= now)
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
+    // Compute fill stats from upcoming admin slots (before any language filter)
+    const adminLangStats: Record<string, { filled: number; total: number }> = {};
+    for (const s of adminSlots.filter((s) => slotEnd(s) > now)) {
+      const key = s.language;
+      adminLangStats[key] = {
+        filled: (adminLangStats[key]?.filled ?? 0) + s.signups.length,
+        total: (adminLangStats[key]?.total ?? 0) + (s.endTime - s.startTime) * s.interpreterCount,
+      };
+    }
+    const adminStatLabel = (code: string) => {
+      const st = adminLangStats[code];
+      return st && st.total > 0 ? ` (${st.filled}/${st.total})` : "";
+    };
+    const ADMIN_FIXED = ["ALL", "ES", "ZH"];
+    const adminFixedLabels: Record<string, string> = {
+      ALL: "All Languages",
+      ES: `Spanish${adminStatLabel("ES")}`,
+      ZH: `Mandarin${adminStatLabel("ZH")}`,
+    };
+    const adminOtherLangs = languages
+      .filter((l) => l.isActive && !["ES", "ZH"].includes(l.code) && (adminLangStats[l.code]?.total ?? 0) > 0)
+      .sort((a, b) => a.name.localeCompare(b.name));
+    const adminOtherSelected = !ADMIN_FIXED.includes(langFilter) && langFilter !== "ALL";
+
     const selectedSlots = upcomingAdminSlots.filter((s) => adminSelectedSlotIds.has(s.id));
     const deleteConfirmText = selectedSlots.length === 1
       ? `${selectedSlots[0].clinic.name} ${selectedSlots[0].date.slice(0, 10)}`
@@ -513,15 +537,27 @@ export default function BrowsePage() {
 
         {/* Filters */}
         <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "10px", marginBottom: "28px" }}>
-          {["ALL", ...languages.filter((l) => l.isActive).map((l) => l.code)].map((lang) => (
+          {ADMIN_FIXED.map((lang) => (
             <button
               key={lang}
               onClick={() => setLangFilter(lang)}
-              style={{ padding: "9px 14px", borderRadius: "9px", fontSize: "0.875rem", fontWeight: 500, border: langFilter === lang ? "1.5px solid var(--blue)" : "1.5px solid var(--card-border)", background: langFilter === lang ? "var(--blue)" : "var(--card-bg)", color: langFilter === lang ? "#fff" : "var(--gray-900)", fontFamily: "'DM Sans', sans-serif", cursor: "pointer" }}
-            >
-              {lang === "ALL" ? "All Languages" : (languages.find((l) => l.code === lang)?.name ?? langName(lang))}
-            </button>
+              style={{ padding: "9px 14px", borderRadius: "9px", fontSize: "0.875rem", fontWeight: 500, cursor: "pointer", fontFamily: "'DM Sans', sans-serif", border: langFilter === lang ? "1.5px solid var(--blue)" : "1.5px solid var(--card-border)", background: langFilter === lang ? "var(--blue)" : "var(--card-bg)", color: langFilter === lang ? "#fff" : "var(--gray-900)" }}
+            >{adminFixedLabels[lang]}</button>
           ))}
+          {adminOtherLangs.length > 0 && (
+            <select
+              value={adminOtherSelected ? langFilter : ""}
+              onChange={(e) => {
+                const val = e.target.value;
+                if (!val || val === langFilter) setLangFilter("ALL");
+                else setLangFilter(val);
+              }}
+              style={{ padding: "9px 14px", borderRadius: "9px", fontSize: "0.875rem", fontWeight: 500, cursor: "pointer", fontFamily: "'DM Sans', sans-serif", outline: "none", border: adminOtherSelected ? "1.5px solid var(--blue)" : "1.5px solid var(--card-border)", background: adminOtherSelected ? "var(--blue)" : "var(--card-bg)", color: adminOtherSelected ? "#fff" : "var(--gray-900)" }}
+            >
+              <option value="">{adminOtherSelected ? "Clear filter" : "Other languages…"}</option>
+              {adminOtherLangs.map((l) => <option key={l.code} value={l.code}>{l.name}{adminStatLabel(l.code)}</option>)}
+            </select>
+          )}
           <div style={{ width: "1px", background: "var(--card-border)", alignSelf: "stretch", margin: "0 4px" }} />
           <select value={clinicFilter} onChange={(e) => setClinicFilter(e.target.value)} style={{ padding: "9px 14px", borderRadius: "9px", fontSize: "0.875rem", fontWeight: 500, border: "1.5px solid var(--card-border)", background: "var(--card-bg)", color: "var(--gray-900)", fontFamily: "'DM Sans', sans-serif", cursor: "pointer", outline: "none" }}>
             <option value="ALL">All Clinics</option>
@@ -741,9 +777,30 @@ export default function BrowsePage() {
 
   const upcoming = filtered.filter((s) => slotEnd(s) > now);
 
+  // Compute fill stats from upcoming slots only (before any language filter)
+  const langStats: Record<string, { filled: number; total: number }> = {};
+  for (const s of browseSlots.filter((s) => slotEnd(s) > now)) {
+    const key = s.language;
+    langStats[key] = {
+      filled: (langStats[key]?.filled ?? 0) + s.signups.length,
+      total: (langStats[key]?.total ?? 0) + (s.endTime - s.startTime) * s.interpreterCount,
+    };
+  }
+  const statLabel = (code: string) => {
+    const s = langStats[code];
+    return s && s.total > 0 ? ` (${s.filled}/${s.total})` : "";
+  };
+
   const FIXED = ["ALL", "ES", "ZH"];
-  const fixedLabels: Record<string, string> = { ALL: "All Languages", ES: "Spanish", ZH: "Mandarin" };
-  const otherLangs = availableLanguages.filter((l) => !["ES", "ZH"].includes(l.code));
+  const fixedLabels: Record<string, string> = {
+    ALL: "All Languages",
+    ES: `Spanish${statLabel("ES")}`,
+    ZH: `Mandarin${statLabel("ZH")}`,
+  };
+  // Other languages: active, not ES/ZH, and have at least 1 upcoming slot — sorted alphabetically
+  const otherLangs = availableLanguages
+    .filter((l) => !["ES", "ZH"].includes(l.code) && (langStats[l.code]?.total ?? 0) > 0)
+    .sort((a, b) => a.name.localeCompare(b.name));
   const otherSelected = !FIXED.includes(langFilter) && langFilter !== "ALL";
 
   const renderVolunteerSlot = (slot: BrowseSlot, isPast: boolean) => {
@@ -870,7 +927,7 @@ export default function BrowsePage() {
             style={{ padding: "9px 14px", borderRadius: "9px", fontSize: "0.875rem", fontWeight: 500, cursor: "pointer", fontFamily: "'DM Sans', sans-serif", outline: "none", border: otherSelected ? "1.5px solid var(--blue)" : "1.5px solid var(--card-border)", background: otherSelected ? "var(--blue)" : "var(--card-bg)", color: otherSelected ? "#fff" : "var(--gray-900)" }}
           >
             <option value="">{otherSelected ? "Clear filter" : "Other languages…"}</option>
-            {otherLangs.map((l) => <option key={l.code} value={l.code}>{l.name}</option>)}
+            {otherLangs.map((l) => <option key={l.code} value={l.code}>{l.name}{statLabel(l.code)}</option>)}
           </select>
         )}
         <div style={{ width: "1px", background: "var(--card-border)", alignSelf: "stretch", margin: "0 4px" }} />
