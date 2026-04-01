@@ -17,7 +17,9 @@ export async function POST(req: NextRequest) {
   });
 
   for (const clinic of clinics) {
-    const match = await bcrypt.compare(pin, clinic.loginPin);
+    const match = clinic.loginPin.startsWith("$2")
+      ? await bcrypt.compare(pin, clinic.loginPin)
+      : pin === clinic.loginPin;
     if (match) {
       return NextResponse.json({ token: clinic.loginToken, name: clinic.name });
     }

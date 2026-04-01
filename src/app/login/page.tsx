@@ -43,7 +43,7 @@ function LoginContent() {
     setClinicLoading(false);
 
     if (result?.ok) {
-      window.location.href = "/dashboard";
+      window.location.href = "/dashboard/clinic";
     } else {
       setClinicError("Sign in failed. Please try again.");
       setPin("");
