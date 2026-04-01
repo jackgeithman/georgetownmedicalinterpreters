@@ -292,7 +292,7 @@ export default function ProfilePage() {
                         : isDenied
                         ? { bg: "#FEF2F2", color: "#DC2626", border: "1px solid #FECACA", dot: "#EF4444", label: "Denied" }
                         : { bg: "#FFFBEB", color: "#92400E", border: "1px solid #FDE68A", dot: "#F59E0B", label: "Pending" };
-                      const showRemove = isCleared || isDenied;
+                      const showRemove = true;
                       return (
                         <span key={code} style={{ display: "inline-flex", alignItems: "center", gap: "6px", padding: "5px 11px", borderRadius: "99px", fontSize: "0.78rem", fontWeight: 600, background: chipStyle.bg, color: chipStyle.color, border: chipStyle.border }}>
                           <span style={{ width: "7px", height: "7px", borderRadius: "50%", background: chipStyle.dot, flexShrink: 0 }} />

@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
+import { LANGUAGE_MAP } from "@/lib/languages";
 
 type LanguageConfig = {
   id: string;
@@ -23,11 +24,24 @@ type ConflictSlot = {
   signupCount: number;
 };
 
+// Build the full selectable list from LANGUAGE_MAP, sorted alphabetically
+const ALL_OPTIONS = Object.entries(LANGUAGE_MAP)
+  .map(([code, name]) => ({ code, name }))
+  .sort((a, b) => a.name.localeCompare(b.name));
+
 export default function LanguagesPage() {
   const [languages, setLanguages] = useState<LanguageConfig[]>([]);
   const [loading, setLoading] = useState(true);
-  const [langForm, setLangForm] = useState({ name: "" });
-  const [langFormError, setLangFormError] = useState("");
+
+  // Add form
+  const [search, setSearch] = useState("");
+  const [selected, setSelected] = useState<{ code: string; name: string } | null>(null);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [addError, setAddError] = useState("");
+  const [adding, setAdding] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // Deactivate conflict modal
   const [langDeactivateConflict, setLangDeactivateConflict] = useState<{
     langId: string;
     langName: string;
@@ -35,31 +49,60 @@ export default function LanguagesPage() {
   } | null>(null);
   const [langDeactivateLoading, setLangDeactivateLoading] = useState(false);
 
+  // Delete confirm modal
+  const [deleteConfirm, setDeleteConfirm] = useState<LanguageConfig | null>(null);
+  const [deleteError, setDeleteError] = useState("");
+  const [deleteLoading, setDeleteLoading] = useState(false);
+
   const fetchLanguages = useCallback(async () => {
     const res = await fetch("/api/admin/languages");
     if (res.ok) setLanguages(await res.json());
     setLoading(false);
   }, []);
 
-  useEffect(() => {
-    void fetchLanguages();
-  }, [fetchLanguages]);
+  useEffect(() => { void fetchLanguages(); }, [fetchLanguages]);
+
+  // Filter options: match search text, exclude already-added languages
+  const existingCodes = new Set(languages.map((l) => l.code.toUpperCase()));
+  const filteredOptions = ALL_OPTIONS.filter(
+    (o) =>
+      !existingCodes.has(o.code.toUpperCase()) &&
+      (search === "" || o.name.toLowerCase().includes(search.toLowerCase()))
+  );
+
+  const handleSelect = (opt: { code: string; name: string }) => {
+    setSelected(opt);
+    setSearch(opt.name);
+    setDropdownOpen(false);
+    setAddError("");
+  };
+
+  const handleSearchChange = (val: string) => {
+    setSearch(val);
+    setSelected(null);
+    setDropdownOpen(true);
+    setAddError("");
+  };
 
   const createLanguage = async () => {
-    setLangFormError("");
+    if (!selected) return;
+    setAdding(true);
+    setAddError("");
     const res = await fetch("/api/admin/languages", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: langForm.name.trim() }),
+      body: JSON.stringify({ name: selected.name, code: selected.code }),
     });
     if (res.ok) {
       const lang = await res.json();
       setLanguages((prev) => [...prev, lang].sort((a, b) => a.name.localeCompare(b.name)));
-      setLangForm({ name: "" });
+      setSearch("");
+      setSelected(null);
     } else {
       const data = await res.json().catch(() => ({}));
-      setLangFormError((data as { error?: string }).error ?? "Could not add language.");
+      setAddError((data as { error?: string }).error ?? "Could not add language.");
     }
+    setAdding(false);
   };
 
   const toggleLanguageActive = async (id: string, newIsActive: boolean, langName: string) => {
@@ -117,6 +160,21 @@ export default function LanguagesPage() {
     setLangDeactivateLoading(false);
   };
 
+  const deleteLanguage = async () => {
+    if (!deleteConfirm) return;
+    setDeleteLoading(true);
+    setDeleteError("");
+    const res = await fetch(`/api/admin/languages/${deleteConfirm.id}`, { method: "DELETE" });
+    if (res.ok) {
+      setLanguages((prev) => prev.filter((l) => l.id !== deleteConfirm.id));
+      setDeleteConfirm(null);
+    } else {
+      const data = await res.json().catch(() => ({}));
+      setDeleteError((data as { error?: string }).error ?? "Could not delete language.");
+    }
+    setDeleteLoading(false);
+  };
+
   if (loading) {
     return (
       <div style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "80px 0" }}>
@@ -127,30 +185,60 @@ export default function LanguagesPage() {
 
   return (
     <div style={{ maxWidth: "640px", display: "flex", flexDirection: "column", gap: "16px" }}>
+
+      {/* Add language */}
       <div style={{ background: "var(--card-bg)", borderRadius: "14px", border: "1.5px solid var(--card-border)", padding: "24px" }}>
         <h3 style={{ fontSize: "0.875rem", fontWeight: 600, color: "#111827", marginBottom: "4px" }}>Add Language</h3>
-        <p style={{ fontSize: "0.75rem", color: "#111827", marginBottom: "16px" }}>Inactive languages are hidden from dropdowns but shown here.</p>
-        <div style={{ display: "flex", gap: "10px" }}>
-          <input
-            placeholder="Name (e.g. French)"
-            value={langForm.name}
-            onChange={(e) => setLangForm({ name: e.target.value })}
-            onKeyDown={(e) => { if (e.key === "Enter" && langForm.name.trim()) void createLanguage(); }}
-            style={{ flex: 1, padding: "9px 12px", fontSize: "0.875rem", border: "1.5px solid var(--card-border)", borderRadius: "9px", background: "var(--card-bg)", color: "#111827", outline: "none", fontFamily: "'DM Sans', sans-serif" }}
-          />
+        <p style={{ fontSize: "0.75rem", color: "#111827", marginBottom: "16px" }}>Search and select from the standard language list.</p>
+        <div style={{ display: "flex", gap: "10px", position: "relative" }}>
+          <div style={{ flex: 1, position: "relative" }}>
+            <input
+              ref={inputRef}
+              placeholder="Search languages (e.g. French)…"
+              value={search}
+              onChange={(e) => handleSearchChange(e.target.value)}
+              onFocus={() => setDropdownOpen(true)}
+              onBlur={() => setTimeout(() => setDropdownOpen(false), 150)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && selected) void createLanguage();
+                if (e.key === "Escape") setDropdownOpen(false);
+              }}
+              style={{ width: "100%", padding: "9px 12px", fontSize: "0.875rem", border: `1.5px solid ${selected ? "var(--blue)" : "var(--card-border)"}`, borderRadius: "9px", background: "var(--card-bg)", color: "#111827", outline: "none", fontFamily: "'DM Sans', sans-serif", boxSizing: "border-box" }}
+            />
+            {dropdownOpen && filteredOptions.length > 0 && (
+              <div style={{ position: "absolute", top: "calc(100% + 4px)", left: 0, right: 0, background: "var(--card-bg)", border: "1.5px solid var(--card-border)", borderRadius: "9px", boxShadow: "0 4px 16px rgba(0,0,0,.1)", zIndex: 50, maxHeight: "220px", overflowY: "auto" }}>
+                {filteredOptions.map((opt) => (
+                  <button
+                    key={opt.code}
+                    onMouseDown={() => handleSelect(opt)}
+                    style={{ width: "100%", textAlign: "left", padding: "8px 14px", fontSize: "0.875rem", color: "#111827", background: "none", border: "none", borderBottom: "1px solid #F9FAFB", fontFamily: "'DM Sans', sans-serif", cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center" }}
+                  >
+                    {opt.name}
+                    <span style={{ fontSize: "0.7rem", color: "#6B7280", fontWeight: 500 }}>{opt.code}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+            {dropdownOpen && search.length > 0 && filteredOptions.length === 0 && (
+              <div style={{ position: "absolute", top: "calc(100% + 4px)", left: 0, right: 0, background: "var(--card-bg)", border: "1.5px solid var(--card-border)", borderRadius: "9px", padding: "12px 14px", fontSize: "0.8rem", color: "#6B7280", zIndex: 50 }}>
+                No matching languages found.
+              </div>
+            )}
+          </div>
           <button
-            disabled={!langForm.name.trim()}
+            disabled={!selected || adding}
             onClick={() => void createLanguage()}
-            style={{ padding: "9px 22px", fontSize: "0.875rem", background: "var(--blue)", color: "#fff", border: "none", borderRadius: "99px", cursor: "pointer", fontWeight: 600, opacity: !langForm.name.trim() ? 0.5 : 1, fontFamily: "'DM Sans', sans-serif" }}
+            style={{ padding: "9px 22px", fontSize: "0.875rem", background: "var(--blue)", color: "#fff", border: "none", borderRadius: "99px", cursor: selected ? "pointer" : "not-allowed", fontWeight: 600, opacity: !selected || adding ? 0.5 : 1, fontFamily: "'DM Sans', sans-serif", whiteSpace: "nowrap" }}
           >
-            Add
+            {adding ? "Adding…" : "Add"}
           </button>
         </div>
-        {langFormError && (
-          <p style={{ marginTop: "8px", fontSize: "0.875rem", color: "#DC2626", background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: "8px", padding: "8px 12px" }}>{langFormError}</p>
+        {addError && (
+          <p style={{ marginTop: "8px", fontSize: "0.875rem", color: "#DC2626", background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: "8px", padding: "8px 12px" }}>{addError}</p>
         )}
       </div>
 
+      {/* Language list */}
       {languages.length === 0 ? (
         <div style={{ background: "var(--card-bg)", borderRadius: "14px", border: "1.5px solid var(--card-border)", padding: "48px", textAlign: "center" }}>
           <p style={{ color: "var(--gray-400)" }}>No languages configured yet.</p>
@@ -172,6 +260,13 @@ export default function LanguagesPage() {
                   style={{ fontSize: "0.75rem", padding: "4px 12px", borderRadius: "8px", cursor: "pointer", fontFamily: "'DM Sans', sans-serif", background: lang.isActive ? "var(--gray-200)" : "#DCFCE7", color: lang.isActive ? "#111827" : "#15803D", border: "none" }}
                 >
                   {lang.isActive ? "Deactivate" : "Activate"}
+                </button>
+                <button
+                  onClick={() => { setDeleteConfirm(lang); setDeleteError(""); }}
+                  title="Delete language permanently"
+                  style={{ fontSize: "0.75rem", padding: "4px 10px", borderRadius: "8px", cursor: "pointer", fontFamily: "'DM Sans', sans-serif", background: "#FEF2F2", color: "#DC2626", border: "1px solid #FECACA" }}
+                >
+                  Delete
                 </button>
               </div>
             </div>
@@ -200,16 +295,33 @@ export default function LanguagesPage() {
               )}
             </div>
             <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end" }}>
-              <button
-                onClick={() => setLangDeactivateConflict(null)}
-                style={{ padding: "8px 18px", fontSize: "0.875rem", background: "var(--card-bg)", color: "#111827", border: "1.5px solid var(--card-border)", borderRadius: "9px", cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}
-              >Cancel</button>
-              <button
-                disabled={langDeactivateLoading}
-                onClick={() => void forceDeactivateLanguage()}
-                style={{ padding: "8px 18px", fontSize: "0.875rem", background: "#DC2626", color: "#fff", border: "none", borderRadius: "9px", cursor: "pointer", fontFamily: "'DM Sans', sans-serif", fontWeight: 600, opacity: langDeactivateLoading ? 0.5 : 1 }}
-              >
+              <button onClick={() => setLangDeactivateConflict(null)} style={{ padding: "8px 18px", fontSize: "0.875rem", background: "var(--card-bg)", color: "#111827", border: "1.5px solid var(--card-border)", borderRadius: "9px", cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>Cancel</button>
+              <button disabled={langDeactivateLoading} onClick={() => void forceDeactivateLanguage()} style={{ padding: "8px 18px", fontSize: "0.875rem", background: "#DC2626", color: "#fff", border: "none", borderRadius: "9px", cursor: "pointer", fontFamily: "'DM Sans', sans-serif", fontWeight: 600, opacity: langDeactivateLoading ? 0.5 : 1 }}>
                 {langDeactivateLoading ? "Deactivating..." : "Deactivate Anyway"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete confirm modal */}
+      {deleteConfirm && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.45)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <div style={{ background: "var(--card-bg)", borderRadius: "16px", border: "1.5px solid var(--card-border)", padding: "28px", maxWidth: "420px", width: "90%", boxShadow: "0 20px 60px rgba(0,0,0,.2)" }}>
+            <h3 style={{ fontSize: "1rem", fontWeight: 700, color: "#111827", marginBottom: "8px" }}>Delete Language?</h3>
+            <p style={{ fontSize: "0.875rem", color: "#111827", marginBottom: "6px" }}>
+              This will permanently remove <strong>{deleteConfirm.name}</strong> from the system.
+            </p>
+            <p style={{ fontSize: "0.8rem", color: "#DC2626", marginBottom: "20px" }}>
+              This cannot be undone. If any slots reference this language, deletion will be blocked.
+            </p>
+            {deleteError && (
+              <p style={{ marginBottom: "16px", fontSize: "0.875rem", color: "#DC2626", background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: "8px", padding: "8px 12px" }}>{deleteError}</p>
+            )}
+            <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end" }}>
+              <button onClick={() => setDeleteConfirm(null)} style={{ padding: "8px 18px", fontSize: "0.875rem", background: "var(--card-bg)", color: "#111827", border: "1.5px solid var(--card-border)", borderRadius: "9px", cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>Cancel</button>
+              <button disabled={deleteLoading} onClick={() => void deleteLanguage()} style={{ padding: "8px 18px", fontSize: "0.875rem", background: "#DC2626", color: "#fff", border: "none", borderRadius: "9px", cursor: "pointer", fontFamily: "'DM Sans', sans-serif", fontWeight: 600, opacity: deleteLoading ? 0.5 : 1 }}>
+                {deleteLoading ? "Deleting…" : "Delete Permanently"}
               </button>
             </div>
           </div>

@@ -149,3 +149,38 @@ export async function PATCH(
 
   return NextResponse.json({ ...updated, volunteerCount: counts[updated.code] ?? 0 });
 }
+
+export async function DELETE(
+  _req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const admin = await getAdminUser();
+  if (!admin) return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+
+  const { id } = await params;
+  const lang = await prisma.languageConfig.findUnique({ where: { id } });
+  if (!lang) return NextResponse.json({ error: "Language not found" }, { status: 404 });
+
+  // Block delete if any slots (past or future) reference this language
+  const slotCount = await prisma.slot.count({ where: { language: lang.code } });
+  if (slotCount > 0) {
+    return NextResponse.json(
+      { error: `Cannot delete — ${slotCount} slot${slotCount !== 1 ? "s" : ""} reference this language. Deactivate it instead.` },
+      { status: 409 }
+    );
+  }
+
+  await prisma.languageConfig.delete({ where: { id } });
+
+  await logActivity({
+    actorId: admin.id,
+    actorEmail: admin.email ?? undefined,
+    actorName: admin.name ?? undefined,
+    action: "LANGUAGE_DELETED",
+    targetType: "Language",
+    targetId: id,
+    detail: `Deleted language ${lang.name} (${lang.code})`,
+  });
+
+  return NextResponse.json({ ok: true });
+}
