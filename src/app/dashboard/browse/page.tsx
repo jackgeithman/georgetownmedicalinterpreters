@@ -381,8 +381,10 @@ export default function BrowsePage() {
     }
     const adminStatLabel = (code: string) => {
       const st = adminLangStats[code];
-      if (!st || st.total === 0) return " (None)";
-      return st.filled >= st.total ? ` Full (${st.filled}/${st.total})` : ` (${st.filled}/${st.total})`;
+      if (!st || st.total === 0) return " · No slots posted";
+      const open = st.total - st.filled;
+      if (open <= 0) return ` · Full — ${st.total} posted`;
+      return ` · ${open} of ${st.total} open`;
     };
     const adminSpanishLang = languages.find((l) => l.isActive && /\bspanish\b/i.test(l.name));
     const adminMandarinLang = languages.find((l) => l.isActive && /\b(mandarin|chinese)\b/i.test(l.name));
@@ -824,8 +826,10 @@ export default function BrowsePage() {
   }
   const statLabel = (code: string) => {
     const s = langStats[code];
-    if (!s || s.total === 0) return " (None)";
-    return s.filled >= s.total ? ` Full (${s.filled}/${s.total})` : ` (${s.filled}/${s.total})`;
+    if (!s || s.total === 0) return " · No slots posted";
+    const open = s.total - s.filled;
+    if (open <= 0) return ` · Full — ${s.total} posted`;
+    return ` · ${open} of ${s.total} open`;
   };
 
   // Dynamically resolve Spanish and Mandarin by name so the code works regardless
