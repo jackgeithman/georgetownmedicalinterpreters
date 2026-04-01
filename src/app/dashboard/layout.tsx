@@ -53,7 +53,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const isInstructor = role === "INSTRUCTOR";
 
   // Show "awaiting role" screen if no meaningful role
-  const hasRole = role === "VOLUNTEER" || role === "ADMIN" || role === "INSTRUCTOR" || isDev;
+  const hasRole = role === "VOLUNTEER" || role === "ADMIN" || role === "INSTRUCTOR" || role === "CLINIC" || isDev;
 
   if (status === "authenticated" && !hasRole) {
     return (

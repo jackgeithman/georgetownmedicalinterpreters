@@ -2,8 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import bcrypt from "bcryptjs";
-
 async function getAdmin() {
   const session = await getServerSession(authOptions);
   if (!session?.user?.email) return null;
@@ -42,10 +40,9 @@ export async function POST(req: NextRequest) {
   }
 
   const plainPin = generatePin();
-  const hashedPin = await bcrypt.hash(plainPin, 10);
 
   const clinic = await prisma.clinic.create({
-    data: { name, address: address ?? "", contactName: contactName ?? "", contactEmail, loginPin: hashedPin },
+    data: { name, address: address ?? "", contactName: contactName ?? "", contactEmail, loginPin: plainPin },
   });
 
   return NextResponse.json({ ...clinic, plainPin });
