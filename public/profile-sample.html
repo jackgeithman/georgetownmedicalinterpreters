@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Volunteer Profile — Sample</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'DM Sans', system-ui, sans-serif;
+    background: #F8F9FB;
+    color: #111827;
+    min-height: 100vh;
+  }
+
+  header {
+    background: #041E42;
+    height: 64px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 32px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .header-left { display: flex; align-items: center; gap: 14px; }
+  .logo {
+    width: 36px; height: 36px; border-radius: 9px;
+    background: #4A90D9;
+    display: flex; align-items: center; justify-content: center;
+    color: #fff; font-weight: 700; font-size: 0.85rem; flex-shrink: 0;
+  }
+  .header-title { color: #fff; font-size: 0.95rem; font-weight: 600; }
+  .header-sub { color: #94A3B8; font-size: 0.72rem; }
+  .header-right { display: flex; align-items: center; gap: 14px; }
+  .header-email { color: #CBD5E1; font-size: 0.82rem; }
+  .btn-ghost {
+    background: rgba(255,255,255,.08);
+    border: 1px solid rgba(255,255,255,.2);
+    color: #fff; font-family: inherit;
+    font-size: 0.8rem; font-weight: 500;
+    padding: 7px 16px; border-radius: 8px; cursor: pointer;
+  }
+
+  .tabs-wrap { max-width: 920px; margin: 0 auto; padding: 28px 24px 0; }
+  .tabs {
+    display: flex; gap: 4px;
+    background: #fff; padding: 5px; border-radius: 12px;
+    width: fit-content; border: 1px solid #E5E7EB;
+    margin-bottom: 28px; flex-wrap: wrap;
+  }
+  .tab {
+    padding: 9px 20px; border-radius: 9px;
+    font-size: 0.9rem; font-weight: 500; cursor: pointer;
+    border: none; background: none; color: #4B5563;
+    font-family: inherit; white-space: nowrap;
+  }
+  .tab.active { background: #2563EB; color: #fff; font-weight: 600; }
+
+  .page { max-width: 920px; margin: 0 auto; padding: 0 24px 48px; }
+
+  /* Two-column: narrow left sidebar, wide right */
+  .profile-grid {
+    display: grid;
+    grid-template-columns: 240px 1fr;
+    gap: 20px;
+    align-items: start;
+  }
+
+  .left-col { display: flex; flex-direction: column; gap: 14px; }
+
+  .card {
+    background: #fff;
+    border-radius: 16px;
+    border: 1.5px solid #E5E7EB;
+    overflow: hidden;
+    box-shadow: 0 1px 4px rgba(0,0,0,.04);
+  }
+  .card-header {
+    padding: 16px 20px 14px;
+    border-bottom: 1.5px solid #F3F4F6;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .card-header h3 {
+    font-size: 0.8rem; font-weight: 700;
+    color: #111827; text-transform: uppercase; letter-spacing: 0.07em;
+  }
+  .card-body { padding: 18px 20px; }
+
+  /* Identity card */
+  .identity-card { padding: 20px; }
+  .vol-name { font-size: 1rem; font-weight: 700; color: #111827; }
+  .vol-email { font-size: 0.75rem; color: #9CA3AF; margin-top: 3px; }
+  .vol-since { font-size: 0.7rem; color: #D1D5DB; margin-top: 6px; }
+  .divider { width: 100%; height: 1px; background: #F3F4F6; margin: 14px 0; }
+
+  /* Hours stat — single box */
+  .hours-box {
+    background: #F0F7FF;
+    border: 1px solid #BFDBFE;
+    border-radius: 10px;
+    padding: 12px 14px;
+    display: flex; align-items: center; gap: 12px;
+  }
+  .hours-val { font-size: 1.5rem; font-weight: 700; color: #1D4ED8; line-height: 1; }
+  .hours-label { font-size: 0.72rem; font-weight: 600; color: #3B82F6; text-transform: uppercase; letter-spacing: 0.07em; }
+
+  /* Right column */
+  .right-col { display: flex; flex-direction: column; gap: 20px; }
+
+  /* Chips */
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 5px 11px; border-radius: 99px;
+    font-size: 0.78rem; font-weight: 600;
+  }
+  .chip-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+  .chip-status { font-size: 0.68rem; opacity: 0.75; }
+  .chip-remove {
+    background: none; border: none; cursor: pointer;
+    opacity: 0.5; font-size: 0.9rem; line-height: 1;
+    padding: 0 0 0 2px; color: inherit; font-family: inherit;
+  }
+  .chip.cleared { background: #BBF7D0; color: #15803D; border: 1px solid #86EFAC; }
+  .chip.pending { background: #FFFBEB; color: #92400E; border: 1px solid #FDE68A; }
+  .chip.denied  { background: #FEF2F2; color: #DC2626; border: 1px solid #FECACA; }
+
+  .lang-search {
+    width: 100%; padding: 9px 12px; font-size: 0.875rem;
+    border: 1.5px solid #E5E7EB; border-radius: 9px;
+    font-family: inherit; color: #111827; outline: none;
+    background: #FAFAFA; margin-bottom: 10px;
+  }
+  .lang-search:focus { border-color: #2563EB; background: #fff; }
+
+  .lang-list {
+    border: 1.5px solid #E5E7EB; border-radius: 10px;
+    overflow: hidden; max-height: 180px; overflow-y: auto;
+  }
+  .lang-section-label {
+    padding: 7px 14px 4px; font-size: 0.65rem; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.1em; color: #9CA3AF;
+    background: #FAFAFA; border-bottom: 1px solid #F3F4F6;
+  }
+  .lang-item {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 8px 14px; font-size: 0.875rem; color: #111827;
+    cursor: pointer; border-bottom: 1px solid #F9FAFB; transition: background 0.1s;
+  }
+  .lang-item:hover { background: #F0F7FF; }
+  .lang-item:last-child { border-bottom: none; }
+  .lang-add { font-size: 0.72rem; color: #9CA3AF; font-weight: 500; }
+  .lang-item:hover .lang-add { color: #2563EB; }
+
+  .save-btn {
+    margin-top: 14px; padding: 9px 22px; font-size: 0.875rem;
+    background: #2563EB; color: #fff; border: none; border-radius: 9px;
+    font-family: inherit; font-weight: 600; cursor: pointer;
+  }
+
+  .notif-row {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 11px 0; border-bottom: 1px solid #F3F4F6;
+  }
+  .notif-row:last-child { border-bottom: none; }
+  .notif-label { font-size: 0.875rem; font-weight: 500; color: #111827; }
+  .notif-desc { font-size: 0.72rem; color: #9CA3AF; margin-top: 2px; }
+  .toggle { position: relative; width: 38px; height: 21px; cursor: pointer; flex-shrink: 0; }
+  .toggle-track { position: absolute; inset: 0; border-radius: 99px; transition: background 0.2s; }
+  .toggle-track.on { background: #2563EB; }
+  .toggle-track.off { background: #D1D5DB; }
+  .toggle-thumb {
+    position: absolute; width: 15px; height: 15px; border-radius: 50%;
+    background: #fff; top: 3px; transition: left 0.2s;
+    box-shadow: 0 1px 3px rgba(0,0,0,.2);
+  }
+  .toggle-thumb.on { left: 20px; }
+  .toggle-thumb.off { left: 3px; }
+
+  .unsaved-banner {
+    background: #FFFBEB; border: 1.5px solid #FDE68A; border-radius: 10px;
+    padding: 9px 14px; font-size: 0.78rem; font-weight: 500; color: #92400E;
+    display: flex; align-items: center; gap: 8px; margin-bottom: 16px;
+  }
+
+  .bg-textarea {
+    width: 100%; padding: 9px 12px; font-size: 0.875rem;
+    border: 1.5px solid #E5E7EB; border-radius: 9px; font-family: inherit;
+    color: #111827; outline: none; resize: vertical; background: #FAFAFA;
+    line-height: 1.6; min-height: 76px;
+  }
+  .bg-textarea:focus { border-color: #2563EB; background: #fff; }
+  .field-label {
+    font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.08em; color: #6B7280; margin-bottom: 6px; display: block;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-left">
+    <div class="logo">GMI</div>
+    <div>
+      <div class="header-title">Georgetown Medical Interpreters</div>
+      <div class="header-sub">Volunteer Dashboard</div>
+    </div>
+  </div>
+  <div class="header-right">
+    <span class="header-email">jane.smith@georgetown.edu</span>
+    <button class="btn-ghost">Sign Out</button>
+  </div>
+</header>
+
+<div class="tabs-wrap">
+  <div class="tabs">
+    <button class="tab">Browse Slots</button>
+    <button class="tab">My Signups <span style="background:#DC2626;color:#fff;font-size:0.7rem;font-weight:700;padding:1px 7px;border-radius:99px;margin-left:4px;">3</span></button>
+    <button class="tab active">Profile</button>
+    <button class="tab">Training</button>
+    <button class="tab">Messages</button>
+  </div>
+</div>
+
+<div class="page">
+
+  <!-- Unsaved warning -->
+  <div class="unsaved-banner">
+    ⚠ Unsaved language changes — click Save Languages before leaving.
+  </div>
+
+  <div class="profile-grid">
+
+    <!-- Left sidebar -->
+    <div class="left-col">
+
+      <!-- Identity -->
+      <div class="card">
+        <div class="identity-card">
+          <div class="vol-name">Jane Smith</div>
+          <div class="vol-email">jane.smith@georgetown.edu</div>
+          <div class="vol-since">Member since Sep 2023</div>
+          <div class="divider"></div>
+          <div class="hours-box">
+            <div class="hours-val">24</div>
+            <div class="hours-label">Hours<br>Volunteered</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Notifications -->
+      <div class="card">
+        <div class="card-header"><h3>Notifications</h3></div>
+        <div class="card-body" style="padding:14px 18px;">
+          <div class="notif-row">
+            <div>
+              <div class="notif-label">Signup confirmation</div>
+              <div class="notif-desc">Email on signup</div>
+            </div>
+            <label class="toggle"><div class="toggle-track on"></div><div class="toggle-thumb on"></div></label>
+          </div>
+          <div class="notif-row">
+            <div>
+              <div class="notif-label">Cancellation receipt</div>
+              <div class="notif-desc">Email on cancellation</div>
+            </div>
+            <label class="toggle"><div class="toggle-track on"></div><div class="toggle-thumb on"></div></label>
+          </div>
+          <div class="notif-row">
+            <div>
+              <div class="notif-label">24-hour reminder</div>
+              <div class="notif-desc">Day-before reminder</div>
+            </div>
+            <label class="toggle"><div class="toggle-track on"></div><div class="toggle-thumb on"></div></label>
+          </div>
+          <div class="notif-row">
+            <div>
+              <div class="notif-label">Unfilled slot alerts</div>
+              <div class="notif-desc">Open shifts in your languages</div>
+            </div>
+            <label class="toggle"><div class="toggle-track off"></div><div class="toggle-thumb off"></div></label>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Right: Languages + Background -->
+    <div class="right-col">
+
+      <!-- Languages -->
+      <div class="card">
+        <div class="card-header">
+          <h3>Languages</h3>
+          <span style="font-size:0.72rem;font-weight:500;color:#9CA3AF;text-transform:none;letter-spacing:0;">Medical-level proficiency only</span>
+        </div>
+        <div class="card-body">
+
+          <!-- Notice — soft blue -->
+          <div style="background:#EFF6FF;border:1px solid #BFDBFE;border-radius:8px;padding:9px 13px;margin-bottom:18px;font-size:0.78rem;color:#1E40AF;line-height:1.5;">
+            Only select languages you are fully confident using in a <strong>healthcare setting</strong> with medical vocabulary.
+          </div>
+
+          <!-- Current languages -->
+          <div style="margin-bottom:18px;">
+            <div style="font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:#9CA3AF;margin-bottom:10px;">Your languages</div>
+            <div class="chips">
+              <span class="chip cleared">
+                <span class="chip-dot" style="background:#10B981;"></span>
+                Spanish
+                <span class="chip-status">· Cleared</span>
+                <button class="chip-remove">×</button>
+              </span>
+              <span class="chip pending">
+                <span class="chip-dot" style="background:#F59E0B;"></span>
+                French
+                <span class="chip-status">· Pending</span>
+              </span>
+              <span class="chip denied">
+                <span class="chip-dot" style="background:#EF4444;"></span>
+                Mandarin
+                <span class="chip-status">· Denied</span>
+                <button class="chip-remove">×</button>
+              </span>
+            </div>
+          </div>
+
+          <input class="lang-search" type="text" placeholder="Search languages to add…" />
+
+          <div class="lang-list">
+            <div class="lang-section-label">Most Common</div>
+            <div class="lang-item">Arabic <span class="lang-add">+ Add</span></div>
+            <div class="lang-item">Hindi <span class="lang-add">+ Add</span></div>
+            <div class="lang-item">Korean <span class="lang-add">+ Add</span></div>
+            <div class="lang-item">Portuguese <span class="lang-add">+ Add</span></div>
+            <div class="lang-section-label">All Languages</div>
+            <div class="lang-item">Amharic <span class="lang-add">+ Add</span></div>
+            <div class="lang-item">Bengali <span class="lang-add">+ Add</span></div>
+            <div class="lang-item">Haitian Creole <span class="lang-add">+ Add</span></div>
+          </div>
+
+          <button class="save-btn">Save Languages</button>
+        </div>
+      </div>
+
+
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,8 @@
+{
+  "hooks": {
+    "pre-commit": {
+      "command": "npm run build",
+      "description": "Verify build passes before committing"
+    }
+  }
+}
