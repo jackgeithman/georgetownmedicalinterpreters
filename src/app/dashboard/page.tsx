@@ -17,10 +17,8 @@ export default function DashboardPage() {
   useEffect(() => {
     if (session?.user?.role) {
       const role = session.user.role;
-      if (role === "ADMIN") router.push("/dashboard/admin");
-      else if (role === "INSTRUCTOR") router.push("/dashboard/volunteer");
+      if (role === "ADMIN" || role === "INSTRUCTOR" || role === "VOLUNTEER") router.push("/dashboard/browse");
       else if (role === "CLINIC") router.push("/dashboard/clinic");
-      else if (role === "VOLUNTEER") router.push("/dashboard/volunteer");
     }
   }, [session, router]);
 
