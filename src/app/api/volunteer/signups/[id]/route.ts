@@ -6,10 +6,7 @@ import { notifyVolunteerCancellation, notifyNoShow } from "@/lib/notifications";
 import { sendGmail } from "@/lib/notifications/gmail";
 import { sendResendEmail } from "@/lib/notifications/resend";
 import { logActivity } from "@/lib/activity-log";
-
-const LANG_NAMES: Record<string, string> = {
-  ES: "Spanish", ZH: "Chinese (Mandarin)", KO: "Korean", AR: "Arabic",
-};
+import { langName } from "@/lib/languages";
 
 function fmt12(h: number) {
   const period = h < 12 ? "AM" : "PM";
@@ -139,7 +136,7 @@ export async function DELETE(
         include: { user: true },
       });
 
-      const lang = LANG_NAMES[slot.language] ?? slot.language;
+      const lang = langName(slot.language);
 
       for (const vol of candidates) {
         if (!vol.user.email) continue;

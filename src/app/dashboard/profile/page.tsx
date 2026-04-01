@@ -22,7 +22,6 @@ type VolunteerNotifPrefs = {
 
 // Top 10 most spoken world languages first, then rest alphabetically
 const TOP_WORLD_LANGUAGES = [
-  { code: "EN", name: "English" },
   { code: "ZH", name: "Mandarin Chinese" },
   { code: "HI", name: "Hindi" },
   { code: "ES", name: "Spanish" },

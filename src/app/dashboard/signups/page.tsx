@@ -2,6 +2,7 @@
 
 import { useSession } from "next-auth/react";
 import { useEffect, useState, useCallback } from "react";
+import { langName } from "@/lib/languages";
 
 type MySignup = {
   id: string;
@@ -17,11 +18,6 @@ type MySignup = {
   };
 };
 
-const LANG_LABELS: Record<string, string> = {
-  ES: "Spanish",
-  ZH: "Chinese",
-  KO: "Korean",
-};
 
 const RATING_OPTIONS = [
   { value: 1, label: "Needs Improvement", active: "bg-red-100 text-red-700 border-red-300", idle: "bg-white text-gray-500 border-gray-200 hover:border-red-200 hover:text-red-600" },
@@ -184,7 +180,7 @@ export default function SignupsPage() {
                   <div>
                     <div style={{ fontSize: "1.15rem", fontWeight: 700, color: "var(--navy)" }}>{slot.clinic.name}</div>
                     <div style={{ fontSize: "0.875rem", fontWeight: 500, color: "#111827", marginTop: "3px" }}>
-                      {LANG_LABELS[slot.language] ?? slot.language}
+                      {langName(slot.language)}
                     </div>
                     <div style={{ display: "flex", gap: "24px", marginTop: "12px", flexWrap: "wrap" }}>
                       <div style={{ display: "flex", flexDirection: "column", gap: "3px" }}>

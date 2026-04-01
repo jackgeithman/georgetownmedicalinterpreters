@@ -27,12 +27,7 @@ export interface SlotInfo {
   notes?: string | null;
 }
 
-const LANG_NAMES: Record<string, string> = {
-  ES: "Spanish",
-  ZH: "Chinese (Mandarin)",
-  KO: "Korean",
-  AR: "Arabic",
-};
+import { langName } from "@/lib/languages";
 
 function fmt12(h: number): string {
   const period = h < 12 ? "AM" : "PM";
@@ -41,7 +36,7 @@ function fmt12(h: number): string {
 }
 
 function buildEventBody(volunteerEmail: string, slot: SlotInfo, titlePrefix = "") {
-  const lang = LANG_NAMES[slot.language] ?? slot.language;
+  const lang = langName(slot.language);
   const senderEmail = process.env.GOOGLE_GMAIL_SENDER_EMAIL!;
 
   // Slot dates are stored at noon UTC. Build a local datetime string (no UTC
