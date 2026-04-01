@@ -381,7 +381,8 @@ export default function BrowsePage() {
     }
     const adminStatLabel = (code: string) => {
       const st = adminLangStats[code];
-      return st && st.total > 0 ? ` (${st.filled}/${st.total})` : " (None)";
+      if (!st || st.total === 0) return " (None)";
+      return st.filled >= st.total ? ` Full (${st.filled}/${st.total})` : ` (${st.filled}/${st.total})`;
     };
     const adminSpanishLang = languages.find((l) => l.isActive && /\bspanish\b/i.test(l.name));
     const adminMandarinLang = languages.find((l) => l.isActive && /\b(mandarin|chinese)\b/i.test(l.name));
@@ -823,7 +824,8 @@ export default function BrowsePage() {
   }
   const statLabel = (code: string) => {
     const s = langStats[code];
-    return s && s.total > 0 ? ` (${s.filled}/${s.total})` : " (None)";
+    if (!s || s.total === 0) return " (None)";
+    return s.filled >= s.total ? ` Full (${s.filled}/${s.total})` : ` (${s.filled}/${s.total})`;
   };
 
   // Dynamically resolve Spanish and Mandarin by name so the code works regardless
