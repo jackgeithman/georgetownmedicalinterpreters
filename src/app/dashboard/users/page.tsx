@@ -3,6 +3,7 @@
 import { useSession } from "next-auth/react";
 import { useEffect, useState, useCallback } from "react";
 import ReactDOM from "react-dom";
+import { langName } from "@/lib/languages";
 
 type VolunteerStats = {
   languages: string[];
@@ -37,15 +38,8 @@ const ROLE_CHIPS = [
   { key: "PENDING",    label: "Unassigned", bg: "#F1F5F9", color: "#475569", border: "#CBD5E1" },
 ] as const;
 
-const LANG_LABELS_MAP: Record<string, string> = {
-  ES: "Spanish", ZH: "Mandarin", KO: "Korean", AR: "Arabic", FR: "French",
-  HI: "Hindi", PT: "Portuguese", RU: "Russian", DE: "German", JA: "Japanese",
-  VI: "Vietnamese", IT: "Italian", PL: "Polish", TR: "Turkish", UK: "Ukrainian",
-  FA: "Persian", UR: "Urdu", BN: "Bengali", SW: "Swahili", TL: "Filipino",
-};
-
 function getLangLabel(code: string) {
-  return LANG_LABELS_MAP[code] ?? code;
+  return langName(code);
 }
 
 function parseUserRoles(roles: string[]) {

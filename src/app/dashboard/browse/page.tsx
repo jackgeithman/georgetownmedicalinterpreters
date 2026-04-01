@@ -2,6 +2,7 @@
 
 import { useSession } from "next-auth/react";
 import { useEffect, useState, useCallback } from "react";
+import { langName } from "@/lib/languages";
 
 type BrowseSlot = {
   id: string;
@@ -50,11 +51,6 @@ type AdminProfile = {
 
 type LanguageConfig = { id: string; code: string; name: string; isActive: boolean };
 
-const LANG_LABELS: Record<string, string> = {
-  ES: "Spanish",
-  ZH: "Chinese",
-  KO: "Korean",
-};
 
 const LANG_COLORS: Record<string, string> = {
   ES: "bg-amber-50 text-amber-700",
@@ -382,7 +378,7 @@ export default function BrowsePage() {
                 )}
                 <div style={{ fontSize: "1.15rem", fontWeight: 700, color: "var(--navy)" }}>{slot.clinic.name}</div>
               </div>
-              <div style={{ fontSize: "0.875rem", fontWeight: 500, color: "#111827", marginTop: "3px" }}>{LANG_LABELS[slot.language] ?? slot.language}</div>
+              <div style={{ fontSize: "0.875rem", fontWeight: 500, color: "#111827", marginTop: "3px" }}>{langName(slot.language)}</div>
               <div style={{ display: "flex", gap: "24px", marginTop: "12px", flexWrap: "wrap" }}>
                 <div style={{ display: "flex", flexDirection: "column", gap: "3px" }}>
                   <span style={{ fontSize: "0.68rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.09em", color: "var(--gray-400)" }}>Date</span>
@@ -523,7 +519,7 @@ export default function BrowsePage() {
               onClick={() => setLangFilter(lang)}
               style={{ padding: "9px 14px", borderRadius: "9px", fontSize: "0.875rem", fontWeight: 500, border: langFilter === lang ? "1.5px solid var(--blue)" : "1.5px solid var(--card-border)", background: langFilter === lang ? "var(--blue)" : "var(--card-bg)", color: langFilter === lang ? "#fff" : "var(--gray-900)", fontFamily: "'DM Sans', sans-serif", cursor: "pointer" }}
             >
-              {lang === "ALL" ? "All Languages" : (languages.find((l) => l.code === lang)?.name ?? LANG_LABELS[lang] ?? lang)}
+              {lang === "ALL" ? "All Languages" : (languages.find((l) => l.code === lang)?.name ?? langName(lang))}
             </button>
           ))}
           <div style={{ width: "1px", background: "var(--card-border)", alignSelf: "stretch", margin: "0 4px" }} />
@@ -588,7 +584,7 @@ export default function BrowsePage() {
                   <div style={{ maxHeight: "160px", overflowY: "auto", display: "flex", flexDirection: "column", gap: "4px", marginBottom: "16px" }}>
                     {selectedSlotsList.map((s) => (
                       <div key={s.id} style={{ fontSize: "0.78rem", color: "#111827", padding: "4px 0", borderBottom: "1px solid var(--card-border)" }}>
-                        <span style={{ fontWeight: 600 }}>{s.clinic.name}</span> · {formatDate(s.date)} · {formatHour(s.startTime)}–{formatHour(s.endTime)} · {LANG_LABELS[s.language]}
+                        <span style={{ fontWeight: 600 }}>{s.clinic.name}</span> · {formatDate(s.date)} · {formatHour(s.startTime)}–{formatHour(s.endTime)} · {langName(s.language)}
                         {s.signups.length > 0 && (
                           <span style={{ marginLeft: "4px", color: "#D97706" }}>({s.signups.length} volunteer{s.signups.length !== 1 ? "s" : ""} affected)</span>
                         )}
@@ -649,7 +645,7 @@ export default function BrowsePage() {
                 <div style={{ padding: "16px 24px", borderBottom: "1.5px solid var(--card-border)" }}>
                   <h3 style={{ fontSize: "0.875rem", fontWeight: 700, color: "var(--gray-900)" }}>Assign a Volunteer</h3>
                   <p style={{ fontSize: "0.75rem", color: "#111827", marginTop: "2px" }}>
-                    {LANG_LABELS[volunteerAssignTarget.language] ?? volunteerAssignTarget.language} &middot; {formatDate(volunteerAssignTarget.date)} &middot; {formatHour(volunteerAssignTarget.hour)}–{formatHour(volunteerAssignTarget.hour + 1)} &middot; {volunteerAssignTarget.clinicName}
+                    {langName(volunteerAssignTarget.language)} &middot; {formatDate(volunteerAssignTarget.date)} &middot; {formatHour(volunteerAssignTarget.hour)}–{formatHour(volunteerAssignTarget.hour + 1)} &middot; {volunteerAssignTarget.clinicName}
                   </p>
                 </div>
                 {!assignSelected ? (
@@ -685,7 +681,7 @@ export default function BrowsePage() {
                               {alreadySigned && <span style={{ fontSize: "0.72rem", padding: "2px 8px", background: "#DCFCE7", color: "#15803D", borderRadius: "99px" }}>Signed up</span>}
                               {u.volunteer?.languages?.map((l) => (
                                 <span key={l} className={`text-xs px-1.5 py-0.5 rounded-full ${LANG_COLORS[l] ?? "bg-gray-100 text-gray-500"}`}>
-                                  {LANG_LABELS[l] ?? l}
+                                  {langName(l)}
                                 </span>
                               ))}
                             </div>
@@ -702,7 +698,7 @@ export default function BrowsePage() {
                       <p style={{ fontSize: "0.875rem", color: "#78350F" }}>Assign <strong>{assignSelected.name}</strong> to this shift?</p>
                       <p style={{ fontSize: "0.75rem", color: "#92400E", marginTop: "2px" }}>{assignSelected.email}</p>
                       <div style={{ marginTop: "8px", paddingTop: "8px", borderTop: "1px solid #FDE68A", fontSize: "0.75rem", color: "#92400E", display: "flex", flexDirection: "column", gap: "2px" }}>
-                        <p>{LANG_LABELS[volunteerAssignTarget.language] ?? volunteerAssignTarget.language} · {volunteerAssignTarget.clinicName}</p>
+                        <p>{langName(volunteerAssignTarget.language)} · {volunteerAssignTarget.clinicName}</p>
                         <p>{formatDate(volunteerAssignTarget.date)} · {formatHour(volunteerAssignTarget.hour)}–{formatHour(volunteerAssignTarget.hour + 1)}</p>
                         <p style={{ marginTop: "4px", color: "#D97706" }}>They will receive a calendar invite.</p>
                       </div>
@@ -744,8 +740,6 @@ export default function BrowsePage() {
   });
 
   const upcoming = filtered.filter((s) => slotEnd(s) > now);
-  const past = filtered.filter((s) => slotEnd(s) <= now)
-    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
   const FIXED = ["ALL", "ES", "ZH"];
   const fixedLabels: Record<string, string> = { ALL: "All Languages", ES: "Spanish", ZH: "Mandarin" };
@@ -760,7 +754,7 @@ export default function BrowsePage() {
           <div>
             <div style={{ fontSize: "1.15rem", fontWeight: 700, color: "var(--navy)" }}>{slot.clinic.name}</div>
             <div style={{ fontSize: "0.875rem", fontWeight: 500, color: "#111827", marginTop: "3px" }}>
-              {LANG_LABELS[slot.language] ?? slot.language}
+              {langName(slot.language)}
             </div>
             <div style={{ display: "flex", gap: "24px", marginTop: "12px", flexWrap: "wrap" }}>
               <div style={{ display: "flex", flexDirection: "column", gap: "3px" }}>
@@ -903,23 +897,13 @@ export default function BrowsePage() {
         >Available Only</button>
       </div>
 
-      {upcoming.length === 0 && past.length === 0 ? (
+      {upcoming.length === 0 ? (
         <div style={{ background: "var(--card-bg)", borderRadius: "14px", border: "1.5px solid var(--card-border)", padding: "48px", textAlign: "center" }}>
           <p style={{ color: "var(--gray-400)" }}>No slots match your filters.</p>
         </div>
       ) : (
         <div>
           {upcoming.map((slot) => renderVolunteerSlot(slot, false))}
-          {past.length > 0 && (
-            <>
-              <div style={{ display: "flex", alignItems: "center", gap: "12px", margin: "32px 0 16px", fontSize: "0.72rem", textTransform: "uppercase", letterSpacing: "0.1em", fontWeight: 700, color: "var(--gray-400)" }}>
-                <span style={{ flex: 1, height: "1px", background: "var(--card-border)", display: "block" }} />
-                Past Slots
-                <span style={{ flex: 1, height: "1px", background: "var(--card-border)", display: "block" }} />
-              </div>
-              {past.map((slot) => renderVolunteerSlot(slot, true))}
-            </>
-          )}
         </div>
       )}
 
