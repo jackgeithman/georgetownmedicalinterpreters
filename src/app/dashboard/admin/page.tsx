@@ -64,6 +64,7 @@ type AdminProfile = {
   languages: string[];
   backgroundInfo: string | null;
   hoursVolunteered: number;
+  userCreatedAt?: string;
 };
 
 type EmailRule = { id: string; email: string; type: "ALLOW" | "BLOCK"; note: string | null };
@@ -604,29 +605,28 @@ export default function AdminDashboard() {
     setActionLoading(null);
   };
 
-  const saveProfile = async () => {
+  const toggleLanguage = async (lang: string) => {
+    const langName = ALL_WORLD_LANGUAGES.find((l) => l.code === lang)?.name ?? lang;
+    const isRemoving = profileForm.languages.includes(lang);
+    const message = isRemoving
+      ? `Remove ${langName} from your languages?`
+      : `You are requesting clearance to volunteer in ${langName}.`;
+    if (!confirm(message)) return;
+    const langs = isRemoving
+      ? profileForm.languages.filter((l) => l !== lang)
+      : [...profileForm.languages, lang];
     setActionLoading("profile");
-    setProfileSaved(false);
     const res = await fetch("/api/volunteer/profile", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ languages: profileForm.languages }),
+      body: JSON.stringify({ languages: langs }),
     });
     if (res.ok) {
       const p = await res.json();
       setAdminProfile(p);
-      setProfileForm({ languages: p.languages ?? [] });
-      setProfileSaved(true);
-      setTimeout(() => setProfileSaved(false), 3000);
+      setProfileForm({ languages: langs });
     }
     setActionLoading(null);
-  };
-
-  const toggleLanguage = (lang: string) => {
-    const langs = profileForm.languages.includes(lang)
-      ? profileForm.languages.filter((l) => l !== lang)
-      : [...profileForm.languages, lang];
-    setProfileForm({ languages: langs });
   };
 
   const saveNotifPrefs = async (updated: VolunteerNotifPrefs) => {
@@ -2012,143 +2012,152 @@ export default function AdminDashboard() {
 
         {/* My Profile */}
         {tab === "profile" && (
-          <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-            {/* Stats */}
-            <div style={{ background: "var(--card-bg)", borderRadius: "14px", border: "1.5px solid var(--card-border)", padding: "20px", textAlign: "center", width: "192px", boxShadow: "0 2px 6px rgba(0,0,0,.05)" }}>
-              <p style={{ fontSize: "1.5rem", fontWeight: 600, color: "var(--gray-900)" }}>{adminProfile?.hoursVolunteered ?? 0}</p>
-              <p style={{ fontSize: "0.72rem", color: "var(--gray-400)", marginTop: "4px" }}>Hours Volunteered</p>
+          <div style={{ display: "grid", gridTemplateColumns: "240px 1fr", gap: "20px", alignItems: "start" }}>
+
+            {/* Left sidebar */}
+            <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+
+              {/* Identity card */}
+              <div style={{ background: "var(--card-bg)", borderRadius: "16px", border: "1.5px solid var(--card-border)", boxShadow: "0 1px 4px rgba(0,0,0,.04)", padding: "20px" }}>
+                <p style={{ fontSize: "1rem", fontWeight: 700, color: "#111827" }}>{session?.user?.name}</p>
+                <p style={{ fontSize: "0.75rem", color: "#111827", marginTop: "3px" }}>{session?.user?.email}</p>
+                {adminProfile?.userCreatedAt && (
+                  <p style={{ fontSize: "0.7rem", color: "#111827", marginTop: "6px" }}>
+                    Member since {new Date(adminProfile.userCreatedAt).toLocaleDateString("en-US", { month: "short", year: "numeric" })}
+                  </p>
+                )}
+                <div style={{ width: "100%", height: "1px", background: "#F3F4F6", margin: "14px 0" }} />
+                <div style={{ background: "#F0F7FF", border: "1px solid #BFDBFE", borderRadius: "10px", padding: "12px 14px", display: "flex", alignItems: "center", gap: "12px" }}>
+                  <span style={{ fontSize: "1.5rem", fontWeight: 700, color: "#1D4ED8", lineHeight: 1 }}>{adminProfile?.hoursVolunteered ?? 0}</span>
+                  <span style={{ fontSize: "0.72rem", fontWeight: 600, color: "#3B82F6", textTransform: "uppercase", letterSpacing: "0.07em", lineHeight: 1.4 }}>Hours<br />Volunteered</span>
+                </div>
+              </div>
+
+              {/* Notifications card */}
+              <div style={{ background: "var(--card-bg)", borderRadius: "16px", border: "1.5px solid var(--card-border)", overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,.04)" }}>
+                <div style={{ padding: "16px 20px 14px", borderBottom: "1.5px solid #F3F4F6", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                  <h3 style={{ fontSize: "0.8rem", fontWeight: 700, color: "#111827", textTransform: "uppercase", letterSpacing: "0.07em" }}>Notifications</h3>
+                  {notifSaved && <span style={{ fontSize: "0.75rem", color: "#15803D" }}>Saved</span>}
+                </div>
+                <div style={{ padding: "14px 18px" }}>
+                  {([
+                    { key: "signupReceipt" as const, label: "Signup confirmation", desc: "Email on signup" },
+                    { key: "cancellationReceipt" as const, label: "Cancellation receipt", desc: "Email on cancellation" },
+                    { key: "reminder24h" as const, label: "24-hour reminder", desc: "Day-before reminder" },
+                    { key: "unfilledSlotAlert" as const, label: "Unfilled slot alerts", desc: "Open shifts in your languages" },
+                  ] as const).map(({ key, label, desc }, i, arr) => (
+                    <div key={key} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "11px 0", borderBottom: i < arr.length - 1 ? "1px solid #F3F4F6" : "none" }}>
+                      <div>
+                        <p style={{ fontSize: "0.875rem", fontWeight: 500, color: "#111827" }}>{label}</p>
+                        <p style={{ fontSize: "0.72rem", color: "#111827", marginTop: "2px" }}>{desc}</p>
+                      </div>
+                      <button
+                        role="switch"
+                        aria-checked={notifPrefs[key]}
+                        onClick={() => toggleNotif(key)}
+                        style={{ flexShrink: 0, position: "relative", display: "inline-flex", height: "21px", width: "38px", borderRadius: "99px", border: "none", background: notifPrefs[key] ? "#2563EB" : "#D1D5DB", cursor: "pointer", outline: "none", padding: 0 }}
+                      >
+                        <span style={{ display: "inline-block", height: "15px", width: "15px", borderRadius: "50%", background: "#fff", boxShadow: "0 1px 3px rgba(0,0,0,.2)", position: "absolute", top: "3px", left: notifPrefs[key] ? "20px" : "3px", transition: "left .15s" }} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
             </div>
 
-            {/* Languages */}
-            <div style={{ background: "var(--card-bg)", borderRadius: "14px", border: "1.5px solid var(--card-border)", padding: "24px", boxShadow: "0 2px 6px rgba(0,0,0,.05)" }}>
-              <h3 style={{ fontSize: "0.9rem", fontWeight: 600, color: "var(--gray-900)", marginBottom: "4px" }}>Languages</h3>
-              <p style={{ fontSize: "0.75rem", color: "var(--gray-400)", marginBottom: "4px" }}>Select the languages you speak and can interpret.</p>
-              <p style={{ fontSize: "0.75rem", color: "#92400e", background: "#fffbeb", border: "1px solid #fde68a", borderRadius: "8px", padding: "8px 12px", marginBottom: "16px" }}>
-                ⚠️ You must have a medical-level vocabulary to effectively translate in a clinical context. Only select languages you are confident interpreting in a healthcare setting.
-              </p>
-              <div style={{ marginBottom: "12px" }}>
-                <input
-                  type="text"
-                  placeholder="Search languages..."
-                  value={langSearch}
-                  onChange={(e) => setLangSearch(e.target.value)}
-                  style={{ width: "100%", padding: "8px 12px", fontSize: "0.875rem", border: "1.5px solid var(--card-border)", borderRadius: "9px", fontFamily: "'DM Sans', sans-serif", background: "var(--card-bg)", color: "var(--gray-900)", outline: "none", boxSizing: "border-box" }}
-                />
-              </div>
-              {profileForm.languages.length > 0 && (
-                <div style={{ marginBottom: "12px" }}>
-                  <p style={{ fontSize: "0.72rem", fontWeight: 700, color: "var(--gray-400)", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "8px" }}>Selected</p>
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
-                    {profileForm.languages.map((code) => {
-                      const lang = ALL_WORLD_LANGUAGES.find((l) => l.code === code);
-                      return (
-                        <button
-                          key={code}
-                          onClick={() => toggleLanguage(code)}
-                          style={{ padding: "4px 12px", fontSize: "0.75rem", borderRadius: "99px", background: "var(--blue)", color: "#fff", border: "none", fontFamily: "'DM Sans', sans-serif", cursor: "pointer", display: "flex", alignItems: "center", gap: "4px" }}
-                        >
-                          {lang?.name ?? code}
-                          <span style={{ color: "rgba(255,255,255,.7)" }}>×</span>
-                        </button>
-                      );
-                    })}
-                  </div>
+            {/* Right column: Languages */}
+            <div>
+              <div style={{ background: "var(--card-bg)", borderRadius: "16px", border: "1.5px solid var(--card-border)", overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,.04)" }}>
+                <div style={{ padding: "16px 20px 14px", borderBottom: "1.5px solid #F3F4F6", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                  <h3 style={{ fontSize: "0.8rem", fontWeight: 700, color: "#111827", textTransform: "uppercase", letterSpacing: "0.07em" }}>Languages</h3>
+                  <span style={{ fontSize: "0.72rem", fontWeight: 500, color: "#111827" }}>Medical-level proficiency only</span>
                 </div>
-              )}
-              {(() => {
-                const query = langSearch.trim().toLowerCase();
-                const filtered = query
-                  ? ALL_WORLD_LANGUAGES.filter((l) => l.name.toLowerCase().includes(query) || l.code.toLowerCase().includes(query))
-                  : ALL_WORLD_LANGUAGES;
-                const top10 = filtered.filter((l) => TOP_WORLD_LANGUAGES.some((t) => t.code === l.code));
-                const others = filtered.filter((l) => !TOP_WORLD_LANGUAGES.some((t) => t.code === l.code));
-                const unselected = [...top10, ...others].filter((l) => !profileForm.languages.includes(l.code));
-                return (
-                  <div style={{ maxHeight: "192px", overflowY: "auto", border: "1.5px solid var(--card-border)", borderRadius: "9px" }}>
-                    {unselected.length === 0 ? (
-                      <p style={{ fontSize: "0.75rem", color: "var(--gray-400)", padding: "12px", textAlign: "center" }}>No languages match your search.</p>
-                    ) : (
-                      <>
-                        {!query && top10.filter((l) => !profileForm.languages.includes(l.code)).length > 0 && (
-                          <div style={{ padding: "8px 12px 4px" }}>
-                            <p style={{ fontSize: "0.72rem", fontWeight: 700, color: "var(--gray-400)", textTransform: "uppercase", letterSpacing: "0.1em" }}>Most Common</p>
-                          </div>
-                        )}
-                        {!query && top10.filter((l) => !profileForm.languages.includes(l.code)).map((lang) => (
-                          <button key={lang.code} onClick={() => toggleLanguage(lang.code)} style={{ width: "100%", textAlign: "left", padding: "8px 12px", fontSize: "0.875rem", color: "var(--gray-900)", background: "none", border: "none", fontFamily: "'DM Sans', sans-serif", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                            {lang.name}<span style={{ fontSize: "0.72rem", color: "var(--gray-400)" }}>+</span>
-                          </button>
-                        ))}
-                        {!query && others.filter((l) => !profileForm.languages.includes(l.code)).length > 0 && (
-                          <div style={{ padding: "8px 12px 4px", borderTop: "1px solid var(--card-border)" }}>
-                            <p style={{ fontSize: "0.72rem", fontWeight: 700, color: "var(--gray-400)", textTransform: "uppercase", letterSpacing: "0.1em" }}>All Languages</p>
-                          </div>
-                        )}
-                        {(query ? unselected : others.filter((l) => !profileForm.languages.includes(l.code))).map((lang) => (
-                          <button key={lang.code} onClick={() => toggleLanguage(lang.code)} style={{ width: "100%", textAlign: "left", padding: "8px 12px", fontSize: "0.875rem", color: "var(--gray-900)", background: "none", border: "none", fontFamily: "'DM Sans', sans-serif", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                            {lang.name}<span style={{ fontSize: "0.72rem", color: "var(--gray-400)" }}>+</span>
-                          </button>
-                        ))}
-                      </>
-                    )}
+                <div style={{ padding: "18px 20px" }}>
+                  <div style={{ background: "#EFF6FF", border: "1px solid #BFDBFE", borderRadius: "8px", padding: "9px 13px", marginBottom: "18px", fontSize: "0.78rem", color: "#1E40AF", lineHeight: 1.5 }}>
+                    Only select languages you are fully confident using in a <strong>healthcare setting</strong> with medical vocabulary.
                   </div>
-                );
-              })()}
-              <button
-                disabled={actionLoading === "profile"}
-                onClick={saveProfile}
-                style={{ marginTop: "16px", padding: "9px 20px", fontSize: "0.875rem", background: "var(--blue)", color: "#fff", border: "none", borderRadius: "9px", fontFamily: "'DM Sans', sans-serif", fontWeight: 600, cursor: "pointer", opacity: actionLoading === "profile" ? 0.5 : 1 }}
-              >
-                {actionLoading === "profile" ? "Saving..." : "Save Languages"}
-              </button>
+
+                  {profileForm.languages.length > 0 && (
+                    <div style={{ marginBottom: "18px" }}>
+                      <p style={{ fontSize: "0.68rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", color: "#111827", marginBottom: "10px" }}>Your languages</p>
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
+                        {profileForm.languages.map((code) => {
+                          const lang = ALL_WORLD_LANGUAGES.find((l) => l.code === code);
+                          const myRoles = session?.user?.roles ?? [];
+                          const isCleared = myRoles.includes(`LANG_${code}_CLEARED`);
+                          const isDenied = myRoles.includes(`LANG_${code}_DENIED`);
+                          const chipStyle = isCleared
+                            ? { bg: "#BBF7D0", color: "#15803D", border: "1px solid #86EFAC", dot: "#10B981", label: "Cleared" }
+                            : isDenied
+                            ? { bg: "#FEF2F2", color: "#DC2626", border: "1px solid #FECACA", dot: "#EF4444", label: "Denied" }
+                            : { bg: "#FFFBEB", color: "#92400E", border: "1px solid #FDE68A", dot: "#F59E0B", label: "Pending" };
+                          const showRemove = isCleared || isDenied;
+                          return (
+                            <span key={code} style={{ display: "inline-flex", alignItems: "center", gap: "6px", padding: "5px 11px", borderRadius: "99px", fontSize: "0.78rem", fontWeight: 600, background: chipStyle.bg, color: chipStyle.color, border: chipStyle.border }}>
+                              <span style={{ width: "7px", height: "7px", borderRadius: "50%", background: chipStyle.dot, flexShrink: 0 }} />
+                              {lang?.name ?? code}
+                              <span style={{ fontSize: "0.68rem", opacity: 0.75 }}>· {chipStyle.label}</span>
+                              {showRemove && (
+                                <button onClick={() => toggleLanguage(code)} style={{ background: "none", border: "none", cursor: "pointer", opacity: 0.5, fontSize: "0.9rem", lineHeight: 1, padding: "0 0 0 2px", color: "inherit", fontFamily: "'DM Sans', sans-serif" }} title="Remove language">×</button>
+                              )}
+                            </span>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  <input
+                    type="text"
+                    placeholder="Search languages to add…"
+                    value={langSearch}
+                    onChange={(e) => setLangSearch(e.target.value)}
+                    style={{ width: "100%", padding: "9px 12px", fontSize: "0.875rem", border: "1.5px solid var(--card-border)", borderRadius: "9px", fontFamily: "'DM Sans', sans-serif", color: "#111827", outline: "none", background: "#FAFAFA", marginBottom: "10px", boxSizing: "border-box" }}
+                  />
+
+                  {(() => {
+                    const query = langSearch.trim().toLowerCase();
+                    const filtered = query
+                      ? ALL_WORLD_LANGUAGES.filter((l) => l.name.toLowerCase().includes(query) || l.code.toLowerCase().includes(query))
+                      : ALL_WORLD_LANGUAGES;
+                    const top10 = filtered.filter((l) => TOP_WORLD_LANGUAGES.some((t) => t.code === l.code));
+                    const others = filtered.filter((l) => !TOP_WORLD_LANGUAGES.some((t) => t.code === l.code));
+                    const unselected = [...top10, ...others].filter((l) => !profileForm.languages.includes(l.code));
+                    return (
+                      <div style={{ border: "1.5px solid var(--card-border)", borderRadius: "10px", overflow: "hidden", maxHeight: "180px", overflowY: "auto" }}>
+                        {unselected.length === 0 ? (
+                          <p style={{ fontSize: "0.8rem", color: "#111827", padding: "14px", textAlign: "center" }}>No languages match your search.</p>
+                        ) : (
+                          <>
+                            {!query && top10.filter((l) => !profileForm.languages.includes(l.code)).length > 0 && (
+                              <div style={{ padding: "7px 14px 4px", fontSize: "0.65rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", color: "#111827", background: "#FAFAFA", borderBottom: "1px solid #F3F4F6" }}>Most Common</div>
+                            )}
+                            {!query && top10.filter((l) => !profileForm.languages.includes(l.code)).map((lang) => (
+                              <button key={lang.code} onClick={() => toggleLanguage(lang.code)} style={{ width: "100%", textAlign: "left", padding: "8px 14px", fontSize: "0.875rem", color: "#111827", background: "none", border: "none", borderBottom: "1px solid #F9FAFB", fontFamily: "'DM Sans', sans-serif", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                                {lang.name}<span style={{ fontSize: "0.72rem", color: "#111827", fontWeight: 500 }}>+ Add</span>
+                              </button>
+                            ))}
+                            {!query && others.filter((l) => !profileForm.languages.includes(l.code)).length > 0 && (
+                              <div style={{ padding: "7px 14px 4px", fontSize: "0.65rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", color: "#111827", background: "#FAFAFA", borderBottom: "1px solid #F3F4F6", borderTop: "1px solid #F3F4F6" }}>All Languages</div>
+                            )}
+                            {(query ? unselected : others.filter((l) => !profileForm.languages.includes(l.code))).map((lang) => (
+                              <button key={lang.code} onClick={() => toggleLanguage(lang.code)} style={{ width: "100%", textAlign: "left", padding: "8px 14px", fontSize: "0.875rem", color: "#111827", background: "none", border: "none", borderBottom: "1px solid #F9FAFB", fontFamily: "'DM Sans', sans-serif", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                                {lang.name}<span style={{ fontSize: "0.72rem", color: "#111827", fontWeight: 500 }}>+ Add</span>
+                              </button>
+                            ))}
+                          </>
+                        )}
+                      </div>
+                    );
+                  })()}
+                  {actionLoading === "profile" && (
+                    <p style={{ marginTop: "10px", fontSize: "0.78rem", color: "#111827" }}>Saving…</p>
+                  )}
+                </div>
+              </div>
             </div>
 
-            {/* Notification Preferences */}
-            <div style={{ background: "var(--card-bg)", borderRadius: "14px", border: "1.5px solid var(--card-border)", padding: "24px", boxShadow: "0 2px 6px rgba(0,0,0,.05)" }}>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "4px" }}>
-                <h3 style={{ fontSize: "0.9rem", fontWeight: 600, color: "var(--gray-900)" }}>Email Notifications</h3>
-                {notifSaved && <span style={{ fontSize: "0.75rem", color: "var(--green)" }}>Saved ✓</span>}
-              </div>
-              <p style={{ fontSize: "0.75rem", color: "var(--gray-400)", marginBottom: "20px" }}>Toggles save instantly. We&apos;ll never send you more than you want.</p>
-              <div>
-                <p style={{ fontSize: "0.72rem", fontWeight: 700, color: "var(--gray-400)", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "8px" }}>Recommended</p>
-                {([
-                  { key: "signupReceipt" as const, label: "Signup confirmation", desc: "Sent after you sign up (2 min delay so quick toggles don't flood your inbox)" },
-                  { key: "cancellationReceipt" as const, label: "Cancellation receipt", desc: "Confirms when you cancel a shift" },
-                  { key: "reminder24h" as const, label: "24-hour reminder", desc: "Email the day before your shift" },
-                ] as const).map(({ key, label, desc }) => (
-                  <label key={key} style={{ display: "flex", alignItems: "flex-start", gap: "12px", padding: "10px 0", cursor: "pointer" }}>
-                    <button role="switch" aria-checked={notifPrefs[key]} onClick={() => toggleNotif(key)} style={{ marginTop: "2px", position: "relative", display: "inline-flex", height: "20px", width: "36px", flexShrink: 0, borderRadius: "99px", border: "2px solid transparent", background: notifPrefs[key] ? "var(--blue)" : "var(--gray-200)", cursor: "pointer", outline: "none" }}>
-                      <span style={{ display: "inline-block", height: "16px", width: "16px", borderRadius: "50%", background: "#fff", boxShadow: "0 1px 3px rgba(0,0,0,.2)", transform: notifPrefs[key] ? "translateX(16px)" : "translateX(0)", transition: "transform .15s" }} />
-                    </button>
-                    <div>
-                      <p style={{ fontSize: "0.875rem", color: "var(--gray-900)" }}>{label}</p>
-                      <p style={{ fontSize: "0.75rem", color: "var(--gray-400)" }}>{desc}</p>
-                    </div>
-                  </label>
-                ))}
-                <div style={{ paddingTop: "12px", borderTop: "1px solid var(--card-border)", marginTop: "8px" }}>
-                  <p style={{ fontSize: "0.72rem", fontWeight: 700, color: "var(--gray-400)", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "8px" }}>Optional</p>
-                  <label style={{ display: "flex", alignItems: "flex-start", gap: "12px", padding: "10px 0", cursor: "pointer" }}>
-                    <button role="switch" aria-checked={notifPrefs.unfilledSlotAlert} onClick={() => toggleNotif("unfilledSlotAlert")} style={{ marginTop: "2px", position: "relative", display: "inline-flex", height: "20px", width: "36px", flexShrink: 0, borderRadius: "99px", border: "2px solid transparent", background: notifPrefs.unfilledSlotAlert ? "var(--blue)" : "var(--gray-200)", cursor: "pointer", outline: "none" }}>
-                      <span style={{ display: "inline-block", height: "16px", width: "16px", borderRadius: "50%", background: "#fff", boxShadow: "0 1px 3px rgba(0,0,0,.2)", transform: notifPrefs.unfilledSlotAlert ? "translateX(16px)" : "translateX(0)", transition: "transform .15s" }} />
-                    </button>
-                    <div>
-                      <p style={{ fontSize: "0.875rem", color: "var(--gray-900)" }}>Urgent: unfilled slot alerts</p>
-                      <p style={{ fontSize: "0.75rem", color: "var(--gray-400)" }}>Notified immediately when a qualifying slot within 24 hrs has a last-minute opening due to a cancellation</p>
-                    </div>
-                  </label>
-                </div>
-                <div style={{ paddingTop: "12px", borderTop: "1px solid var(--card-border)", marginTop: "8px" }}>
-                  <p style={{ fontSize: "0.72rem", fontWeight: 700, color: "var(--gray-400)", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "8px" }}>Always On</p>
-                  <div style={{ display: "flex", flexDirection: "column", gap: "4px", fontSize: "0.75rem", color: "var(--gray-400)", paddingLeft: "4px" }}>
-                    <p>• Removed from a shift by an admin</p>
-                    <p>• Slot cancelled by a clinic</p>
-                    <p>• Slot edited and your signup was dropped</p>
-                  </div>
-                </div>
-              </div>
-            </div>
           </div>
         )}
 
