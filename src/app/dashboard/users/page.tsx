@@ -451,7 +451,8 @@ export default function UsersPage() {
                             {state === "pending" && (
                               <>
                                 <button onClick={() => handleLangAction(user.id, code, "approve")} disabled={isLoading} title="Approve clearance" style={{ fontSize: "0.68rem", padding: "1px 6px", borderRadius: "4px", border: "none", background: "#BBF7D0", color: "#15803D", cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>Approve</button>
-                                <button onClick={() => setLangActionModal({ userId: user.id, langCode: code, action: "deny", note: "" })} disabled={isLoading} title="Deny clearance" style={{ fontSize: "0.68rem", padding: "1px 6px", borderRadius: "4px", border: "none", background: "#FECACA", color: "#DC2626", cursor: "pointer", fontFamily: "'DM Sans', sans-serif", marginRight: "3px" }}>Deny</button>
+                                <button onClick={() => setLangActionModal({ userId: user.id, langCode: code, action: "deny", note: "" })} disabled={isLoading} title="Deny clearance" style={{ fontSize: "0.68rem", padding: "1px 6px", borderRadius: "4px", border: "none", background: "#FECACA", color: "#DC2626", cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>Deny</button>
+                                <button onClick={() => handleRemoveLanguage(user.id, code)} disabled={roleActionLoading === `removelang-${user.id}-${code}`} title={`Remove ${getLangLabel(code)}`} style={{ background: "none", border: "none", cursor: "pointer", color: "inherit", opacity: 0.55, fontSize: "0.9rem", lineHeight: 1, padding: "0 5px 0 1px", fontFamily: "'DM Sans', sans-serif" }}>×</button>
                               </>
                             )}
                             {state === "cleared" && canModify && (
