@@ -214,13 +214,13 @@ export default function LanguagesPage() {
                     style={{ width: "100%", textAlign: "left", padding: "8px 14px", fontSize: "0.875rem", color: "#111827", background: "none", border: "none", borderBottom: "1px solid #F9FAFB", fontFamily: "'DM Sans', sans-serif", cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center" }}
                   >
                     {opt.name}
-                    <span style={{ fontSize: "0.7rem", color: "#6B7280", fontWeight: 500 }}>{opt.code}</span>
+                    <span style={{ fontSize: "0.7rem", color: "#111827", fontWeight: 500 }}>{opt.code}</span>
                   </button>
                 ))}
               </div>
             )}
             {dropdownOpen && search.length > 0 && filteredOptions.length === 0 && (
-              <div style={{ position: "absolute", top: "calc(100% + 4px)", left: 0, right: 0, background: "var(--card-bg)", border: "1.5px solid var(--card-border)", borderRadius: "9px", padding: "12px 14px", fontSize: "0.8rem", color: "#6B7280", zIndex: 50 }}>
+              <div style={{ position: "absolute", top: "calc(100% + 4px)", left: 0, right: 0, background: "var(--card-bg)", border: "1.5px solid var(--card-border)", borderRadius: "9px", padding: "12px 14px", fontSize: "0.8rem", color: "#111827", zIndex: 50 }}>
                 No matching languages found.
               </div>
             )}

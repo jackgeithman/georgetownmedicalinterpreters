@@ -55,7 +55,7 @@ export default function MetricsPage() {
   if (loading) {
     return (
       <div style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "80px 0" }}>
-        <p style={{ color: "var(--gray-400)", fontFamily: "'DM Sans', sans-serif" }}>Loading metrics...</p>
+        <p style={{ color: "#111827", fontFamily: "'DM Sans', sans-serif" }}>Loading metrics...</p>
       </div>
     );
   }
@@ -75,8 +75,8 @@ export default function MetricsPage() {
         ].map((stat) => (
           <div key={stat.label} style={{ background: "var(--card-bg)", borderRadius: "14px", border: "1.5px solid var(--card-border)", padding: "20px", textAlign: "center" }}>
             <p style={{ fontSize: "2rem", fontWeight: 700, color: "var(--gray-900)" }}>{stat.value}</p>
-            <p style={{ fontSize: "0.75rem", color: "var(--gray-400)", marginTop: "4px" }}>{stat.label}</p>
-            {stat.sub && <p style={{ fontSize: "0.68rem", color: "var(--gray-400)", marginTop: "2px", fontStyle: "italic" }}>{stat.sub}</p>}
+            <p style={{ fontSize: "0.75rem", color: "#111827", marginTop: "4px" }}>{stat.label}</p>
+            {stat.sub && <p style={{ fontSize: "0.68rem", color: "#111827", marginTop: "2px", fontStyle: "italic" }}>{stat.sub}</p>}
           </div>
         ))}
       </div>
@@ -85,7 +85,7 @@ export default function MetricsPage() {
         <div style={{ background: "var(--card-bg)", borderRadius: "14px", border: "1.5px solid var(--card-border)", padding: "20px" }}>
           <h3 style={{ fontSize: "0.875rem", fontWeight: 600, color: "#111827", marginBottom: "12px" }}>Hours by Language</h3>
           {metrics.hoursByLanguage.length === 0 ? (
-            <p style={{ fontSize: "0.75rem", color: "var(--gray-400)" }}>No data yet.</p>
+            <p style={{ fontSize: "0.75rem", color: "#111827" }}>No data yet.</p>
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
               {metrics.hoursByLanguage.map((item) => (
@@ -104,7 +104,7 @@ export default function MetricsPage() {
         <div style={{ background: "var(--card-bg)", borderRadius: "14px", border: "1.5px solid var(--card-border)", padding: "20px" }}>
           <h3 style={{ fontSize: "0.875rem", fontWeight: 600, color: "#111827", marginBottom: "12px" }}>Hours by Clinic</h3>
           {metrics.hoursByClinic.length === 0 ? (
-            <p style={{ fontSize: "0.75rem", color: "var(--gray-400)" }}>No data yet.</p>
+            <p style={{ fontSize: "0.75rem", color: "#111827" }}>No data yet.</p>
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
               {metrics.hoursByClinic.map((item) => (
@@ -118,7 +118,7 @@ export default function MetricsPage() {
         </div>
       </div>
 
-      <p style={{ fontSize: "0.75rem", color: "var(--gray-400)", textAlign: "center" }}>Graphs coming soon</p>
+      <p style={{ fontSize: "0.75rem", color: "#111827", textAlign: "center" }}>Graphs coming soon</p>
 
       <div style={{ background: "var(--card-bg)", borderRadius: "14px", border: "1.5px solid var(--card-border)", padding: "20px" }}>
         <h3 style={{ fontSize: "0.875rem", fontWeight: 600, color: "#111827", marginBottom: "12px" }}>Feedback Overview</h3>
@@ -130,13 +130,13 @@ export default function MetricsPage() {
           ].map((stat) => (
             <div key={stat.label} style={{ textAlign: "center" }}>
               <p style={{ fontSize: "1.5rem", fontWeight: 700, color: "var(--gray-900)" }}>{stat.value}</p>
-              <p style={{ fontSize: "0.75rem", color: "var(--gray-400)", marginTop: "4px" }}>{stat.label}</p>
+              <p style={{ fontSize: "0.75rem", color: "#111827", marginTop: "4px" }}>{stat.label}</p>
             </div>
           ))}
         </div>
         {allFeedback.length > 0 && (
           <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-            <p style={{ fontSize: "0.68rem", fontWeight: 700, color: "var(--gray-400)", textTransform: "uppercase", letterSpacing: "0.09em", marginBottom: "4px" }}>Recent Feedback</p>
+            <p style={{ fontSize: "0.68rem", fontWeight: 700, color: "#111827", textTransform: "uppercase", letterSpacing: "0.09em", marginBottom: "4px" }}>Recent Feedback</p>
             {allFeedback.slice(0, 10).map((fb) => (
               <div key={fb.id} style={{ border: "1.5px solid var(--card-border)", borderRadius: "10px", padding: "12px 16px" }}>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "4px" }}>
@@ -154,10 +154,10 @@ export default function MetricsPage() {
                       </span>
                     )}
                   </div>
-                  <span style={{ fontSize: "0.72rem", color: "var(--gray-400)" }}>{new Date(fb.createdAt).toLocaleDateString()}</span>
+                  <span style={{ fontSize: "0.72rem", color: "#111827" }}>{new Date(fb.createdAt).toLocaleDateString()}</span>
                 </div>
                 <p style={{ fontSize: "0.78rem", color: "#111827", marginBottom: "4px" }}>{fb.note}</p>
-                <p style={{ fontSize: "0.72rem", color: "var(--gray-400)" }}>
+                <p style={{ fontSize: "0.72rem", color: "#111827" }}>
                   {fb.signup.slot.clinic.name} · {fb.signup.volunteer.user.name ?? fb.signup.volunteer.user.email}
                 </p>
               </div>
@@ -165,7 +165,7 @@ export default function MetricsPage() {
           </div>
         )}
         {allFeedback.length === 0 && (
-          <p style={{ fontSize: "0.75rem", color: "var(--gray-400)", textAlign: "center", padding: "16px 0" }}>No feedback yet.</p>
+          <p style={{ fontSize: "0.75rem", color: "#111827", textAlign: "center", padding: "16px 0" }}>No feedback yet.</p>
         )}
       </div>
     </div>
