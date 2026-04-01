@@ -136,7 +136,7 @@ function Toggle({ on, onToggle }: { on: boolean; onToggle: () => void }) {
 }
 
 function FieldLabel({ children }: { children: React.ReactNode }) {
-  return <label style={{ display: "block", fontSize: "0.72rem", fontWeight: 700, textTransform: "uppercase" as const, letterSpacing: "0.08em", color: "var(--gray-600)", marginBottom: "6px" }}>{children}</label>;
+  return <label style={{ display: "block", fontSize: "0.72rem", fontWeight: 700, textTransform: "uppercase" as const, letterSpacing: "0.08em", color: "#111827", marginBottom: "6px" }}>{children}</label>;
 }
 
 function ClinicDashboardInner() {
@@ -281,13 +281,13 @@ function ClinicDashboardInner() {
   const upcoming = slots.filter((s) => s.status === "ACTIVE" && isUpcoming(s));
   const past = slots.filter((s) => !isUpcoming(s) || s.status !== "ACTIVE");
 
-  if (status === "loading" || loading) return <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--page-bg)" }}><p style={{ color: "var(--gray-400)" }}>Loading…</p></div>;
+  if (status === "loading" || loading) return <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--page-bg)" }}><p style={{ color: "#111827" }}>Loading…</p></div>;
 
   if (!session?.user?.clinicId && !isAdminPreview) return (
     <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--page-bg)" }}>
       <div style={{ textAlign: "center" }}>
         <p style={{ fontWeight: 600, color: "var(--gray-900)" }}>No clinic assigned</p>
-        <p style={{ color: "var(--gray-600)", fontSize: "0.875rem", marginTop: "6px" }}>Contact your admin to be assigned to a clinic.</p>
+        <p style={{ color: "#111827", fontSize: "0.875rem", marginTop: "6px" }}>Contact your admin to be assigned to a clinic.</p>
       </div>
     </div>
   );
@@ -337,10 +337,10 @@ function ClinicDashboardInner() {
           </div>
           {tab === "upcoming" && (
             <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-              <span style={{ fontSize: "0.82rem", color: "var(--gray-400)" }}>{upcoming.length}/100 slots</span>
+              <span style={{ fontSize: "0.82rem", color: "#111827" }}>{upcoming.length}/100 slots</span>
               {!isAdminPreview && (!showPostForm
                 ? <button onClick={() => setShowPostForm(true)} disabled={upcoming.length >= 100} style={{ ...btnPrimary, opacity: upcoming.length >= 100 ? 0.4 : 1 }}>+ Post Slot</button>
-                : <button onClick={() => setShowPostForm(false)} style={{ padding: "10px 22px", borderRadius: "9px", background: "none", border: "1.5px solid var(--card-border)", color: "var(--gray-600)", fontFamily: "inherit", fontSize: "0.875rem", cursor: "pointer" }}>Cancel</button>
+                : <button onClick={() => setShowPostForm(false)} style={{ padding: "10px 22px", borderRadius: "9px", background: "none", border: "1.5px solid var(--card-border)", color: "#111827", fontFamily: "inherit", fontSize: "0.875rem", cursor: "pointer" }}>Cancel</button>
               )}
             </div>
           )}
@@ -365,10 +365,10 @@ function ClinicDashboardInner() {
               </label>
               {form.isRecurring && (
                 <div style={{ display: "flex", alignItems: "center", gap: "12px", marginTop: "12px" }}>
-                  <span style={{ fontSize: "0.82rem", color: "var(--gray-600)" }}>Repeat until</span>
+                  <span style={{ fontSize: "0.82rem", color: "#111827" }}>Repeat until</span>
                   <input type="date" value={form.recurrenceEndDate} min={form.date || undefined} onChange={(e) => setForm({ ...form, recurrenceEndDate: e.target.value })} style={{ ...iStyle, width: "auto" }} />
                   {form.date && form.recurrenceEndDate && form.recurrenceEndDate >= form.date && (
-                    <span style={{ fontSize: "0.82rem", color: "var(--gray-400)" }}>
+                    <span style={{ fontSize: "0.82rem", color: "#111827" }}>
                       {Math.floor((new Date(form.recurrenceEndDate + "T12:00:00").getTime() - new Date(form.date + "T12:00:00").getTime()) / (7 * 24 * 60 * 60 * 1000)) + 1} occurrences
                     </span>
                   )}
@@ -397,7 +397,7 @@ function ClinicDashboardInner() {
         {/* Slot list */}
         {tab !== "settings" && (
           displaySlots.length === 0
-            ? <div style={{ ...card, padding: "48px", textAlign: "center" }}><p style={{ color: "var(--gray-400)" }}>{tab === "upcoming" ? "No upcoming slots. Post one to get started." : "No past slots."}</p></div>
+            ? <div style={{ ...card, padding: "48px", textAlign: "center" }}><p style={{ color: "#111827" }}>{tab === "upcoming" ? "No upcoming slots. Post one to get started." : "No past slots."}</p></div>
             : tab === "upcoming"
               ? Object.entries(upcomingByDate).map(([label, ds]) => (
                 <div key={label}>
@@ -417,18 +417,18 @@ function ClinicDashboardInner() {
                 {notifSaved && <span style={{ fontSize: "0.82rem", color: "var(--green)" }}>Saved ✓</span>}
               </div>
               <div style={{ padding: "20px 24px" }}>
-                <p style={{ fontSize: "0.82rem", color: "var(--gray-600)", marginBottom: "20px" }}>Changes save instantly.</p>
+                <p style={{ fontSize: "0.82rem", color: "#111827", marginBottom: "20px" }}>Changes save instantly.</p>
                 <label style={{ display: "flex", alignItems: "flex-start", gap: "12px", marginBottom: "18px", cursor: "pointer" }}>
                   <Toggle on={notifPrefs.dailySummary} onToggle={() => saveNotifPrefs({ ...notifPrefs, dailySummary: !notifPrefs.dailySummary })} />
-                  <div><p style={{ fontSize: "0.9rem", fontWeight: 500, color: "var(--gray-900)" }}>Daily summary email</p><p style={{ fontSize: "0.8rem", color: "var(--gray-600)", marginTop: "2px" }}>Sent each morning with all your upcoming slots and their current roster</p></div>
+                  <div><p style={{ fontSize: "0.9rem", fontWeight: 500, color: "var(--gray-900)" }}>Daily summary email</p><p style={{ fontSize: "0.8rem", color: "#111827", marginTop: "2px" }}>Sent each morning with all your upcoming slots and their current roster</p></div>
                 </label>
                 <label style={{ display: "flex", alignItems: "flex-start", gap: "12px", marginBottom: "22px", cursor: "pointer" }}>
                   <Toggle on={notifPrefs.unfilledAlert24h} onToggle={() => saveNotifPrefs({ ...notifPrefs, unfilledAlert24h: !notifPrefs.unfilledAlert24h })} />
-                  <div><p style={{ fontSize: "0.9rem", fontWeight: 500, color: "var(--gray-900)" }}>Unfilled slot alert (24 hrs before)</p><p style={{ fontSize: "0.8rem", color: "var(--gray-600)", marginTop: "2px" }}>Email if any sub-block is still open within 24 hours</p></div>
+                  <div><p style={{ fontSize: "0.9rem", fontWeight: 500, color: "var(--gray-900)" }}>Unfilled slot alert (24 hrs before)</p><p style={{ fontSize: "0.8rem", color: "#111827", marginTop: "2px" }}>Email if any sub-block is still open within 24 hours</p></div>
                 </label>
                 <div style={{ paddingTop: "18px", borderTop: "1px solid var(--card-border)" }}>
                   <p style={{ fontSize: "0.9rem", fontWeight: 500, color: "var(--gray-900)", marginBottom: "4px" }}>Volunteer cancellation alert</p>
-                  <p style={{ fontSize: "0.8rem", color: "var(--gray-600)", marginBottom: "12px" }}>Get notified when a volunteer cancels within a certain window of the appointment</p>
+                  <p style={{ fontSize: "0.8rem", color: "#111827", marginBottom: "12px" }}>Get notified when a volunteer cancels within a certain window of the appointment</p>
                   <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
                     {([null, 2, 4, 12, 24] as (number | null)[]).map((v) => (
                       <button key={String(v)} onClick={() => saveNotifPrefs({ ...notifPrefs, volunteerCancelWindow: v })} style={{ padding: "8px 16px", fontSize: "0.82rem", fontFamily: "inherit", cursor: "pointer", borderRadius: "8px", border: "1.5px solid", background: notifPrefs.volunteerCancelWindow === v ? "var(--blue)" : "transparent", color: notifPrefs.volunteerCancelWindow === v ? "#fff" : "var(--gray-600)", borderColor: notifPrefs.volunteerCancelWindow === v ? "var(--blue)" : "var(--card-border)", fontWeight: 500 }}>
@@ -470,7 +470,7 @@ function ClinicDashboardInner() {
               </div>
               <div style={{ display: "flex", gap: "10px", marginTop: "20px" }}>
                 <button disabled={actionLoading === "edit" || editSlot.endTime <= editSlot.startTime} onClick={requestSaveEdit} style={{ ...btnPrimary, opacity: actionLoading === "edit" || editSlot.endTime <= editSlot.startTime ? 0.5 : 1 }}>{actionLoading === "edit" ? "Saving…" : "Save Changes"}</button>
-                <button onClick={() => setEditSlot(null)} style={{ padding: "10px 22px", borderRadius: "9px", background: "none", border: "1.5px solid var(--card-border)", color: "var(--gray-600)", fontFamily: "inherit", fontSize: "0.875rem", cursor: "pointer" }}>Cancel</button>
+                <button onClick={() => setEditSlot(null)} style={{ padding: "10px 22px", borderRadius: "9px", background: "none", border: "1.5px solid var(--card-border)", color: "#111827", fontFamily: "inherit", fontSize: "0.875rem", cursor: "pointer" }}>Cancel</button>
               </div>
             </div>
           </div>
@@ -487,12 +487,12 @@ function ClinicDashboardInner() {
               </div>
               <div>
                 <h3 style={{ fontSize: "0.95rem", fontWeight: 700, color: "var(--navy)", marginBottom: "6px" }}>Volunteers will be removed</h3>
-                <p style={{ fontSize: "0.875rem", color: "var(--gray-600)" }}>{editWarning.cancelCount} volunteer signup{editWarning.cancelCount !== 1 ? "s" : ""} conflict with your changes and will be cancelled.</p>
+                <p style={{ fontSize: "0.875rem", color: "#111827" }}>{editWarning.cancelCount} volunteer signup{editWarning.cancelCount !== 1 ? "s" : ""} conflict with your changes and will be cancelled.</p>
               </div>
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
               <button disabled={actionLoading === "edit"} onClick={confirmSaveEdit} style={{ ...btnPrimary, width: "100%", textAlign: "center", opacity: actionLoading === "edit" ? 0.5 : 1 }}>{actionLoading === "edit" ? "Saving…" : "Save Changes Anyway"}</button>
-              <button onClick={() => setEditWarning(null)} style={{ padding: "10px", borderRadius: "9px", background: "var(--page-bg)", border: "1.5px solid var(--card-border)", color: "var(--gray-600)", fontFamily: "inherit", fontSize: "0.875rem", fontWeight: 500, cursor: "pointer" }}>Go Back &amp; Edit</button>
+              <button onClick={() => setEditWarning(null)} style={{ padding: "10px", borderRadius: "9px", background: "var(--page-bg)", border: "1.5px solid var(--card-border)", color: "#111827", fontFamily: "inherit", fontSize: "0.875rem", fontWeight: 500, cursor: "pointer" }}>Go Back &amp; Edit</button>
             </div>
           </div>
         </div>
@@ -503,13 +503,13 @@ function ClinicDashboardInner() {
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.3)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 50, padding: "16px" }}>
           <div style={{ background: "#fff", borderRadius: "16px", padding: "24px", width: "100%", maxWidth: "360px", boxShadow: "0 20px 60px rgba(0,0,0,.2)" }}>
             <h3 style={{ fontSize: "0.95rem", fontWeight: 700, color: "var(--navy)", marginBottom: "6px" }}>Cancel Slot</h3>
-            <p style={{ fontSize: "0.82rem", color: "var(--gray-600)", marginBottom: "16px" }}>All volunteer signups for the cancelled slot(s) will be removed.</p>
+            <p style={{ fontSize: "0.82rem", color: "#111827", marginBottom: "16px" }}>All volunteer signups for the cancelled slot(s) will be removed.</p>
             <div style={{ display: "flex", flexDirection: "column", gap: "8px", marginBottom: "10px" }}>
               {cancelConfirm.isRecurring ? (
                 <>
                   <button disabled={!!actionLoading} onClick={() => cancelSlot(cancelConfirm.slotId, "single")} style={{ textAlign: "left", padding: "12px 16px", border: "1.5px solid var(--card-border)", borderRadius: "9px", background: "var(--card-bg)", fontFamily: "inherit", cursor: "pointer", opacity: !!actionLoading ? 0.5 : 1 }}>
                     <p style={{ fontSize: "0.875rem", fontWeight: 600, color: "var(--gray-900)" }}>This date only</p>
-                    <p style={{ fontSize: "0.78rem", color: "var(--gray-400)", marginTop: "2px" }}>Cancel just this occurrence</p>
+                    <p style={{ fontSize: "0.78rem", color: "#111827", marginTop: "2px" }}>Cancel just this occurrence</p>
                   </button>
                   <button disabled={!!actionLoading} onClick={() => cancelSlot(cancelConfirm.slotId, "this_and_future")} style={{ textAlign: "left", padding: "12px 16px", border: "1px solid #FECACA", borderRadius: "9px", background: "#FEF2F2", fontFamily: "inherit", cursor: "pointer", opacity: !!actionLoading ? 0.5 : 1 }}>
                     <p style={{ fontSize: "0.875rem", fontWeight: 600, color: "#DC2626" }}>This and all future dates</p>
@@ -522,7 +522,7 @@ function ClinicDashboardInner() {
                 </button>
               )}
             </div>
-            <button onClick={() => setCancelConfirm(null)} style={{ width: "100%", padding: "10px", borderRadius: "9px", background: "none", border: "1.5px solid var(--card-border)", color: "var(--gray-600)", fontFamily: "inherit", fontSize: "0.875rem", cursor: "pointer" }}>Keep Slot</button>
+            <button onClick={() => setCancelConfirm(null)} style={{ width: "100%", padding: "10px", borderRadius: "9px", background: "none", border: "1.5px solid var(--card-border)", color: "#111827", fontFamily: "inherit", fontSize: "0.875rem", cursor: "pointer" }}>Keep Slot</button>
           </div>
         </div>
       )}
@@ -532,7 +532,7 @@ function ClinicDashboardInner() {
 
 export default function ClinicDashboard() {
   return (
-    <Suspense fallback={<div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--page-bg)" }}><p style={{ color: "var(--gray-400)" }}>Loading…</p></div>}>
+    <Suspense fallback={<div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--page-bg)" }}><p style={{ color: "#111827" }}>Loading…</p></div>}>
       <ClinicDashboardInner />
     </Suspense>
   );
@@ -564,18 +564,18 @@ function SlotCard({ slot, isPast, selectedSlotIds, actionLoading, onToggleSelect
           <div style={{ display: "flex", gap: "24px", marginTop: "10px", flexWrap: "wrap" }}>
             {[{ label: "Date", val: formatDate(slot.date) }, { label: "Session", val: `${formatHour(slot.startTime)} – ${formatHour(slot.endTime)}` }, { label: "Interpreters/hr", val: String(slot.interpreterCount) }].map(({ label, val }) => (
               <div key={label} style={{ display: "flex", flexDirection: "column", gap: "3px" }}>
-                <span style={{ fontSize: "0.68rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.09em", color: "var(--gray-400)" }}>{label}</span>
+                <span style={{ fontSize: "0.68rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.09em", color: "#111827" }}>{label}</span>
                 <span style={{ fontSize: "0.95rem", fontWeight: 600, color: "var(--gray-900)" }}>{val}</span>
               </div>
             ))}
           </div>
-          {slot.notes && <p style={{ fontSize: "0.82rem", color: "var(--gray-600)", fontStyle: "italic", marginTop: "8px" }}>{slot.notes}</p>}
+          {slot.notes && <p style={{ fontSize: "0.82rem", color: "#111827", fontStyle: "italic", marginTop: "8px" }}>{slot.notes}</p>}
         </div>
         <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "8px" }}>
           {!isPast && <div style={{ background: openCount > 0 ? "var(--green-light)" : "var(--gray-200)", color: openCount > 0 ? "var(--green)" : "var(--gray-600)", fontSize: "0.9rem", fontWeight: 700, padding: "9px 18px", borderRadius: "10px", textAlign: "center", lineHeight: 1.2 }}>{openCount} open<span style={{ display: "block", fontSize: "0.72rem", fontWeight: 500, marginTop: "2px", opacity: 0.8 }}>slots</span></div>}
           {!isPast && slot.status === "ACTIVE" && !isAdminPreview && (
             <div style={{ display: "flex", gap: "8px" }}>
-              <button onClick={() => onEdit(slot)} style={{ fontSize: "0.78rem", padding: "6px 14px", background: "var(--page-bg)", color: "var(--gray-600)", border: "1px solid var(--card-border)", borderRadius: "7px", fontFamily: "inherit", cursor: "pointer" }}>Edit</button>
+              <button onClick={() => onEdit(slot)} style={{ fontSize: "0.78rem", padding: "6px 14px", background: "var(--page-bg)", color: "#111827", border: "1px solid var(--card-border)", borderRadius: "7px", fontFamily: "inherit", cursor: "pointer" }}>Edit</button>
               <button disabled={actionLoading === slot.id} onClick={() => onCancel(slot)} style={{ fontSize: "0.78rem", padding: "6px 14px", background: "#FEF2F2", color: "#DC2626", border: "1px solid #FECACA", borderRadius: "7px", fontFamily: "inherit", cursor: "pointer", opacity: actionLoading === slot.id ? 0.5 : 1 }}>Cancel Slot</button>
             </div>
           )}
@@ -587,7 +587,7 @@ function SlotCard({ slot, isPast, selectedSlotIds, actionLoading, onToggleSelect
         <thead>
           <tr style={{ background: "#FAFAF9", borderBottom: "1px solid var(--card-border)" }}>
             {["Hour", "Volunteer", "Status", ...(isPast ? ["Action"] : [])].map((h) => (
-              <th key={h} style={{ textAlign: h === "Action" ? "right" : "left", fontSize: "0.68rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.09em", color: "var(--gray-400)", padding: "9px 16px" }}>{h}</th>
+              <th key={h} style={{ textAlign: h === "Action" ? "right" : "left", fontSize: "0.68rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.09em", color: "#111827", padding: "9px 16px" }}>{h}</th>
             ))}
           </tr>
         </thead>
@@ -599,10 +599,10 @@ function SlotCard({ slot, isPast, selectedSlotIds, actionLoading, onToggleSelect
               <Fragment key={hour}>
                 {hourSignups.map((signup) => (
                   <tr key={signup.id} style={{ borderBottom: "1px solid var(--card-border)" }}>
-                    <td style={{ padding: "10px 16px", color: "var(--gray-600)", fontSize: "0.82rem", whiteSpace: "nowrap" }}>{formatHour(hour)} – {formatHour(hour + 1)}</td>
+                    <td style={{ padding: "10px 16px", color: "#111827", fontSize: "0.82rem", whiteSpace: "nowrap" }}>{formatHour(hour)} – {formatHour(hour + 1)}</td>
                     <td style={{ padding: "10px 16px", fontSize: "0.82rem" }}>
                       <span style={{ fontWeight: 500, color: "var(--gray-900)" }}>{signup.volunteer.user.name}</span>
-                      <span style={{ color: "var(--gray-400)", marginLeft: "8px", fontSize: "0.78rem" }}>{signup.volunteer.user.email}</span>
+                      <span style={{ color: "#111827", marginLeft: "8px", fontSize: "0.78rem" }}>{signup.volunteer.user.email}</span>
                     </td>
                     <td style={{ padding: "10px 16px" }}>
                       <span style={{ fontSize: "0.72rem", fontWeight: 600, padding: "3px 9px", borderRadius: "99px", background: signup.status === "ACTIVE" ? "var(--green-light)" : signup.status === "NO_SHOW" ? "#FEF2F2" : "var(--gray-200)", color: signup.status === "ACTIVE" ? "var(--green)" : signup.status === "NO_SHOW" ? "#DC2626" : "var(--gray-600)" }}>
@@ -614,9 +614,9 @@ function SlotCard({ slot, isPast, selectedSlotIds, actionLoading, onToggleSelect
                 ))}
                 {Array.from({ length: empty }).map((_, i) => (
                   <tr key={`empty-${hour}-${i}`} style={{ borderBottom: "1px solid var(--card-border)" }}>
-                    <td style={{ padding: "10px 16px", color: "var(--gray-600)", fontSize: "0.82rem", whiteSpace: "nowrap" }}>{formatHour(hour)} – {formatHour(hour + 1)}</td>
-                    <td style={{ padding: "10px 16px", color: "var(--gray-400)", fontSize: "0.82rem", fontStyle: "italic" }}>Open</td>
-                    <td style={{ padding: "10px 16px" }}><span style={{ fontSize: "0.72rem", fontWeight: 600, padding: "3px 9px", borderRadius: "99px", background: "var(--page-bg)", color: "var(--gray-400)", border: "1px solid var(--card-border)" }}>Available</span></td>
+                    <td style={{ padding: "10px 16px", color: "#111827", fontSize: "0.82rem", whiteSpace: "nowrap" }}>{formatHour(hour)} – {formatHour(hour + 1)}</td>
+                    <td style={{ padding: "10px 16px", color: "#111827", fontSize: "0.82rem", fontStyle: "italic" }}>Open</td>
+                    <td style={{ padding: "10px 16px" }}><span style={{ fontSize: "0.72rem", fontWeight: 600, padding: "3px 9px", borderRadius: "99px", background: "var(--page-bg)", color: "#111827", border: "1px solid var(--card-border)" }}>Available</span></td>
                     {isPast && <td />}
                   </tr>
                 ))}

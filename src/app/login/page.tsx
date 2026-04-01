@@ -58,7 +58,7 @@ function LoginContent() {
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/logo.svg" alt="GMI" style={{ width: "108px", height: "108px", borderRadius: "24px", margin: "0 auto 20px", display: "block" }} />
         <h1 style={{ fontSize: "2.2rem", fontWeight: 700, color: "#000", letterSpacing: "-0.02em" }}>Georgetown Medical Interpreters</h1>
-        <p style={{ fontSize: "1.1rem", color: "var(--gray-600)", marginTop: "8px" }}>GMI Volunteer Platform</p>
+        <p style={{ fontSize: "1.1rem", color: "#111827", marginTop: "8px" }}>GMI Volunteer Platform</p>
       </div>
 
       {/* Card */}
@@ -162,7 +162,7 @@ function LoginContent() {
       </div>
 
       {/* Footer — outside card */}
-      <p style={{ textAlign: "center", marginTop: "20px", fontSize: "0.8rem", color: "var(--gray-600)", lineHeight: 1.7 }}>
+      <p style={{ textAlign: "center", marginTop: "20px", fontSize: "0.8rem", color: "#111827", lineHeight: 1.7 }}>
         By signing in you agree to our{" "}
         <a href="/terms" style={{ color: "var(--blue)", textDecoration: "none" }}>Terms of Service</a>
         {" "}and{" "}
