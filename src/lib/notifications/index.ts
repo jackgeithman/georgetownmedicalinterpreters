@@ -4,12 +4,7 @@ import { sendResendEmail } from "./resend";
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
-const LANG_NAMES: Record<string, string> = {
-  ES: "Spanish",
-  ZH: "Chinese (Mandarin)",
-  KO: "Korean",
-  AR: "Arabic",
-};
+import { langName } from "@/lib/languages";
 
 function fmt12(h: number): string {
   const period = h < 12 ? "AM" : "PM";
@@ -108,7 +103,7 @@ export async function notifyVolunteerCancellation(params: {
     hoursUntilSlot,
   } = params;
 
-  const lang = LANG_NAMES[language] ?? language;
+  const lang = langName(language);
   const isUrgent = hoursUntilSlot < 24;
 
   // GCal sends its own cancellation email to the volunteer when the event is
@@ -168,7 +163,7 @@ export async function notifySlotUpdated(params: {
   notes?: string | null;
 }): Promise<void> {
   const { cancelledSignups, updatedSignups, clinicName, clinicAddress, language, date, newDate, notes } = params;
-  const lang = LANG_NAMES[language] ?? language;
+  const lang = langName(language);
   const displayDate = newDate ?? date;
 
   // Notify cancelled volunteers
@@ -235,7 +230,7 @@ export async function notifySlotCancelled(params: {
   date: Date;
 }): Promise<void> {
   const { affectedSignups, clinicName, language, date } = params;
-  const lang = LANG_NAMES[language] ?? language;
+  const lang = langName(language);
 
   await Promise.all(
     affectedSignups.map(({ signupId, volunteerEmail, volunteerName, subBlockHour }) => {
@@ -272,7 +267,7 @@ export async function notifyNoShow(params: {
   subBlockHour: number;
 }): Promise<void> {
   const { volunteerEmail, volunteerName, clinicName, language, date, subBlockHour } = params;
-  const lang = LANG_NAMES[language] ?? language;
+  const lang = langName(language);
 
   const html = wrap(
     "No-Show Recorded",

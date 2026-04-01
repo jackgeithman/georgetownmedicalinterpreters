@@ -3,6 +3,7 @@
 import { useSession, signOut } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState, useCallback, Fragment, Suspense } from "react";
+import { langName } from "@/lib/languages";
 
 type SubBlockSignup = {
   id: string;
@@ -37,11 +38,6 @@ type ClinicNotifPrefs = {
   unfilledAlert24h: boolean;
 };
 
-const LANG_LABELS: Record<string, string> = {
-  ES: "Spanish",
-  ZH: "Chinese",
-  KO: "Korean",
-};
 
 const RATING_OPTIONS = [
   { value: 1, label: "Needs Improvement", active: "bg-red-100 text-red-700 border-red-300", idle: "bg-white text-gray-500 border-gray-200 hover:border-red-200 hover:text-red-600" },
@@ -202,6 +198,10 @@ function ClinicDashboardInner() {
     if (session?.user?.role === "CLINIC" || isAdminPreview) fetchSlots();
   }, [session, fetchSlots, isAdminPreview]);
 
+  useEffect(() => {
+    fetch("/api/languages").then((r) => r.ok ? r.json() : []).then(setActiveLanguages);
+  }, []);
+
   const saveNotifPrefs = async (updated: ClinicNotifPrefs) => {
     await fetch("/api/clinic/notif-prefs", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(updated) });
     setNotifPrefs(updated); setNotifSaved(true); setTimeout(() => setNotifSaved(false), 2000);
@@ -351,7 +351,7 @@ function ClinicDashboardInner() {
           <div style={{ ...card, padding: "24px", marginBottom: "20px" }}>
             <h3 style={{ fontSize: "1.05rem", fontWeight: 700, color: "var(--navy)", marginBottom: "18px" }}>New Slot</h3>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" }}>
-              <div><FieldLabel>Language</FieldLabel><select value={form.language} onChange={(e) => setForm({ ...form, language: e.target.value })} style={{ ...iStyle, cursor: "pointer" }}>{Object.entries(LANG_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></div>
+              <div><FieldLabel>Language</FieldLabel><select value={form.language} onChange={(e) => setForm({ ...form, language: e.target.value })} style={{ ...iStyle, cursor: "pointer" }}>{activeLanguages.map((l) => <option key={l.code} value={l.code}>{l.name}</option>)}</select></div>
               <div><FieldLabel>Date</FieldLabel><input type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} style={iStyle} /></div>
               <div><FieldLabel>Start Time</FieldLabel><select value={form.startTime} onChange={(e) => setForm({ ...form, startTime: Number(e.target.value) })} style={{ ...iStyle, cursor: "pointer" }}>{HOUR_OPTIONS.map((h) => <option key={h} value={h}>{formatHour(h)}</option>)}</select></div>
               <div><FieldLabel>End Time</FieldLabel><select value={form.endTime} onChange={(e) => setForm({ ...form, endTime: Number(e.target.value) })} style={{ ...iStyle, cursor: "pointer" }}>{HOUR_OPTIONS.map((h) => <option key={h} value={h}>{formatHour(h)}</option>)}</select></div>
@@ -461,7 +461,7 @@ function ClinicDashboardInner() {
                 </div>
               )}
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
-                <div><FieldLabel>Language</FieldLabel><select value={editSlot.language} onChange={(e) => setEditSlot({ ...editSlot, language: e.target.value })} style={{ ...iStyle, cursor: "pointer" }}>{Object.entries(LANG_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></div>
+                <div><FieldLabel>Language</FieldLabel><select value={editSlot.language} onChange={(e) => setEditSlot({ ...editSlot, language: e.target.value })} style={{ ...iStyle, cursor: "pointer" }}>{activeLanguages.map((l) => <option key={l.code} value={l.code}>{l.name}</option>)}</select></div>
                 <div><FieldLabel>Date</FieldLabel><input type="date" value={editSlot.date.split("T")[0]} onChange={(e) => setEditSlot({ ...editSlot, date: e.target.value })} style={iStyle} /></div>
                 <div><FieldLabel>Start Time</FieldLabel><select value={editSlot.startTime} onChange={(e) => setEditSlot({ ...editSlot, startTime: Number(e.target.value) })} style={{ ...iStyle, cursor: "pointer" }}>{HOUR_OPTIONS.map((h) => <option key={h} value={h}>{formatHour(h)}</option>)}</select></div>
                 <div><FieldLabel>End Time</FieldLabel><select value={editSlot.endTime} onChange={(e) => setEditSlot({ ...editSlot, endTime: Number(e.target.value) })} style={{ ...iStyle, cursor: "pointer" }}>{HOUR_OPTIONS.map((h) => <option key={h} value={h}>{formatHour(h)}</option>)}</select></div>
@@ -557,7 +557,7 @@ function SlotCard({ slot, isPast, selectedSlotIds, actionLoading, onToggleSelect
         <div>
           <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
             {!isPast && slot.status === "ACTIVE" && <input type="checkbox" checked={selectedSlotIds.has(slot.id)} onChange={() => onToggleSelect(slot.id)} onClick={(e) => e.stopPropagation()} style={{ width: "16px", height: "16px", cursor: "pointer", accentColor: "var(--navy)" }} />}
-            <span style={{ fontSize: "1.15rem", fontWeight: 700, color: "var(--navy)" }}>{LANG_LABELS[slot.language]}</span>
+            <span style={{ fontSize: "1.15rem", fontWeight: 700, color: "var(--navy)" }}>{langName(slot.language)}</span>
             {slot.isRecurring && <span style={{ fontSize: "0.72rem", fontWeight: 600, padding: "2px 9px", borderRadius: "99px", background: "#F5F3FF", color: "#7C3AED", border: "1px solid #E9D5FF" }}>Weekly</span>}
             {slot.status === "CANCELLED" && <span style={{ fontSize: "0.72rem", fontWeight: 600, padding: "2px 9px", borderRadius: "99px", background: "var(--gray-200)", color: "var(--gray-600)" }}>Cancelled</span>}
           </div>
