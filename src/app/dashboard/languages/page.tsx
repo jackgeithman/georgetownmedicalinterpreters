@@ -106,6 +106,7 @@ export default function LanguagesPage() {
   };
 
   const toggleLanguageActive = async (id: string, newIsActive: boolean, langName: string) => {
+    if (!newIsActive && !confirm(`Deactivate ${langName}? It will no longer be available for new slots.`)) return;
     try {
       if (!newIsActive) {
         const res = await fetch(`/api/admin/languages/${id}`, {
