@@ -38,7 +38,7 @@ export default function ClinicLoginPage({
     });
     setLoading(false);
     if (result?.ok) {
-      router.push("/dashboard");
+      router.push("/dashboard/clinic");
     } else {
       setError("Incorrect PIN. Please try again.");
       setPin("");
