@@ -384,7 +384,7 @@ export default function BrowsePage() {
       return st && st.total > 0 ? ` (${st.filled}/${st.total})` : "";
     };
     const adminSpanishLang = languages.find((l) => l.isActive && /\bspanish\b/i.test(l.name));
-    const adminMandarinLang = languages.find((l) => l.isActive && /\bmandarin\b/i.test(l.name));
+    const adminMandarinLang = languages.find((l) => l.isActive && /\b(mandarin|chinese)\b/i.test(l.name));
     const adminFixedLangs: { code: string; label: string }[] = [
       { code: "ALL", label: "All Languages" },
       ...(adminSpanishLang ? [{ code: adminSpanishLang.code, label: `Spanish${adminStatLabel(adminSpanishLang.code)}` }] : []),
@@ -829,7 +829,7 @@ export default function BrowsePage() {
   // Dynamically resolve Spanish and Mandarin by name so the code works regardless
   // of whatever short code was auto-generated in the database
   const spanishLang = availableLanguages.find((l) => /\bspanish\b/i.test(l.name));
-  const mandarinLang = availableLanguages.find((l) => /\bmandarin\b/i.test(l.name));
+  const mandarinLang = availableLanguages.find((l) => /\b(mandarin|chinese)\b/i.test(l.name));
   const fixedLangs: { code: string; label: string }[] = [
     { code: "ALL", label: "All Languages" },
     ...(spanishLang ? [{ code: spanishLang.code, label: `Spanish${statLabel(spanishLang.code)}` }] : []),
