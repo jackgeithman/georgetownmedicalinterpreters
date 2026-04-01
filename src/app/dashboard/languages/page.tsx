@@ -251,15 +251,30 @@ export default function LanguagesPage() {
                 <span style={{ fontSize: "0.875rem", color: "#111827", fontWeight: 500 }}>{lang.name}</span>
                 <span style={{ fontSize: "0.75rem", color: "#111827" }}>{lang.volunteerCount ?? 0} volunteer{(lang.volunteerCount ?? 0) !== 1 ? "s" : ""}</span>
               </div>
-              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                <span style={{ fontSize: "0.75rem", padding: "2px 10px", borderRadius: "99px", background: lang.isActive ? "#DCFCE7" : "var(--gray-200)", color: lang.isActive ? "#15803D" : "var(--gray-400)" }}>
-                  {lang.isActive ? "Active" : "Inactive"}
-                </span>
+              <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                {/* iOS-style toggle */}
                 <button
+                  role="switch"
+                  aria-checked={lang.isActive}
                   onClick={() => void toggleLanguageActive(lang.id, !lang.isActive, lang.name)}
-                  style={{ fontSize: "0.75rem", padding: "4px 12px", borderRadius: "8px", cursor: "pointer", fontFamily: "'DM Sans', sans-serif", background: lang.isActive ? "var(--gray-200)" : "#DCFCE7", color: lang.isActive ? "#111827" : "#15803D", border: "none" }}
+                  title={lang.isActive ? "Deactivate" : "Activate"}
+                  style={{
+                    position: "relative", display: "inline-flex", alignItems: "center",
+                    width: "44px", height: "26px", borderRadius: "99px", border: "none",
+                    background: lang.isActive ? "#16A34A" : "#D1D5DB",
+                    cursor: "pointer", flexShrink: 0,
+                    transition: "background 0.2s",
+                    padding: 0,
+                  }}
                 >
-                  {lang.isActive ? "Deactivate" : "Activate"}
+                  <span style={{
+                    position: "absolute",
+                    left: lang.isActive ? "20px" : "2px",
+                    width: "22px", height: "22px", borderRadius: "50%",
+                    background: "#fff",
+                    boxShadow: "0 1px 4px rgba(0,0,0,.25)",
+                    transition: "left 0.2s",
+                  }} />
                 </button>
                 <button
                   onClick={() => { setDeleteConfirm(lang); setDeleteError(""); }}
