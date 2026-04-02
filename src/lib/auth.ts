@@ -111,19 +111,21 @@ export const authOptions: NextAuthOptions = {
         } else {
           if (user.email === DEV_EMAIL) {
             await prisma.user.create({
-              data: { email: user.email, name: user.name ?? user.email, role: "ADMIN", roles: ["DEV"], status: "ACTIVE" },
+              data: { email: user.email, name: user.name ?? user.email, role: "ADMIN", roles: ["DEV"], status: "ACTIVE", onboardingComplete: true },
             });
           } else {
             const adminCount = await prisma.user.count({
               where: { role: "ADMIN" },
             });
+            const isFirstAdmin = adminCount === 0;
             await prisma.user.create({
               data: {
                 email: user.email,
                 name: user.name ?? user.email,
-                role: adminCount === 0 ? "ADMIN" : "PENDING",
-                roles: adminCount === 0 ? ["ADMIN"] : ["PENDING"],
-                status: adminCount === 0 ? "ACTIVE" : "PENDING_APPROVAL",
+                role: isFirstAdmin ? "ADMIN" : "PENDING",
+                roles: isFirstAdmin ? ["ADMIN"] : ["PENDING"],
+                status: isFirstAdmin ? "ACTIVE" : "PENDING_APPROVAL",
+                onboardingComplete: isFirstAdmin, // first admin bypasses onboarding, everyone else must complete it
               },
             });
           }
