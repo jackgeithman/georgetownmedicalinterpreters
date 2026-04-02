@@ -250,6 +250,11 @@ export default function UsersPage() {
 
   const viewerIsAdmin = session?.user?.role === "ADMIN" || session?.user?.roles?.includes("DEV");
   const isSuperAdmin = session?.user?.roles?.includes("DEV");
+  const viewerClearedLangs = new Set(
+    (session?.user?.roles ?? [])
+      .filter((r) => r.startsWith("LANG_") && r.endsWith("_CLEARED"))
+      .map((r) => r.slice(5, -8))
+  );
 
   const sortedUsers = [...users].sort((a, b) => {
     if (a.status === "PENDING_APPROVAL" && b.status !== "PENDING_APPROVAL") return -1;
@@ -276,9 +281,9 @@ export default function UsersPage() {
           <button
             data-role-filter-btn="true"
             onClick={() => setRoleFilterOpen(!roleFilterOpen)}
-            style={{ display: "flex", alignItems: "center", gap: "6px", padding: "7px 14px", fontSize: "0.82rem", fontWeight: 500, border: roleFilter.length > 0 ? "1.5px solid var(--blue)" : "1.5px solid var(--card-border)", borderRadius: "9px", background: roleFilter.length > 0 ? "#EFF6FF" : "var(--card-bg)", color: roleFilter.length > 0 ? "var(--blue)" : "#111827", cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}
+            style={{ display: "flex", alignItems: "center", gap: "7px", padding: "9px 18px", fontSize: "0.9rem", fontWeight: 600, border: roleFilter.length > 0 ? "1.5px solid var(--blue)" : "1.5px solid var(--card-border)", borderRadius: "99px", background: roleFilter.length > 0 ? "#EFF6FF" : "var(--card-bg)", color: roleFilter.length > 0 ? "var(--blue)" : "#111827", cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}
           >
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" /></svg>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" /></svg>
             Filter{roleFilter.length > 0 && ` (${roleFilter.length})`}
           </button>
           {roleFilterOpen && (
@@ -451,7 +456,14 @@ export default function UsersPage() {
                             </span>
                             {state === "pending" && (
                               <>
-                                <button onClick={() => handleLangAction(user.id, code, "approve")} disabled={isLoading} title="Approve clearance" style={{ fontSize: "0.68rem", padding: "1px 6px", borderRadius: "4px", border: "none", background: "#BBF7D0", color: "#15803D", cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>Approve</button>
+                                {viewerIsAdmin || viewerClearedLangs.has(code) ? (
+                                  <button onClick={() => handleLangAction(user.id, code, "approve")} disabled={isLoading} title="Approve clearance" style={{ fontSize: "0.68rem", padding: "1px 6px", borderRadius: "4px", border: "none", background: "#BBF7D0", color: "#15803D", cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>Approve</button>
+                                ) : (
+                                  <button disabled title={`You are not cleared for ${getLangLabel(code)}`} style={{ fontSize: "0.68rem", padding: "1px 6px", borderRadius: "4px", border: "none", background: "#E5E7EB", color: "#9CA3AF", cursor: "not-allowed", fontFamily: "'DM Sans', sans-serif", display: "inline-flex", alignItems: "center", gap: "3px" }}>
+                                    <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                                    Approve
+                                  </button>
+                                )}
                                 <button onClick={() => setLangActionModal({ userId: user.id, langCode: code, action: "deny", note: "" })} disabled={isLoading} title="Deny clearance" style={{ fontSize: "0.68rem", padding: "1px 6px", borderRadius: "4px", border: "none", background: "#FECACA", color: "#DC2626", cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>Deny</button>
                                 <button onClick={() => handleRemoveLanguage(user.id, code)} disabled={roleActionLoading === `removelang-${user.id}-${code}`} title={`Remove ${getLangLabel(code)}`} style={{ background: "none", border: "none", cursor: "pointer", color: "inherit", opacity: 0.55, fontSize: "0.9rem", lineHeight: 1, padding: "0 5px 0 1px", fontFamily: "'DM Sans', sans-serif" }}>×</button>
                               </>
