@@ -1,6 +1,6 @@
 "use client";
 
-import { useSession, signOut } from "next-auth/react";
+import { useSession, signOut, signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { LANGUAGE_MAP } from "@/lib/languages";
@@ -113,12 +113,18 @@ export default function PendingPage() {
           )}
         </div>
 
-        <div style={{ textAlign: "center" }}>
+        <div style={{ textAlign: "center", display: "flex", gap: "20px", justifyContent: "center" }}>
           <button
             onClick={() => signOut({ callbackUrl: "/login" })}
             style={{ background: "none", border: "none", fontSize: "0.82rem", color: "#111827", cursor: "pointer", textDecoration: "underline", fontFamily: "'DM Sans', sans-serif" }}
           >
             Sign out
+          </button>
+          <button
+            onClick={() => signIn("google", { callbackUrl: "/dashboard" }, { prompt: "select_account", hd: "" })}
+            style={{ background: "none", border: "none", fontSize: "0.82rem", color: "#9CA3AF", cursor: "pointer", textDecoration: "underline", fontFamily: "'DM Sans', sans-serif" }}
+          >
+            Switch account
           </button>
         </div>
 
