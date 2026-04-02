@@ -713,7 +713,11 @@ export default function UsersPage() {
         if (!targetUser) return null;
         const { langChips } = parseUserRoles(targetUser.roles ?? []);
         const assignedCodes = langChips.map(l => l.code);
-        const availableLangs = languages.filter(l => l.isActive && !assignedCodes.includes(l.code.toUpperCase()));
+        const availableLangs = languages.filter(l =>
+          l.isActive &&
+          !assignedCodes.includes(l.code.toUpperCase()) &&
+          (viewerIsAdmin || viewerClearedLangs.has(l.code.toUpperCase()))
+        );
         if (availableLangs.length === 0) return null;
         return ReactDOM.createPortal(
           <div
