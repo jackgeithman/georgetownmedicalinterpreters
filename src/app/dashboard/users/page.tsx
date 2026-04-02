@@ -22,6 +22,7 @@ type User = {
   role: string;
   roles: string[];
   status: string;
+  onboardingComplete: boolean;
   clinicId: string | null;
   createdAt: string;
   clinic?: { name: string } | null;
@@ -591,6 +592,14 @@ export default function UsersPage() {
                       (() => {
                         const pendingRoles = (user.roles ?? []).filter((r) => r.endsWith("_PENDING"));
                         const ROLE_LABEL: Record<string, string> = { VOLUNTEER_PENDING: "Volunteer", INSTRUCTOR_PENDING: "Instructor", ADMIN_PENDING: "Admin" };
+                        // User hasn't submitted onboarding yet
+                        if (!user.onboardingComplete) {
+                          return (
+                            <span style={{ fontSize: "0.72rem", color: "#92400E", background: "#FEF3C7", border: "1px solid #FDE68A", borderRadius: "6px", padding: "4px 8px", whiteSpace: "nowrap" }}>
+                              Awaiting onboarding
+                            </span>
+                          );
+                        }
                         if (pendingRoles.length === 0) return null;
                         return (
                           <div style={{ display: "flex", flexDirection: "column", gap: "6px", alignItems: "flex-end" }}>

@@ -169,7 +169,12 @@ export const authOptions: NextAuthOptions = {
           session.user.clinicId = dbUser.clinicId;
           session.user.onboardingComplete = dbUser.onboardingComplete;
         } else {
-          console.warn(`[AUTH] User not found in database: ${session.user.email}`);
+          // User was deleted — invalidate the session so they hit the login page
+          console.warn(`[AUTH] User not found in database: ${session.user.email} — treating as unauthenticated`);
+          session.user.status = "DELETED";
+          session.user.role = "PENDING";
+          session.user.roles = [];
+          session.user.onboardingComplete = false;
         }
       }
       return session;

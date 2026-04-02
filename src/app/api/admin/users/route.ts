@@ -364,10 +364,17 @@ export async function PATCH(req: NextRequest) {
       });
     }
 
+    // If admin manually adds a role to a user who hasn't completed onboarding,
+    // treat it as an admin override — mark onboarding complete and activate the account.
+    const bypassingOnboarding = !target.onboardingComplete;
     await prisma.user.update({
       where: { id: userId },
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      data: { roles: newRoles, role: newPrimaryRole as any },
+      data: {
+        roles: newRoles,
+        role: newPrimaryRole as any,
+        ...(bypassingOnboarding ? { onboardingComplete: true, status: "ACTIVE" } : {}),
+      },
     });
     await logActivity({
       actorId: admin.id,
@@ -376,7 +383,7 @@ export async function PATCH(req: NextRequest) {
       action: "ROLE_ADDED",
       targetType: "User",
       targetId: userId,
-      detail: `Added role ${addRole} to ${target.email}`,
+      detail: `Added role ${addRole} to ${target.email}${bypassingOnboarding ? " (bypassed onboarding)" : ""}`,
     });
     return NextResponse.json({ ok: true, roles: newRoles });
   }

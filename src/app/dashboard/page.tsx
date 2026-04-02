@@ -1,6 +1,6 @@
 "use client";
 
-import { useSession } from "next-auth/react";
+import { useSession, signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 
@@ -17,6 +17,12 @@ export default function DashboardPage() {
   useEffect(() => {
     if (!session?.user) return;
     const { role, status, onboardingComplete } = session.user;
+
+    // Account was deleted mid-session — force sign out so they start fresh
+    if (status === "DELETED") {
+      void signOut({ callbackUrl: "/login" });
+      return;
+    }
 
     if (!onboardingComplete) {
       router.push("/onboarding");
