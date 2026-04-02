@@ -109,40 +109,44 @@ export default function LanguagesPage() {
     setAdding(false);
   };
 
+  const performDeactivate = async (id: string, langName: string) => {
+    try {
+      const res = await fetch(`/api/admin/languages/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isActive: false }),
+      });
+      if (res.status === 409) {
+        const data = await res.json();
+        setLangDeactivateConflict({ langId: id, langName, conflicts: (data as { conflicts: ConflictSlot[] }).conflicts });
+        return;
+      }
+      if (res.ok) {
+        const updated = await res.json();
+        setLanguages((prev) => prev.map((l) => (l.id === id ? updated : l)));
+      } else {
+        const data = await res.json().catch(() => ({}));
+        alert((data as { error?: string }).error ?? `Failed to deactivate language (${res.status}). Please try again.`);
+      }
+    } catch {
+      alert("An unexpected error occurred. Please try again.");
+    }
+  };
+
   const toggleLanguageActive = async (id: string, newIsActive: boolean, langName: string) => {
     if (!newIsActive) { setLangDeactivateSimple({ id, name: langName }); return; }
     try {
-      if (!newIsActive) {
-        const res = await fetch(`/api/admin/languages/${id}`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ isActive: false }),
-        });
-        if (res.status === 409) {
-          const data = await res.json();
-          setLangDeactivateConflict({ langId: id, langName, conflicts: (data as { conflicts: ConflictSlot[] }).conflicts });
-          return;
-        }
-        if (res.ok) {
-          const updated = await res.json();
-          setLanguages((prev) => prev.map((l) => (l.id === id ? updated : l)));
-        } else {
-          const data = await res.json().catch(() => ({}));
-          alert((data as { error?: string }).error ?? `Failed to deactivate language (${res.status}). Please try again.`);
-        }
+      const res = await fetch(`/api/admin/languages/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isActive: true }),
+      });
+      if (res.ok) {
+        const updated = await res.json();
+        setLanguages((prev) => prev.map((l) => (l.id === id ? updated : l)));
       } else {
-        const res = await fetch(`/api/admin/languages/${id}`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ isActive: true }),
-        });
-        if (res.ok) {
-          const updated = await res.json();
-          setLanguages((prev) => prev.map((l) => (l.id === id ? updated : l)));
-        } else {
-          const data = await res.json().catch(() => ({}));
-          alert((data as { error?: string }).error ?? `Failed to activate language (${res.status}). Please try again.`);
-        }
+        const data = await res.json().catch(() => ({}));
+        alert((data as { error?: string }).error ?? `Failed to activate language (${res.status}). Please try again.`);
       }
     } catch {
       alert("An unexpected error occurred. Please try again.");
@@ -334,7 +338,7 @@ export default function LanguagesPage() {
             <p style={{ fontSize: "0.9rem", fontWeight: 500, color: "var(--gray-900)", lineHeight: 1.5, marginBottom: "20px" }}>Deactivate <strong>{langDeactivateSimple.name}</strong>? It will no longer be available for new slots.</p>
             <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end" }}>
               <button onClick={() => setLangDeactivateSimple(null)} style={{ background: "none", border: "1.5px solid var(--card-border)", color: "#0F172A", fontFamily: "'DM Sans', sans-serif", fontSize: "0.82rem", fontWeight: 600, padding: "8px 18px", borderRadius: "99px", cursor: "pointer" }}>Cancel</button>
-              <button onClick={() => { const { id, name } = langDeactivateSimple; setLangDeactivateSimple(null); void toggleLanguageActive(id, false, name); }} style={{ background: "#DC2626", border: "none", color: "#fff", fontFamily: "'DM Sans', sans-serif", fontSize: "0.82rem", fontWeight: 600, padding: "8px 18px", borderRadius: "99px", cursor: "pointer" }}>Deactivate</button>
+              <button onClick={() => { const { id, name } = langDeactivateSimple; setLangDeactivateSimple(null); void performDeactivate(id, name); }} style={{ background: "#DC2626", border: "none", color: "#fff", fontFamily: "'DM Sans', sans-serif", fontSize: "0.82rem", fontWeight: 600, padding: "8px 18px", borderRadius: "99px", cursor: "pointer" }}>Deactivate</button>
             </div>
           </div>
         </div>
