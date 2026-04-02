@@ -50,6 +50,8 @@ function parseUserRoles(roles: string[]) {
       if (r.endsWith("_CLEARED")) langMap[r.slice(5, -8)] = "cleared";
       else if (r.endsWith("_DENIED")) langMap[r.slice(5, -7)] = "denied";
       else langMap[r.slice(5)] = "pending";
+    } else if (r.endsWith("_PENDING")) {
+      // Onboarding pending roles — shown separately in the actions column, skip here
     } else {
       roleChips.push(r);
     }
@@ -178,6 +180,19 @@ export default function UsersPage() {
       }
       await fetchData();
     }
+    setRoleActionLoading(null);
+  };
+
+  const handleRoleDecision = async (userId: string, role: string, decision: "approve" | "reject") => {
+    const key = `role-decision-${userId}-${role}`;
+    setRoleActionLoading(key);
+    const body = decision === "approve" ? { userId, approveRole: role } : { userId, rejectRole: role };
+    const res = await fetch("/api/admin/users", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    if (res.ok) await fetchData();
     setRoleActionLoading(null);
   };
 
@@ -561,18 +576,36 @@ export default function UsersPage() {
                   {/* Actions */}
                   <td style={{ padding: "14px 20px", textAlign: "right" }}>
                     {canAdminModify && user.status === "PENDING_APPROVAL" ? (
-                      <div style={{ display: "flex", gap: "4px", justifyContent: "flex-end" }}>
-                        <button
-                          disabled={actionLoading === user.id}
-                          onClick={() => updateUser(user.id, { status: "ACTIVE", role: "VOLUNTEER" })}
-                          style={{ padding: "6px 12px", fontSize: "0.75rem", background: "#DCFCE7", color: "#15803D", border: "none", borderRadius: "6px", cursor: "pointer", opacity: actionLoading === user.id ? 0.5 : 1, fontFamily: "'DM Sans', sans-serif" }}
-                        >Approve</button>
-                        <button
-                          disabled={actionLoading === user.id}
-                          onClick={() => updateUser(user.id, { status: "SUSPENDED" })}
-                          style={{ padding: "6px 12px", fontSize: "0.75rem", background: "#FEF2F2", color: "#DC2626", border: "none", borderRadius: "6px", cursor: "pointer", opacity: actionLoading === user.id ? 0.5 : 1, fontFamily: "'DM Sans', sans-serif" }}
-                        >Reject</button>
-                      </div>
+                      (() => {
+                        const pendingRoles = (user.roles ?? []).filter((r) => r.endsWith("_PENDING"));
+                        const ROLE_LABEL: Record<string, string> = { VOLUNTEER_PENDING: "Volunteer", INSTRUCTOR_PENDING: "Instructor", ADMIN_PENDING: "Admin" };
+                        if (pendingRoles.length === 0) return null;
+                        return (
+                          <div style={{ display: "flex", flexDirection: "column", gap: "6px", alignItems: "flex-end" }}>
+                            {pendingRoles.map((pr) => {
+                              const roleKey = pr.replace("_PENDING", "");
+                              const loading = roleActionLoading === `role-decision-${user.id}-${roleKey}`;
+                              return (
+                                <div key={pr} style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                                  <span style={{ fontSize: "0.72rem", fontWeight: 600, color: "#92400E", background: "#FEF3C7", border: "1px solid #FDE68A", borderRadius: "99px", padding: "2px 8px", whiteSpace: "nowrap" }}>
+                                    {ROLE_LABEL[pr] ?? roleKey}
+                                  </span>
+                                  <button
+                                    disabled={loading}
+                                    onClick={() => void handleRoleDecision(user.id, roleKey, "approve")}
+                                    style={{ padding: "4px 9px", fontSize: "0.7rem", background: "#DCFCE7", color: "#15803D", border: "none", borderRadius: "5px", cursor: loading ? "not-allowed" : "pointer", opacity: loading ? 0.5 : 1, fontFamily: "'DM Sans', sans-serif", fontWeight: 600 }}
+                                  >✓ Approve</button>
+                                  <button
+                                    disabled={loading}
+                                    onClick={() => void handleRoleDecision(user.id, roleKey, "reject")}
+                                    style={{ padding: "4px 9px", fontSize: "0.7rem", background: "#FEF2F2", color: "#DC2626", border: "none", borderRadius: "5px", cursor: loading ? "not-allowed" : "pointer", opacity: loading ? 0.5 : 1, fontFamily: "'DM Sans', sans-serif", fontWeight: 600 }}
+                                  >✗ Reject</button>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        );
+                      })()
                     ) : canAdminModify && !isUserSuperAdmin && (
                       <div style={{ display: "flex", gap: "4px", justifyContent: "flex-end" }}>
                         {user.status === "ACTIVE" ? (

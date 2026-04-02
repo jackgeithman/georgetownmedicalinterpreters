@@ -70,11 +70,14 @@ model User {
   id                String              @id @default(uuid())
   email             String              @unique
   name              String?
+  firstName         String?
+  lastName          String?
   emailVerified     DateTime?
   image             String?
   role              Role                @default(PENDING)
   roles             String[]            @default([])
   status            UserStatus          @default(PENDING_APPROVAL)
+  onboardingComplete Boolean            @default(false)
   clinicId          String?
   clinic            Clinic?             @relation(fields: [clinicId], references: [id])
   volunteer         VolunteerProfile?

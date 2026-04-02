@@ -11,6 +11,7 @@ declare module "next-auth" {
       roles: string[];
       status: string;
       clinicId: string | null;
+      onboardingComplete: boolean;
     };
   }
 }

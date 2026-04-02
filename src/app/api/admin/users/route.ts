@@ -239,6 +239,109 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ ok: true, roles: newRoles });
   }
 
+  // Handle approveRole (per-role onboarding approval)
+  if (body.approveRole) {
+    if (!isAdmin) return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+    const roleToApprove = (body.approveRole as string).toUpperCase();
+    const pendingKey = `${roleToApprove}_PENDING`;
+
+    if (!target.roles.includes(pendingKey)) {
+      return NextResponse.json({ error: "Role is not pending for this user" }, { status: 400 });
+    }
+
+    // Remove pending entry, add the approved role
+    const withoutPending = target.roles.filter((r) => r !== pendingKey && r !== "PENDING");
+    const newRoles = [...withoutPending, roleToApprove];
+
+    // INSTRUCTOR implies VOLUNTEER
+    if (roleToApprove === "INSTRUCTOR" && !newRoles.includes("VOLUNTEER")) {
+      newRoles.push("VOLUNTEER");
+    }
+
+    const newPrimaryRole = primaryRole(newRoles);
+
+    // Ensure volunteer profile exists when approving VOLUNTEER or INSTRUCTOR
+    if (roleToApprove === "VOLUNTEER" || roleToApprove === "INSTRUCTOR") {
+      const existingVp = await prisma.volunteerProfile.findUnique({ where: { userId: target.id } });
+      if (!existingVp) {
+        await prisma.volunteerProfile.create({ data: { userId: target.id, languages: [] } });
+      }
+    }
+
+    // Grant access immediately on first approval
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await prisma.user.update({ where: { id: userId }, data: { roles: newRoles, role: newPrimaryRole as any, status: "ACTIVE" } });
+
+    await logActivity({
+      actorId: admin.id,
+      actorEmail: admin.email ?? undefined,
+      actorName: admin.name ?? undefined,
+      action: "ROLE_ADDED",
+      targetType: "User",
+      targetId: userId,
+      detail: `Approved role ${roleToApprove} for ${target.email} (onboarding)`,
+    });
+
+    const approvedRoles = newRoles.filter((r) => ["VOLUNTEER", "INSTRUCTOR", "ADMIN"].includes(r));
+    if (target.email) {
+      const { notifyRolesApproved } = await import("@/lib/notifications");
+      await notifyRolesApproved({
+        email: target.email,
+        name: target.name ?? target.email,
+        approvedRoles,
+      }).catch(console.error);
+    }
+
+    return NextResponse.json({ ok: true, roles: newRoles });
+  }
+
+  // Handle rejectRole (per-role onboarding rejection)
+  if (body.rejectRole) {
+    if (!isAdmin) return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+    const roleToReject = (body.rejectRole as string).toUpperCase();
+    const pendingKey = `${roleToReject}_PENDING`;
+
+    if (!target.roles.includes(pendingKey)) {
+      return NextResponse.json({ error: "Role is not pending for this user" }, { status: 400 });
+    }
+
+    const newRoles = target.roles.filter((r) => r !== pendingKey);
+    const remainingApproved = newRoles.filter((r) => ["VOLUNTEER", "INSTRUCTOR", "ADMIN"].includes(r));
+    const remainingPending = newRoles.filter((r) => r.endsWith("_PENDING"));
+
+    // If no approved roles remain and no more pending: account fully rejected
+    const allRejected = remainingApproved.length === 0 && remainingPending.length === 0;
+    const finalRoles = allRejected
+      ? [...newRoles.filter((r) => r.startsWith("LANG_")), "PENDING"]
+      : newRoles;
+    const newStatus = allRejected ? "SUSPENDED" : target.status;
+    const newPrimaryRole = primaryRole(finalRoles);
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await prisma.user.update({ where: { id: userId }, data: { roles: finalRoles, role: newPrimaryRole as any, status: newStatus } });
+
+    await logActivity({
+      actorId: admin.id,
+      actorEmail: admin.email ?? undefined,
+      actorName: admin.name ?? undefined,
+      action: "ROLE_REMOVED",
+      targetType: "User",
+      targetId: userId,
+      detail: `Rejected role ${roleToReject} for ${target.email} (onboarding)${allRejected ? " — all roles rejected, account suspended" : ""}`,
+    });
+
+    if (allRejected && target.email) {
+      const { notifyRolesRejected } = await import("@/lib/notifications");
+      await notifyRolesRejected({
+        email: target.email,
+        name: target.name ?? target.email,
+        rejectedRoles: [roleToReject],
+      }).catch(console.error);
+    }
+
+    return NextResponse.json({ ok: true, roles: finalRoles, allRejected });
+  }
+
   // Handle addRole
   if (addRole) {
     if (!isAdmin && !isSuperAdmin) return NextResponse.json({ error: "Unauthorized" }, { status: 403 });

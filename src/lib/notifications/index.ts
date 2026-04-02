@@ -363,6 +363,97 @@ export async function notifyUserApproved(params: {
   await sendGmail(email, "Your Georgetown Medical Interpreters Account Has Been Approved", html).catch(console.error);
 }
 
+// ─── Onboarding Notifications ───────────────────────────────────────────────
+
+const ROLE_LABEL_MAP: Record<string, string> = {
+  VOLUNTEER: "Volunteer",
+  INSTRUCTOR: "Instructor",
+  ADMIN: "Admin",
+};
+
+/**
+ * New user submits onboarding form. Sends a confirmation Gmail to the user.
+ */
+export async function sendOnboardingConfirmation(params: {
+  email: string;
+  name: string;
+  roles: string[];
+}): Promise<void> {
+  const { email, name, roles } = params;
+  const roleList = roles.map((r) => ROLE_LABEL_MAP[r] ?? r).join(", ");
+
+  const html = wrap(
+    "We've Received Your Account Request",
+    `<p>Hi ${name},</p>
+<p>Thanks for signing up for Georgetown Medical Interpreters. Your request has been submitted and is pending review by an admin.</p>
+${table(
+  detail("Roles requested", roleList),
+  detail("Email", email),
+)}
+<p style="font-size:13px;color:#6b7280">You'll receive an email at <strong>${email}</strong> once your access has been cleared. No further action is needed.</p>`,
+  );
+
+  await sendGmail(email, "GMI Account Request Received", html).catch(console.error);
+}
+
+/**
+ * Admin approves one or more roles for a user. Sends a single combined Gmail.
+ */
+export async function notifyRolesApproved(params: {
+  email: string;
+  name: string;
+  approvedRoles: string[];
+}): Promise<void> {
+  const { email, name, approvedRoles } = params;
+  const roleList = approvedRoles.map((r) => ROLE_LABEL_MAP[r] ?? r).join(", ");
+  const plural = approvedRoles.length > 1;
+
+  const html = wrap(
+    `Your ${plural ? "Roles Have" : "Role Has"} Been Approved`,
+    `<p>Hi ${name},</p>
+<p>Your Georgetown Medical Interpreters ${plural ? "roles have" : "role has"} been <strong>approved</strong>. You can now sign in to access the platform.</p>
+${table(
+  detail(plural ? "Approved roles" : "Approved role", roleList),
+)}
+<p><a href="${process.env.NEXTAUTH_URL ?? "https://georgetownmedicalinterpreters.org"}/login"
+   style="display:inline-block;background:#002147;color:#fff;padding:10px 20px;border-radius:6px;text-decoration:none;font-size:14px;font-weight:600">
+  Sign In to Georgetown Medical Interpreters
+</a></p>`,
+  );
+
+  await sendGmail(email, "GMI Account Approved — You're All Set", html).catch(console.error);
+}
+
+/**
+ * Admin rejects all pending roles for a user.
+ */
+export async function notifyRolesRejected(params: {
+  email: string;
+  name: string;
+  rejectedRoles: string[];
+}): Promise<void> {
+  const { email, name, rejectedRoles } = params;
+  const roleList = rejectedRoles.map((r) => ROLE_LABEL_MAP[r] ?? r).join(", ");
+  const plural = rejectedRoles.length > 1;
+  const siteUrl = process.env.NEXTAUTH_URL ?? "https://georgetownmedicalinterpreters.org";
+
+  const html = wrap(
+    `Your Account Request Was Not Approved`,
+    `<p>Hi ${name},</p>
+<p>Your request for the following ${plural ? "roles has" : "role has"} not been approved at this time:</p>
+${table(
+  detail(plural ? "Requested roles" : "Requested role", roleList),
+)}
+<p style="font-size:13px;color:#6b7280">If you believe this is an error or have questions, you can contact us below.</p>
+<p><a href="${siteUrl}/rejected"
+   style="display:inline-block;background:#002147;color:#fff;padding:10px 20px;border-radius:6px;text-decoration:none;font-size:14px;font-weight:600">
+  Contact Us
+</a></p>`,
+  );
+
+  await sendGmail(email, "GMI Account Request — Not Approved", html).catch(console.error);
+}
+
 /**
  * Admin suspends a user. Sends a Gmail notification.
  */
