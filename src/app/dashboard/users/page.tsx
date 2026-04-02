@@ -85,6 +85,8 @@ export default function UsersPage() {
   const [counterEditValues, setCounterEditValues] = useState<{ cancellationsWithin24h: number; cancellationsWithin2h: number; noShows: number }>({ cancellationsWithin24h: 0, cancellationsWithin2h: 0, noShows: 0 });
   const [mounted, setMounted] = useState(false);
   const [suspendUserConfirm, setSuspendUserConfirm] = useState<{ userId: string; userName: string } | null>(null);
+  const [deleteUserConfirm, setDeleteUserConfirm] = useState<{ userId: string; userName: string } | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   useEffect(() => { setMounted(true); }, []);
 
@@ -181,6 +183,16 @@ export default function UsersPage() {
       await fetchData();
     }
     setRoleActionLoading(null);
+  };
+
+  const handleDeleteUser = async (userId: string) => {
+    setDeleteLoading(true);
+    const res = await fetch(`/api/admin/users?userId=${userId}`, { method: "DELETE" });
+    if (res.ok) {
+      setDeleteUserConfirm(null);
+      await fetchData();
+    }
+    setDeleteLoading(false);
   };
 
   const handleRoleDecision = async (userId: string, role: string, decision: "approve" | "reject") => {
@@ -607,7 +619,7 @@ export default function UsersPage() {
                         );
                       })()
                     ) : canAdminModify && !isUserSuperAdmin && (
-                      <div style={{ display: "flex", gap: "4px", justifyContent: "flex-end" }}>
+                      <div style={{ display: "flex", gap: "4px", justifyContent: "flex-end", flexWrap: "wrap" }}>
                         {user.status === "ACTIVE" ? (
                           <button
                             onClick={() => setSuspendUserConfirm({ userId: user.id, userName: user.name ?? user.email })}
@@ -619,6 +631,12 @@ export default function UsersPage() {
                             style={{ padding: "5px 10px", fontSize: "0.75rem", background: "#DCFCE7", color: "#15803D", border: "none", borderRadius: "6px", cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}
                           >Activate</button>
                         ) : null}
+                        {isSuperAdmin && (
+                          <button
+                            onClick={() => setDeleteUserConfirm({ userId: user.id, userName: user.name ?? user.email })}
+                            style={{ padding: "5px 10px", fontSize: "0.75rem", background: "#111827", color: "#fff", border: "none", borderRadius: "6px", cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}
+                          >Delete</button>
+                        )}
                       </div>
                     )}
                   </td>
@@ -650,6 +668,33 @@ export default function UsersPage() {
                 }}
                 style={{ padding: "8px 16px", fontSize: "0.875rem", background: "#DC2626", color: "#fff", border: "none", borderRadius: "8px", cursor: "pointer", fontFamily: "'DM Sans', sans-serif", fontWeight: 600 }}
               >Remove &amp; Cancel Shifts</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete user confirmation modal */}
+      {deleteUserConfirm && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.5)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <div style={{ background: "var(--card-bg)", borderRadius: "16px", border: "1.5px solid var(--card-border)", padding: "28px", maxWidth: "420px", width: "90%", boxShadow: "0 20px 60px rgba(0,0,0,.2)" }}>
+            <h3 style={{ fontSize: "1rem", fontWeight: 700, color: "#111827", marginBottom: "10px" }}>Permanently Delete User?</h3>
+            <p style={{ fontSize: "0.875rem", color: "#111827", marginBottom: "8px", lineHeight: 1.5 }}>
+              This will permanently delete <strong>{deleteUserConfirm.userName}</strong> and all their data — volunteer profile, signups, clearance logs, and notification preferences.
+            </p>
+            <p style={{ fontSize: "0.8rem", color: "#DC2626", marginBottom: "20px", fontWeight: 600 }}>
+              This cannot be undone.
+            </p>
+            <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end" }}>
+              <button
+                onClick={() => setDeleteUserConfirm(null)}
+                disabled={deleteLoading}
+                style={{ padding: "8px 16px", fontSize: "0.875rem", background: "var(--card-bg)", border: "1.5px solid var(--card-border)", borderRadius: "8px", cursor: "pointer", fontFamily: "'DM Sans', sans-serif", color: "#111827" }}
+              >Cancel</button>
+              <button
+                onClick={() => void handleDeleteUser(deleteUserConfirm.userId)}
+                disabled={deleteLoading}
+                style={{ padding: "8px 16px", fontSize: "0.875rem", background: "#111827", color: "#fff", border: "none", borderRadius: "8px", cursor: deleteLoading ? "not-allowed" : "pointer", fontFamily: "'DM Sans', sans-serif", fontWeight: 600, opacity: deleteLoading ? 0.6 : 1 }}
+              >{deleteLoading ? "Deleting…" : "Delete permanently"}</button>
             </div>
           </div>
         </div>
