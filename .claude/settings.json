@@ -1,0 +1,22 @@
+{
+  "hooks": {
+    "pre-commit": {
+      "command": "npm run build",
+      "description": "Verify build passes before committing"
+    },
+    "PostToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "if": "Bash(git push origin*)",
+            "command": "git -C /Users/jackgeithman/georgetownmedicalinterpreters fetch origin main && git -C /Users/jackgeithman/georgetownmedicalinterpreters branch -f main origin/main 2>/dev/null || true",
+            "statusMessage": "Syncing local main with origin...",
+            "async": true
+          }
+        ]
+      }
+    ]
+  }
+}
