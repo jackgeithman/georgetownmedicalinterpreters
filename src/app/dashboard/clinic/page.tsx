@@ -159,7 +159,7 @@ function ClinicDashboardInner() {
   const [form, setForm] = useState({ language: "ES", date: "", startTime: 9, endTime: 12, interpreterCount: 1, notes: "", isRecurring: false, recurrenceEndDate: "" });
   const [selectedSlotIds, setSelectedSlotIds] = useState<Set<string>>(new Set());
   const [postError, setPostError] = useState("");
-  const [activeLanguages, setActiveLanguages] = useState<{ code: string; name: string }[]>([]);
+  const [activeLanguages, setActiveLanguages] = useState<{ code: string; name: string; isActive: boolean }[]>([]);
   // Feedback state — inline (no modal), keyed by "${slotId}-${volunteerId}"
   const [feedbackGiven, setFeedbackGiven] = useState<Set<string>>(new Set());
   const [feedbackForms, setFeedbackForms] = useState<Record<string, { rating: number; note: string }>>({});
@@ -199,7 +199,7 @@ function ClinicDashboardInner() {
   }, [session, fetchSlots, isAdminPreview]);
 
   useEffect(() => {
-    fetch("/api/languages").then((r) => r.ok ? r.json() : []).then(setActiveLanguages);
+    fetch("/api/languages?all=true").then((r) => r.ok ? r.json() : []).then(setActiveLanguages);
   }, []);
 
   const saveNotifPrefs = async (updated: ClinicNotifPrefs) => {
@@ -351,7 +351,7 @@ function ClinicDashboardInner() {
           <div style={{ ...card, padding: "24px", marginBottom: "20px" }}>
             <h3 style={{ fontSize: "1.05rem", fontWeight: 700, color: "var(--navy)", marginBottom: "18px" }}>New Slot</h3>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" }}>
-              <div><FieldLabel>Language</FieldLabel><select value={form.language} onChange={(e) => setForm({ ...form, language: e.target.value })} style={{ ...iStyle, cursor: "pointer" }}>{activeLanguages.map((l) => <option key={l.code} value={l.code}>{l.name}</option>)}</select></div>
+              <div><FieldLabel>Language</FieldLabel><select value={form.language} onChange={(e) => setForm({ ...form, language: e.target.value })} style={{ ...iStyle, cursor: "pointer" }}>{activeLanguages.map((l) => <option key={l.code} value={l.code} disabled={!l.isActive}>{l.name}{!l.isActive ? " (currently not supported)" : ""}</option>)}</select></div>
               <div><FieldLabel>Date</FieldLabel><input type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} style={iStyle} /></div>
               <div><FieldLabel>Start Time</FieldLabel><select value={form.startTime} onChange={(e) => setForm({ ...form, startTime: Number(e.target.value) })} style={{ ...iStyle, cursor: "pointer" }}>{HOUR_OPTIONS.map((h) => <option key={h} value={h}>{formatHour(h)}</option>)}</select></div>
               <div><FieldLabel>End Time</FieldLabel><select value={form.endTime} onChange={(e) => setForm({ ...form, endTime: Number(e.target.value) })} style={{ ...iStyle, cursor: "pointer" }}>{HOUR_OPTIONS.map((h) => <option key={h} value={h}>{formatHour(h)}</option>)}</select></div>
@@ -461,7 +461,7 @@ function ClinicDashboardInner() {
                 </div>
               )}
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
-                <div><FieldLabel>Language</FieldLabel><select value={editSlot.language} onChange={(e) => setEditSlot({ ...editSlot, language: e.target.value })} style={{ ...iStyle, cursor: "pointer" }}>{activeLanguages.map((l) => <option key={l.code} value={l.code}>{l.name}</option>)}</select></div>
+                <div><FieldLabel>Language</FieldLabel><select value={editSlot.language} onChange={(e) => setEditSlot({ ...editSlot, language: e.target.value })} style={{ ...iStyle, cursor: "pointer" }}>{activeLanguages.map((l) => <option key={l.code} value={l.code} disabled={!l.isActive}>{l.name}{!l.isActive ? " (currently not supported)" : ""}</option>)}</select></div>
                 <div><FieldLabel>Date</FieldLabel><input type="date" value={editSlot.date.split("T")[0]} onChange={(e) => setEditSlot({ ...editSlot, date: e.target.value })} style={iStyle} /></div>
                 <div><FieldLabel>Start Time</FieldLabel><select value={editSlot.startTime} onChange={(e) => setEditSlot({ ...editSlot, startTime: Number(e.target.value) })} style={{ ...iStyle, cursor: "pointer" }}>{HOUR_OPTIONS.map((h) => <option key={h} value={h}>{formatHour(h)}</option>)}</select></div>
                 <div><FieldLabel>End Time</FieldLabel><select value={editSlot.endTime} onChange={(e) => setEditSlot({ ...editSlot, endTime: Number(e.target.value) })} style={{ ...iStyle, cursor: "pointer" }}>{HOUR_OPTIONS.map((h) => <option key={h} value={h}>{formatHour(h)}</option>)}</select></div>

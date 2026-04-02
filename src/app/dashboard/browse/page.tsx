@@ -141,6 +141,7 @@ export default function BrowsePage() {
   const [cancelCounts, setCancelCounts] = useState<Record<string, number>>({});
   const [spamModal, setSpamModal] = useState<{ onProceed: (() => void) | null; isBlocked: boolean } | null>(null);
   const [removeVolunteerConfirm, setRemoveVolunteerConfirm] = useState<{ signupId: string } | null>(null);
+  const [removeVolunteerError, setRemoveVolunteerError] = useState<string | null>(null);
 
   const role = session?.user?.role;
   const roles = session?.user?.roles ?? [];
@@ -277,9 +278,20 @@ export default function BrowsePage() {
 
   const confirmRemoveVolunteer = async (signupId: string) => {
     setRemoveVolunteerConfirm(null);
+    setRemoveVolunteerError(null);
     setActionLoading(signupId);
     const res = await fetch(`/api/admin/signups/${signupId}`, { method: "DELETE" });
-    if (res.ok) await fetchBrowseData();
+    if (res.ok) {
+      // Optimistically remove signup from local state immediately, then refresh
+      setAdminSlots((prev) => prev.map((slot) => ({
+        ...slot,
+        signups: slot.signups.filter((s) => s.id !== signupId),
+      })));
+      void fetchBrowseData();
+    } else {
+      const data = await res.json().catch(() => ({}));
+      setRemoveVolunteerError((data as { error?: string }).error ?? `Failed to remove volunteer (${res.status}). Please try again.`);
+    }
     setActionLoading(null);
   };
 
@@ -569,7 +581,7 @@ export default function BrowsePage() {
           {adminFixedLangs.map((lang) => (
             <button
               key={lang.code}
-              onClick={() => { setLangFilter(lang.code); setAdminOtherDropdownOpen(false); }}
+              onClick={() => { setLangFilter(langFilter === lang.code && lang.code !== "ALL" ? "ALL" : lang.code); setAdminOtherDropdownOpen(false); }}
               style={{ padding: "9px 14px", borderRadius: "9px", fontSize: "0.875rem", fontWeight: 500, cursor: "pointer", fontFamily: "'DM Sans', sans-serif", border: langFilter === lang.code ? "1.5px solid var(--blue)" : "1.5px solid var(--card-border)", background: langFilter === lang.code ? "var(--blue)" : "var(--card-bg)", color: langFilter === lang.code ? "#fff" : "#111827" }}
             >{lang.label}</button>
           ))}
@@ -1058,12 +1070,19 @@ export default function BrowsePage() {
       {removeVolunteerConfirm && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.35)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 200, padding: "16px" }}>
           <div style={{ background: "var(--card-bg)", border: "1.5px solid var(--card-border)", borderRadius: "18px", boxShadow: "0 8px 32px rgba(0,0,0,.18)", padding: "24px 24px 20px", width: "100%", maxWidth: "380px" }}>
-            <p style={{ fontSize: "0.9rem", fontWeight: 500, color: "var(--gray-900)", lineHeight: 1.5, marginBottom: "20px" }}>Remove this volunteer from the slot?</p>
+            <p style={{ fontSize: "0.9rem", fontWeight: 500, color: "#111827", lineHeight: 1.5, marginBottom: "20px" }}>Remove this volunteer from the slot?</p>
             <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end" }}>
-              <button onClick={() => setRemoveVolunteerConfirm(null)} style={{ background: "none", border: "1.5px solid var(--card-border)", color: "#0F172A", fontFamily: "'DM Sans', sans-serif", fontSize: "0.82rem", fontWeight: 600, padding: "8px 18px", borderRadius: "99px", cursor: "pointer" }}>Cancel</button>
+              <button onClick={() => { setRemoveVolunteerConfirm(null); setRemoveVolunteerError(null); }} style={{ background: "none", border: "1.5px solid var(--card-border)", color: "#0F172A", fontFamily: "'DM Sans', sans-serif", fontSize: "0.82rem", fontWeight: 600, padding: "8px 18px", borderRadius: "99px", cursor: "pointer" }}>Cancel</button>
               <button onClick={() => void confirmRemoveVolunteer(removeVolunteerConfirm.signupId)} style={{ background: "#DC2626", border: "none", color: "#fff", fontFamily: "'DM Sans', sans-serif", fontSize: "0.82rem", fontWeight: 600, padding: "8px 18px", borderRadius: "99px", cursor: "pointer" }}>Remove</button>
             </div>
           </div>
+        </div>
+      )}
+      {/* Remove error toast */}
+      {removeVolunteerError && (
+        <div style={{ position: "fixed", bottom: "24px", left: "50%", transform: "translateX(-50%)", background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: "10px", padding: "12px 20px", zIndex: 300, display: "flex", alignItems: "center", gap: "12px", boxShadow: "0 4px 16px rgba(0,0,0,.12)", maxWidth: "420px" }}>
+          <span style={{ fontSize: "0.875rem", color: "#DC2626", fontFamily: "'DM Sans', sans-serif" }}>{removeVolunteerError}</span>
+          <button onClick={() => setRemoveVolunteerError(null)} style={{ background: "none", border: "none", cursor: "pointer", color: "#DC2626", fontSize: "1rem", lineHeight: 1, padding: 0 }}>×</button>
         </div>
       )}
     </div>
