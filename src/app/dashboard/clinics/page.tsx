@@ -50,6 +50,7 @@ export default function ClinicsPage() {
   const [pinReveal, setPinReveal] = useState<{ clinicName: string; pin: string } | null>(null);
   const [pinVisible, setPinVisible] = useState<Set<string>>(new Set());
   const [pinCopied, setPinCopied] = useState<string | null>(null);
+  const [regenConfirm, setRegenConfirm] = useState<{ clinicId: string; clinicName: string } | null>(null);
 
   const copyPin = (pin: string, key: string) => {
     void navigator.clipboard.writeText(pin).then(() => {
@@ -104,7 +105,13 @@ export default function ClinicsPage() {
   };
 
   const regeneratePin = async (clinicId: string, clinicName: string) => {
-    if (!confirm("Generate a new PIN for this clinic? The old PIN will stop working immediately.")) return;
+    setRegenConfirm({ clinicId, clinicName });
+  };
+
+  const confirmRegenPin = async () => {
+    if (!regenConfirm) return;
+    const { clinicId, clinicName } = regenConfirm;
+    setRegenConfirm(null);
     setActionLoading(`pin-${clinicId}`);
     const res = await fetch(`/api/admin/clinics/${clinicId}`, { method: "PATCH" });
     if (res.ok) {
@@ -230,6 +237,19 @@ export default function ClinicsPage() {
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Regenerate PIN confirm modal */}
+      {regenConfirm && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.35)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center", padding: "16px" }}>
+          <div style={{ background: "var(--card-bg)", border: "1.5px solid var(--card-border)", borderRadius: "18px", boxShadow: "0 8px 32px rgba(0,0,0,.18)", padding: "24px 24px 20px", width: "100%", maxWidth: "380px" }}>
+            <p style={{ fontSize: "0.9rem", fontWeight: 500, color: "#111827", lineHeight: 1.5, marginBottom: "20px" }}>Generate a new PIN for <strong>{regenConfirm.clinicName}</strong>? The old PIN will stop working immediately.</p>
+            <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end" }}>
+              <button onClick={() => setRegenConfirm(null)} style={{ background: "none", border: "1.5px solid var(--card-border)", color: "#0F172A", fontFamily: "'DM Sans', sans-serif", fontSize: "0.82rem", fontWeight: 600, padding: "8px 18px", borderRadius: "99px", cursor: "pointer" }}>Cancel</button>
+              <button onClick={() => void confirmRegenPin()} style={{ background: "var(--blue)", border: "none", color: "#fff", fontFamily: "'DM Sans', sans-serif", fontSize: "0.82rem", fontWeight: 600, padding: "8px 18px", borderRadius: "99px", cursor: "pointer" }}>Regenerate</button>
+            </div>
+          </div>
         </div>
       )}
 
