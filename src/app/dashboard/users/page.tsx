@@ -454,27 +454,20 @@ export default function UsersPage() {
                               <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: chipStyle.dot, flexShrink: 0 }} />
                               {getLangLabel(code)}
                             </span>
-                            {state === "pending" && (
+                            {state === "pending" && (viewerIsAdmin || viewerClearedLangs.has(code)) && (
                               <>
-                                {viewerIsAdmin || viewerClearedLangs.has(code) ? (
-                                  <button onClick={() => handleLangAction(user.id, code, "approve")} disabled={isLoading} title="Approve clearance" style={{ fontSize: "0.68rem", padding: "1px 6px", borderRadius: "4px", border: "none", background: "#BBF7D0", color: "#15803D", cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>Approve</button>
-                                ) : (
-                                  <button disabled title={`You are not cleared for ${getLangLabel(code)}`} style={{ fontSize: "0.68rem", padding: "1px 6px", borderRadius: "4px", border: "none", background: "#E5E7EB", color: "#9CA3AF", cursor: "not-allowed", fontFamily: "'DM Sans', sans-serif", display: "inline-flex", alignItems: "center", gap: "3px" }}>
-                                    <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-                                    Approve
-                                  </button>
-                                )}
+                                <button onClick={() => handleLangAction(user.id, code, "approve")} disabled={isLoading} title="Approve clearance" style={{ fontSize: "0.68rem", padding: "1px 6px", borderRadius: "4px", border: "none", background: "#BBF7D0", color: "#15803D", cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>Approve</button>
                                 <button onClick={() => setLangActionModal({ userId: user.id, langCode: code, action: "deny", note: "" })} disabled={isLoading} title="Deny clearance" style={{ fontSize: "0.68rem", padding: "1px 6px", borderRadius: "4px", border: "none", background: "#FECACA", color: "#DC2626", cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>Deny</button>
                                 <button onClick={() => handleRemoveLanguage(user.id, code)} disabled={roleActionLoading === `removelang-${user.id}-${code}`} title={`Remove ${getLangLabel(code)}`} style={{ background: "none", border: "none", cursor: "pointer", color: "inherit", opacity: 0.55, fontSize: "0.9rem", lineHeight: 1, padding: "0 5px 0 1px", fontFamily: "'DM Sans', sans-serif" }}>×</button>
                               </>
                             )}
-                            {state === "cleared" && canModify && (
+                            {state === "cleared" && canModify && (viewerIsAdmin || viewerClearedLangs.has(code)) && (
                               <button onClick={() => setLangActionModal({ userId: user.id, langCode: code, action: "revoke", note: "" })} disabled={isLoading} title="Revoke clearance" style={{ background: "none", border: "none", cursor: "pointer", color: "inherit", opacity: 0.6, fontSize: "0.9rem", lineHeight: 1, padding: "0 5px 0 1px", fontFamily: "'DM Sans', sans-serif" }}>×</button>
                             )}
-                            {state === "denied" && (
+                            {state === "denied" && (viewerIsAdmin || viewerClearedLangs.has(code)) && (
                               <button onClick={() => setLangActionModal({ userId: user.id, langCode: code, action: "override", note: "" })} disabled={isLoading} title="Override denial" style={{ fontSize: "0.68rem", padding: "1px 6px", borderRadius: "4px", border: "none", background: "#BBF7D0", color: "#15803D", cursor: "pointer", fontFamily: "'DM Sans', sans-serif", marginRight: "3px" }}>Override</button>
                             )}
-                            {state !== "pending" && state !== "cleared" && canModify && (
+                            {state !== "pending" && state !== "cleared" && canModify && (viewerIsAdmin || viewerClearedLangs.has(code)) && (
                               <button onClick={() => handleRemoveLanguage(user.id, code)} disabled={roleActionLoading === `removelang-${user.id}-${code}`} title={`Remove ${getLangLabel(code)}`} style={{ background: "none", border: "none", cursor: "pointer", color: "inherit", opacity: 0.55, fontSize: "0.9rem", lineHeight: 1, padding: "0 5px 0 1px", fontFamily: "'DM Sans', sans-serif" }}>×</button>
                             )}
                           </span>
@@ -713,7 +706,11 @@ export default function UsersPage() {
         if (!targetUser) return null;
         const { langChips } = parseUserRoles(targetUser.roles ?? []);
         const assignedCodes = langChips.map(l => l.code);
-        const availableLangs = languages.filter(l => l.isActive && !assignedCodes.includes(l.code.toUpperCase()));
+        const availableLangs = languages.filter(l =>
+          l.isActive &&
+          !assignedCodes.includes(l.code.toUpperCase()) &&
+          (viewerIsAdmin || viewerClearedLangs.has(l.code.toUpperCase()))
+        );
         if (availableLangs.length === 0) return null;
         return ReactDOM.createPortal(
           <div

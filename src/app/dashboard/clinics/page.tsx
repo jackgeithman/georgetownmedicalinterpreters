@@ -50,6 +50,11 @@ export default function ClinicsPage() {
   const [pinReveal, setPinReveal] = useState<{ clinicName: string; pin: string } | null>(null);
   const [pinVisible, setPinVisible] = useState<Set<string>>(new Set());
   const [pinCopied, setPinCopied] = useState<string | null>(null);
+  const [regenConfirm, setRegenConfirm] = useState<{ clinicId: string; clinicName: string } | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<{ clinicId: string; clinicName: string } | null>(null);
+  const [deleteConfirmText, setDeleteConfirmText] = useState("");
+  const [deleteError, setDeleteError] = useState("");
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   const copyPin = (pin: string, key: string) => {
     void navigator.clipboard.writeText(pin).then(() => {
@@ -90,21 +95,35 @@ export default function ClinicsPage() {
     setActionLoading(null);
   };
 
-  const deleteClinic = async (clinicId: string, clinicName: string) => {
-    if (!confirm(`Delete "${clinicName}"? This cannot be undone.`)) return;
-    setActionLoading(`delete-clinic-${clinicId}`);
-    const res = await fetch(`/api/admin/clinics/${clinicId}`, { method: "DELETE" });
+  const deleteClinic = (clinicId: string, clinicName: string) => {
+    setDeleteConfirm({ clinicId, clinicName });
+    setDeleteConfirmText("");
+    setDeleteError("");
+  };
+
+  const confirmDeleteClinic = async () => {
+    if (!deleteConfirm) return;
+    setDeleteLoading(true);
+    setDeleteError("");
+    const res = await fetch(`/api/admin/clinics/${deleteConfirm.clinicId}`, { method: "DELETE" });
     if (res.ok) {
       await fetchClinics();
+      setDeleteConfirm(null);
     } else {
       const data = await res.json().catch(() => ({}));
-      alert((data as { error?: string }).error ?? "Could not delete clinic.");
+      setDeleteError((data as { error?: string }).error ?? "Could not delete clinic.");
     }
-    setActionLoading(null);
+    setDeleteLoading(false);
   };
 
   const regeneratePin = async (clinicId: string, clinicName: string) => {
-    if (!confirm("Generate a new PIN for this clinic? The old PIN will stop working immediately.")) return;
+    setRegenConfirm({ clinicId, clinicName });
+  };
+
+  const confirmRegenPin = async () => {
+    if (!regenConfirm) return;
+    const { clinicId, clinicName } = regenConfirm;
+    setRegenConfirm(null);
     setActionLoading(`pin-${clinicId}`);
     const res = await fetch(`/api/admin/clinics/${clinicId}`, { method: "PATCH" });
     if (res.ok) {
@@ -233,24 +252,62 @@ export default function ClinicsPage() {
         </div>
       )}
 
+      {/* Delete clinic confirm modal */}
+      {deleteConfirm && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.35)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center", padding: "16px" }}>
+          <div style={{ background: "var(--card-bg)", border: "1.5px solid var(--card-border)", borderRadius: "18px", boxShadow: "0 8px 32px rgba(0,0,0,.18)", padding: "24px 24px 20px", width: "100%", maxWidth: "380px" }}>
+            <p style={{ fontSize: "0.9rem", fontWeight: 500, color: "#111827", lineHeight: 1.5, marginBottom: "16px" }}>Permanently delete <strong>{deleteConfirm.clinicName}</strong>? This cannot be undone.</p>
+            <p style={{ fontSize: "0.8rem", color: "#111827", marginBottom: "8px" }}>Type <strong>{deleteConfirm.clinicName}</strong> to confirm:</p>
+            <input
+              autoFocus
+              value={deleteConfirmText}
+              onChange={(e) => setDeleteConfirmText(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter" && deleteConfirmText === deleteConfirm.clinicName && !deleteLoading) void confirmDeleteClinic(); }}
+              placeholder={deleteConfirm.clinicName}
+              style={{ width: "100%", padding: "9px 12px", fontSize: "0.875rem", border: "1.5px solid var(--card-border)", borderRadius: "9px", background: "#fff", color: "#111827", outline: "none", fontFamily: "'DM Sans', sans-serif", marginBottom: "16px", boxSizing: "border-box" }}
+            />
+            {deleteError && <p style={{ fontSize: "0.8rem", color: "#DC2626", background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: "8px", padding: "8px 12px", marginBottom: "16px" }}>{deleteError}</p>}
+            <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end" }}>
+              <button onClick={() => setDeleteConfirm(null)} style={{ background: "none", border: "1.5px solid var(--card-border)", color: "#0F172A", fontFamily: "'DM Sans', sans-serif", fontSize: "0.82rem", fontWeight: 600, padding: "8px 18px", borderRadius: "99px", cursor: "pointer" }}>Cancel</button>
+              <button disabled={deleteLoading || deleteConfirmText !== deleteConfirm.clinicName} onClick={() => void confirmDeleteClinic()} style={{ background: "#DC2626", border: "none", color: "#fff", fontFamily: "'DM Sans', sans-serif", fontSize: "0.82rem", fontWeight: 600, padding: "8px 18px", borderRadius: "99px", cursor: deleteConfirmText === deleteConfirm.clinicName ? "pointer" : "not-allowed", opacity: (deleteLoading || deleteConfirmText !== deleteConfirm.clinicName) ? 0.4 : 1 }}>{deleteLoading ? "Deleting…" : "Delete"}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Regenerate PIN confirm modal */}
+      {regenConfirm && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.35)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center", padding: "16px" }}>
+          <div style={{ background: "var(--card-bg)", border: "1.5px solid var(--card-border)", borderRadius: "18px", boxShadow: "0 8px 32px rgba(0,0,0,.18)", padding: "24px 24px 20px", width: "100%", maxWidth: "380px" }}>
+            <p style={{ fontSize: "0.9rem", fontWeight: 500, color: "#111827", lineHeight: 1.5, marginBottom: "20px" }}>Generate a new PIN for <strong>{regenConfirm.clinicName}</strong>? The old PIN will stop working immediately.</p>
+            <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end" }}>
+              <button onClick={() => setRegenConfirm(null)} style={{ background: "none", border: "1.5px solid var(--card-border)", color: "#0F172A", fontFamily: "'DM Sans', sans-serif", fontSize: "0.82rem", fontWeight: 600, padding: "8px 18px", borderRadius: "99px", cursor: "pointer" }}>Cancel</button>
+              <button onClick={() => void confirmRegenPin()} style={{ background: "var(--blue)", border: "none", color: "#fff", fontFamily: "'DM Sans', sans-serif", fontSize: "0.82rem", fontWeight: 600, padding: "8px 18px", borderRadius: "99px", cursor: "pointer" }}>Regenerate</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* PIN reveal modal */}
       {pinReveal && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.45)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <div style={{ background: "var(--card-bg)", borderRadius: "16px", border: "1.5px solid var(--card-border)", padding: "28px", maxWidth: "400px", width: "90%", textAlign: "center", boxShadow: "0 20px 60px rgba(0,0,0,.2)" }}>
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.35)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center", padding: "16px" }}>
+          <div style={{ background: "var(--card-bg)", borderRadius: "18px", border: "1.5px solid var(--card-border)", padding: "24px 24px 20px", maxWidth: "380px", width: "100%", textAlign: "center", boxShadow: "0 8px 32px rgba(0,0,0,.18)" }}>
             <h3 style={{ fontSize: "1rem", fontWeight: 700, color: "#111827", marginBottom: "8px" }}>Clinic Created</h3>
             <p style={{ fontSize: "0.875rem", color: "#111827", marginBottom: "16px" }}>Share this login PIN with <strong>{pinReveal.clinicName}</strong>:</p>
             <div
               onClick={() => copyPin(pinReveal.pin, "modal")}
               title="Click to copy"
-              style={{ background: "#F0F7FF", border: "1px solid #BFDBFE", borderRadius: "12px", padding: "16px 24px", marginBottom: "8px", cursor: "pointer" }}
+              style={{ background: "#F0F7FF", border: "1px solid #BFDBFE", borderRadius: "12px", padding: "16px 24px", marginBottom: "20px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "12px" }}
             >
-              <p style={{ fontSize: "2rem", fontWeight: 700, fontFamily: "monospace", letterSpacing: "0.3em", color: "#1D4ED8", marginBottom: "4px" }}>{pinReveal.pin}</p>
-              <p style={{ fontSize: "0.72rem", color: pinCopied === "modal" ? "#16A34A" : "#6B7280" }}>{pinCopied === "modal" ? "Copied!" : "Click to copy"}</p>
+              <p style={{ fontSize: "2rem", fontWeight: 700, fontFamily: "monospace", letterSpacing: "0.3em", color: "#1D4ED8" }}>{pinReveal.pin}</p>
+              {pinCopied === "modal" ? (
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#16A34A" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+              ) : (
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1D4ED8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+              )}
             </div>
-            <p style={{ fontSize: "0.75rem", color: "#111827", marginBottom: "20px" }}>This PIN will not be shown again. Store it securely.</p>
-            <div style={{ display: "flex", gap: "10px", justifyContent: "center" }}>
-              <button onClick={() => copyPin(pinReveal.pin, "modal-btn")} style={{ padding: "9px 24px", fontSize: "0.875rem", background: pinCopied === "modal-btn" ? "#16A34A" : "var(--card-bg)", color: pinCopied === "modal-btn" ? "#fff" : "#111827", border: "1.5px solid var(--card-border)", borderRadius: "99px", cursor: "pointer", fontFamily: "'DM Sans', sans-serif", fontWeight: 600 }}>{pinCopied === "modal-btn" ? "Copied!" : "Copy PIN"}</button>
-              <button onClick={() => setPinReveal(null)} style={{ padding: "9px 24px", fontSize: "0.875rem", background: "var(--blue)", color: "#fff", border: "none", borderRadius: "99px", cursor: "pointer", fontFamily: "'DM Sans', sans-serif", fontWeight: 600 }}>Done</button>
+            <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end" }}>
+              <button onClick={() => setPinReveal(null)} style={{ background: "var(--blue)", border: "none", color: "#fff", fontFamily: "'DM Sans', sans-serif", fontSize: "0.82rem", fontWeight: 600, padding: "8px 18px", borderRadius: "99px", cursor: "pointer" }}>Done</button>
             </div>
           </div>
         </div>
