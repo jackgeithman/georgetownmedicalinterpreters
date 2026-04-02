@@ -5,10 +5,6 @@ import bcrypt from "bcryptjs";
 import { prisma } from "./prisma";
 
 const DEV_EMAIL = process.env.DEV_EMAIL ?? "jackgeithman2005@gmail.com";
-const ALLOWED_EMAILS = (process.env.ALLOWED_EXTRA_EMAILS ?? "")
-  .split(",")
-  .map((e) => e.trim())
-  .filter(Boolean);
 
 // In-memory rate limiter: max 10 PIN attempts per IP per 15 minutes
 const loginAttempts = new Map<string, { count: number; resetAt: number }>();
@@ -31,6 +27,11 @@ export const authOptions: NextAuthOptions = {
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID!,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+      authorization: {
+        params: {
+          hd: "georgetown.edu",
+        },
+      },
     }),
     CredentialsProvider({
       name: "Clinic PIN",
@@ -78,6 +79,19 @@ export const authOptions: NextAuthOptions = {
       if (!user.email) return false;
 
       if (account?.provider === "google") {
+        const emailLower = user.email.toLowerCase();
+        const isGeorgetown = emailLower.endsWith("@georgetown.edu");
+        const isDevEmail = emailLower === DEV_EMAIL.toLowerCase();
+
+        if (!isDevEmail) {
+          // Single DB lookup for any email rule
+          const rule = await prisma.emailRule.findUnique({ where: { email: emailLower } });
+          // BLOCK rule overrides everything
+          if (rule?.type === "BLOCK") return "/login?error=DomainNotAllowed";
+          // Non-Georgetown emails need an explicit ALLOW rule
+          if (!isGeorgetown && rule?.type !== "ALLOW") return "/login?error=DomainNotAllowed";
+        }
+
         const existing = await prisma.user.findUnique({ where: { email: user.email } });
         if (existing?.status === "SUSPENDED") return false;
 
