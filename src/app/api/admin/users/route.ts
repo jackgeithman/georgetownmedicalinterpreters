@@ -518,3 +518,66 @@ export async function PATCH(req: NextRequest) {
 
   return NextResponse.json({ error: "No valid operation specified" }, { status: 400 });
 }
+
+export async function DELETE(req: NextRequest) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.email) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const actor = await prisma.user.findUnique({ where: { email: session.user.email } });
+  if (!actor || !actor.roles?.includes("DEV")) {
+    return NextResponse.json({ error: "Only the developer account can delete users" }, { status: 403 });
+  }
+
+  const { searchParams } = new URL(req.url);
+  const userId = searchParams.get("userId");
+  if (!userId) return NextResponse.json({ error: "userId required" }, { status: 400 });
+  if (userId === actor.id) return NextResponse.json({ error: "You cannot delete your own account" }, { status: 400 });
+
+  const target = await prisma.user.findUnique({
+    where: { id: userId },
+    include: { volunteer: { include: { signups: true, clearanceLogs: true, notifPrefs: true } } },
+  });
+  if (!target) return NextResponse.json({ error: "User not found" }, { status: 404 });
+
+  const targetEmail = target.email;
+  const targetName = target.name ?? target.email;
+
+  await prisma.$transaction(async (tx) => {
+    // Null out references this user created (preserve history without the link)
+    await tx.trainingMaterial.updateMany({ where: { uploadedById: userId }, data: { uploadedById: null } });
+    await tx.clearanceLog.updateMany({ where: { clearedById: userId }, data: { clearedById: null } });
+    await tx.suggestion.updateMany({ where: { submittedById: userId }, data: { submittedById: null } });
+
+    if (target.volunteer) {
+      const vpId = target.volunteer.id;
+      const signupIds = target.volunteer.signups.map((s) => s.id);
+
+      // Delete feedback on this volunteer's signups
+      if (signupIds.length > 0) {
+        await tx.feedback.deleteMany({ where: { signupId: { in: signupIds } } });
+      }
+      await tx.subBlockSignup.deleteMany({ where: { volunteerId: vpId } });
+      await tx.clearanceLog.deleteMany({ where: { volunteerId: vpId } });
+      if (target.volunteer.notifPrefs) {
+        await tx.volunteerNotifPrefs.delete({ where: { volunteerId: vpId } });
+      }
+      await tx.volunteerProfile.delete({ where: { id: vpId } });
+    }
+
+    // Account has onDelete: Cascade, but delete explicitly for clarity
+    await tx.account.deleteMany({ where: { userId } });
+    await tx.user.delete({ where: { id: userId } });
+  });
+
+  await logActivity({
+    actorId: actor.id,
+    actorEmail: actor.email ?? undefined,
+    actorName: actor.name ?? undefined,
+    action: "USER_STATUS_CHANGED",
+    targetType: "User",
+    targetId: userId,
+    detail: `Permanently deleted user ${targetEmail} (${targetName})`,
+  });
+
+  return NextResponse.json({ ok: true });
+}

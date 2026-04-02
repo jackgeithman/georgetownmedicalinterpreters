@@ -152,8 +152,8 @@ model ClearanceLog {
   id           String           @id @default(uuid())
   volunteerId  String
   volunteer    VolunteerProfile @relation(fields: [volunteerId], references: [id])
-  clearedById  String
-  clearedBy    User             @relation("ClearancesGiven", fields: [clearedById], references: [id])
+  clearedById  String?
+  clearedBy    User?            @relation("ClearancesGiven", fields: [clearedById], references: [id])
   isCleared    Boolean
   note         String?
   languageCode String?          // null = general clearance (legacy), set = per-language clearance
@@ -267,8 +267,8 @@ model TrainingMaterial {
   fileName     String?
   languageCode String?
   category     String               @default("General")
-  uploadedById String
-  uploadedBy   User                 @relation("UploadedMaterials", fields: [uploadedById], references: [id])
+  uploadedById String?
+  uploadedBy   User?                @relation("UploadedMaterials", fields: [uploadedById], references: [id])
   createdAt    DateTime             @default(now())
   updatedAt    DateTime             @updatedAt
 }
