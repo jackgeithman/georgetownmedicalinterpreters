@@ -49,6 +49,14 @@ export default function ClinicsPage() {
   const [clinicFormError, setClinicFormError] = useState("");
   const [pinReveal, setPinReveal] = useState<{ clinicName: string; pin: string } | null>(null);
   const [pinVisible, setPinVisible] = useState<Set<string>>(new Set());
+  const [pinCopied, setPinCopied] = useState<string | null>(null);
+
+  const copyPin = (pin: string, key: string) => {
+    void navigator.clipboard.writeText(pin).then(() => {
+      setPinCopied(key);
+      setTimeout(() => setPinCopied((c) => (c === key ? null : c)), 2000);
+    });
+  };
 
   const fetchClinics = useCallback(async () => {
     const res = await fetch("/api/admin/clinics");
@@ -168,7 +176,11 @@ export default function ClinicsPage() {
                   <div style={{ marginTop: "12px", display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: "6px", background: "rgba(0,0,0,.04)", border: "1.5px solid var(--card-border)", borderRadius: "8px", padding: "4px 10px" }}>
                       <span style={{ fontSize: "0.72rem", color: "var(--gray-400)" }}>PIN</span>
-                      <span style={{ fontSize: "0.72rem", fontFamily: "monospace", fontWeight: 700, color: "#111827", letterSpacing: "0.2em" }}>
+                      <span
+                        onClick={() => pinVisible.has(clinic.id) && copyPin(clinic.loginPin, clinic.id)}
+                        title={pinVisible.has(clinic.id) ? "Click to copy" : undefined}
+                        style={{ fontSize: "0.72rem", fontFamily: "monospace", fontWeight: 700, color: "#111827", letterSpacing: "0.2em", cursor: pinVisible.has(clinic.id) ? "pointer" : "default" }}
+                      >
                         {pinVisible.has(clinic.id) ? clinic.loginPin : "••••••••"}
                       </span>
                       <button
@@ -182,6 +194,19 @@ export default function ClinicsPage() {
                           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
                         )}
                       </button>
+                      {pinVisible.has(clinic.id) && (
+                        <button
+                          onClick={() => copyPin(clinic.loginPin, clinic.id)}
+                          title="Copy PIN"
+                          style={{ background: "none", border: "none", cursor: "pointer", color: pinCopied === clinic.id ? "#16A34A" : "var(--gray-400)", lineHeight: 1, padding: "0 2px", display: "flex", alignItems: "center" }}
+                        >
+                          {pinCopied === clinic.id ? (
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                          ) : (
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                          )}
+                        </button>
+                      )}
                     </div>
                     <button
                       disabled={actionLoading === `pin-${clinic.id}`}
@@ -214,11 +239,19 @@ export default function ClinicsPage() {
           <div style={{ background: "var(--card-bg)", borderRadius: "16px", border: "1.5px solid var(--card-border)", padding: "28px", maxWidth: "400px", width: "90%", textAlign: "center", boxShadow: "0 20px 60px rgba(0,0,0,.2)" }}>
             <h3 style={{ fontSize: "1rem", fontWeight: 700, color: "#111827", marginBottom: "8px" }}>Clinic Created</h3>
             <p style={{ fontSize: "0.875rem", color: "#111827", marginBottom: "16px" }}>Share this login PIN with <strong>{pinReveal.clinicName}</strong>:</p>
-            <div style={{ background: "#F0F7FF", border: "1px solid #BFDBFE", borderRadius: "12px", padding: "16px 24px", marginBottom: "20px" }}>
-              <p style={{ fontSize: "2rem", fontWeight: 700, fontFamily: "monospace", letterSpacing: "0.3em", color: "#1D4ED8" }}>{pinReveal.pin}</p>
+            <div
+              onClick={() => copyPin(pinReveal.pin, "modal")}
+              title="Click to copy"
+              style={{ background: "#F0F7FF", border: "1px solid #BFDBFE", borderRadius: "12px", padding: "16px 24px", marginBottom: "8px", cursor: "pointer" }}
+            >
+              <p style={{ fontSize: "2rem", fontWeight: 700, fontFamily: "monospace", letterSpacing: "0.3em", color: "#1D4ED8", marginBottom: "4px" }}>{pinReveal.pin}</p>
+              <p style={{ fontSize: "0.72rem", color: pinCopied === "modal" ? "#16A34A" : "#6B7280" }}>{pinCopied === "modal" ? "Copied!" : "Click to copy"}</p>
             </div>
-            <p style={{ fontSize: "0.75rem", color: "var(--gray-400)", marginBottom: "20px" }}>This PIN will not be shown again. Store it securely.</p>
-            <button onClick={() => setPinReveal(null)} style={{ padding: "9px 24px", fontSize: "0.875rem", background: "var(--blue)", color: "#fff", border: "none", borderRadius: "9px", cursor: "pointer", fontFamily: "'DM Sans', sans-serif", fontWeight: 600 }}>Done</button>
+            <p style={{ fontSize: "0.75rem", color: "#111827", marginBottom: "20px" }}>This PIN will not be shown again. Store it securely.</p>
+            <div style={{ display: "flex", gap: "10px", justifyContent: "center" }}>
+              <button onClick={() => copyPin(pinReveal.pin, "modal-btn")} style={{ padding: "9px 24px", fontSize: "0.875rem", background: pinCopied === "modal-btn" ? "#16A34A" : "var(--card-bg)", color: pinCopied === "modal-btn" ? "#fff" : "#111827", border: "1.5px solid var(--card-border)", borderRadius: "99px", cursor: "pointer", fontFamily: "'DM Sans', sans-serif", fontWeight: 600 }}>{pinCopied === "modal-btn" ? "Copied!" : "Copy PIN"}</button>
+              <button onClick={() => setPinReveal(null)} style={{ padding: "9px 24px", fontSize: "0.875rem", background: "var(--blue)", color: "#fff", border: "none", borderRadius: "99px", cursor: "pointer", fontFamily: "'DM Sans', sans-serif", fontWeight: 600 }}>Done</button>
+            </div>
           </div>
         </div>
       )}
