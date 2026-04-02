@@ -172,12 +172,7 @@ export default function ProfilePage() {
   };
 
   const toggleLanguage = async (lang: string) => {
-    const langName = ALL_WORLD_LANGUAGES.find((l) => l.code === lang)?.name ?? lang;
     const isRemoving = profileForm.languages.includes(lang);
-    const message = isRemoving
-      ? `Remove ${langName} from your languages?`
-      : `You are requesting clearance to volunteer in ${langName}.`;
-    if (!confirm(message)) return;
     const langs = isRemoving
       ? profileForm.languages.filter((l) => l !== lang)
       : [...profileForm.languages, lang];

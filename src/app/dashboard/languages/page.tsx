@@ -188,7 +188,7 @@ export default function LanguagesPage() {
   }
 
   return (
-    <div style={{ maxWidth: "640px", display: "flex", flexDirection: "column", gap: "16px" }}>
+    <div style={{ maxWidth: "640px", margin: "0 auto", display: "flex", flexDirection: "column", gap: "16px" }}>
 
       {/* Add language */}
       <div style={{ background: "var(--card-bg)", borderRadius: "14px", border: "1.5px solid var(--card-border)", padding: "24px" }}>
@@ -254,8 +254,8 @@ export default function LanguagesPage() {
               <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
                 <span style={{ width: "8px", height: "8px", borderRadius: "50%", flexShrink: 0, background: lang.isActive ? "#22c55e" : "var(--gray-200)", display: "inline-block" }} />
                 <div>
-                  <div style={{ fontSize: "0.875rem", fontWeight: 600, color: lang.isActive ? "#111827" : "var(--gray-400)" }}>{lang.name}</div>
-                  <div style={{ fontSize: "0.72rem", color: "var(--gray-400)" }}>{lang.volunteerCount ?? 0} volunteer{(lang.volunteerCount ?? 0) !== 1 ? "s" : ""}</div>
+                  <div style={{ fontSize: "1rem", fontWeight: 600, color: "#111827" }}>{lang.name}</div>
+                  <div style={{ fontSize: "0.8rem", color: "#111827" }}>{lang.volunteerCount ?? 0} volunteer{(lang.volunteerCount ?? 0) !== 1 ? "s" : ""}</div>
                 </div>
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
