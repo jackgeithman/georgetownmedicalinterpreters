@@ -581,7 +581,7 @@ export default function BrowsePage() {
           {adminFixedLangs.map((lang) => (
             <button
               key={lang.code}
-              onClick={() => { setLangFilter(lang.code); setAdminOtherDropdownOpen(false); }}
+              onClick={() => { setLangFilter(langFilter === lang.code && lang.code !== "ALL" ? "ALL" : lang.code); setAdminOtherDropdownOpen(false); }}
               style={{ padding: "9px 14px", borderRadius: "9px", fontSize: "0.875rem", fontWeight: 500, cursor: "pointer", fontFamily: "'DM Sans', sans-serif", border: langFilter === lang.code ? "1.5px solid var(--blue)" : "1.5px solid var(--card-border)", background: langFilter === lang.code ? "var(--blue)" : "var(--card-bg)", color: langFilter === lang.code ? "#fff" : "#111827" }}
             >{lang.label}</button>
           ))}
