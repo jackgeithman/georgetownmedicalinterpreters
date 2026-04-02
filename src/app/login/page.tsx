@@ -99,19 +99,6 @@ function LoginContent() {
           </div>
           Volunteer &amp; Admin Login
         </button>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: "8px" }}>
-          <p style={{ fontSize: "0.78rem", color: "#111827", margin: 0 }}>
-            Use your Georgetown (@georgetown.edu) Google account
-          </p>
-          {/* Dev-only: bypass hd filter to allow non-Georgetown Google accounts */}
-          <button
-            onClick={() => signIn("google", { callbackUrl: "/dashboard" }, { prompt: "select_account", hd: "" })}
-            title="Developer login — sign in with any Google account"
-            style={{ background: "none", border: "none", cursor: "pointer", fontSize: "0.7rem", color: "#9CA3AF", fontFamily: "inherit", padding: 0, textDecoration: "underline" }}
-          >
-            Dev
-          </button>
-        </div>
 
         {/* Separator */}
         <div style={{ height: "1px", background: "var(--card-border)", margin: "20px 0" }} />
@@ -173,6 +160,17 @@ function LoginContent() {
           </button>
         </form>
       </div>
+
+      {/* Dev login — fixed bottom-right, invisible unless hovered */}
+      <button
+        onClick={() => signIn("google", { callbackUrl: "/dashboard" }, { prompt: "select_account", hd: "" })}
+        title="Developer login"
+        style={{ position: "fixed", bottom: "12px", right: "12px", background: "none", border: "none", cursor: "pointer", fontSize: "0.65rem", color: "transparent", fontFamily: "inherit", padding: "8px", userSelect: "none" }}
+        onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "#9CA3AF"; }}
+        onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "transparent"; }}
+      >
+        dev
+      </button>
 
       {/* Footer — outside card */}
       <p style={{ textAlign: "center", marginTop: "20px", fontSize: "0.8rem", color: "#111827", lineHeight: 1.7 }}>
