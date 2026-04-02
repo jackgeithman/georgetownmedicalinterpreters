@@ -5,7 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
 
 const ERROR_MESSAGES: Record<string, string> = {
-  DomainNotAllowed: "Sign-in not allowed. Please contact your coordinator.",
+  DomainNotAllowed: "Only Georgetown (@georgetown.edu) accounts are permitted. If you need access, contact your coordinator.",
   OAuthAccountNotLinked: "An account with this email already exists. Use your original sign-in method.",
   Default: "Something went wrong. Please try again.",
 };
@@ -99,6 +99,9 @@ function LoginContent() {
           </div>
           Volunteer &amp; Admin Login
         </button>
+        <p style={{ textAlign: "center", fontSize: "0.78rem", color: "#111827", marginTop: "8px" }}>
+          Use your Georgetown (@georgetown.edu) Google account
+        </p>
 
         {/* Separator */}
         <div style={{ height: "1px", background: "var(--card-border)", margin: "20px 0" }} />
