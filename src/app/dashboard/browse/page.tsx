@@ -140,6 +140,7 @@ export default function BrowsePage() {
   // Anti-spam cancel tracking
   const [cancelCounts, setCancelCounts] = useState<Record<string, number>>({});
   const [spamModal, setSpamModal] = useState<{ onProceed: (() => void) | null; isBlocked: boolean } | null>(null);
+  const [removeVolunteerConfirm, setRemoveVolunteerConfirm] = useState<{ signupId: string } | null>(null);
 
   const role = session?.user?.role;
   const roles = session?.user?.roles ?? [];
@@ -270,8 +271,12 @@ export default function BrowsePage() {
   };
 
   // Admin: remove volunteer from slot
-  const removeVolunteer = async (signupId: string) => {
-    if (!confirm("Remove this volunteer from the slot?")) return;
+  const removeVolunteer = (signupId: string) => {
+    setRemoveVolunteerConfirm({ signupId });
+  };
+
+  const confirmRemoveVolunteer = async (signupId: string) => {
+    setRemoveVolunteerConfirm(null);
     setActionLoading(signupId);
     const res = await fetch(`/api/admin/signups/${signupId}`, { method: "DELETE" });
     if (res.ok) await fetchBrowseData();
@@ -1045,6 +1050,19 @@ export default function BrowsePage() {
                 </div>
               </>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Remove Volunteer Confirm (A1) */}
+      {removeVolunteerConfirm && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.35)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 200, padding: "16px" }}>
+          <div style={{ background: "var(--card-bg)", border: "1.5px solid var(--card-border)", borderRadius: "18px", boxShadow: "0 8px 32px rgba(0,0,0,.18)", padding: "24px 24px 20px", width: "100%", maxWidth: "380px" }}>
+            <p style={{ fontSize: "0.9rem", fontWeight: 500, color: "var(--gray-900)", lineHeight: 1.5, marginBottom: "20px" }}>Remove this volunteer from the slot?</p>
+            <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end" }}>
+              <button onClick={() => setRemoveVolunteerConfirm(null)} style={{ background: "none", border: "1.5px solid var(--card-border)", color: "#0F172A", fontFamily: "'DM Sans', sans-serif", fontSize: "0.82rem", fontWeight: 600, padding: "8px 18px", borderRadius: "99px", cursor: "pointer" }}>Cancel</button>
+              <button onClick={() => void confirmRemoveVolunteer(removeVolunteerConfirm.signupId)} style={{ background: "#DC2626", border: "none", color: "#fff", fontFamily: "'DM Sans', sans-serif", fontSize: "0.82rem", fontWeight: 600, padding: "8px 18px", borderRadius: "99px", cursor: "pointer" }}>Remove</button>
+            </div>
           </div>
         </div>
       )}

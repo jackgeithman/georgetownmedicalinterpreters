@@ -82,6 +82,7 @@ export default function UsersPage() {
   const [counterEditTarget, setCounterEditTarget] = useState<string | null>(null);
   const [counterEditValues, setCounterEditValues] = useState<{ cancellationsWithin24h: number; cancellationsWithin2h: number; noShows: number }>({ cancellationsWithin24h: 0, cancellationsWithin2h: 0, noShows: 0 });
   const [mounted, setMounted] = useState(false);
+  const [suspendUserConfirm, setSuspendUserConfirm] = useState<{ userId: string; userName: string } | null>(null);
 
   useEffect(() => { setMounted(true); }, []);
 
@@ -571,7 +572,7 @@ export default function UsersPage() {
                       <div style={{ display: "flex", gap: "4px", justifyContent: "flex-end" }}>
                         {user.status === "ACTIVE" ? (
                           <button
-                            onClick={() => updateUser(user.id, { status: "SUSPENDED" })}
+                            onClick={() => setSuspendUserConfirm({ userId: user.id, userName: user.name ?? user.email })}
                             style={{ padding: "5px 10px", fontSize: "0.75rem", background: "#FEF2F2", color: "#DC2626", border: "none", borderRadius: "6px", cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}
                           >Suspend</button>
                         ) : user.status === "SUSPENDED" ? (
@@ -721,6 +722,19 @@ export default function UsersPage() {
           document.body
         );
       })()}
+
+      {/* Suspend User Confirm (A1) */}
+      {suspendUserConfirm && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.35)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 200, padding: "16px" }}>
+          <div style={{ background: "var(--card-bg)", border: "1.5px solid var(--card-border)", borderRadius: "18px", boxShadow: "0 8px 32px rgba(0,0,0,.18)", padding: "24px 24px 20px", width: "100%", maxWidth: "380px" }}>
+            <p style={{ fontSize: "0.9rem", fontWeight: 500, color: "var(--gray-900)", lineHeight: 1.5, marginBottom: "20px" }}>Suspend <strong>{suspendUserConfirm.userName}</strong>? They will no longer be able to sign up for shifts.</p>
+            <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end" }}>
+              <button onClick={() => setSuspendUserConfirm(null)} style={{ background: "none", border: "1.5px solid var(--card-border)", color: "#0F172A", fontFamily: "'DM Sans', sans-serif", fontSize: "0.82rem", fontWeight: 600, padding: "8px 18px", borderRadius: "99px", cursor: "pointer" }}>Cancel</button>
+              <button onClick={() => { updateUser(suspendUserConfirm.userId, { status: "SUSPENDED" }); setSuspendUserConfirm(null); }} style={{ background: "#DC2626", border: "none", color: "#fff", fontFamily: "'DM Sans', sans-serif", fontSize: "0.82rem", fontWeight: 600, padding: "8px 18px", borderRadius: "99px", cursor: "pointer" }}>Suspend</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

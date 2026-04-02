@@ -41,6 +41,9 @@ export default function LanguagesPage() {
   const [adding, setAdding] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
+  // Deactivate simple confirm (A1 modal)
+  const [langDeactivateSimple, setLangDeactivateSimple] = useState<{ id: string; name: string } | null>(null);
+
   // Deactivate conflict modal
   const [langDeactivateConflict, setLangDeactivateConflict] = useState<{
     langId: string;
@@ -106,7 +109,7 @@ export default function LanguagesPage() {
   };
 
   const toggleLanguageActive = async (id: string, newIsActive: boolean, langName: string) => {
-    if (!newIsActive && !confirm(`Deactivate ${langName}? It will no longer be available for new slots.`)) return;
+    if (!newIsActive) { setLangDeactivateSimple({ id, name: langName }); return; }
     try {
       if (!newIsActive) {
         const res = await fetch(`/api/admin/languages/${id}`, {
@@ -247,10 +250,13 @@ export default function LanguagesPage() {
       ) : (
         <div style={{ background: "var(--card-bg)", borderRadius: "14px", border: "1.5px solid var(--card-border)", overflow: "hidden" }}>
           {languages.map((lang, idx) => (
-            <div key={lang.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 20px", gap: "12px", borderBottom: idx < languages.length - 1 ? "1px solid var(--card-border)" : "none" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                <span style={{ fontSize: "0.875rem", color: "#111827", fontWeight: 500 }}>{lang.name}</span>
-                <span style={{ fontSize: "0.75rem", color: "#111827" }}>{lang.volunteerCount ?? 0} volunteer{(lang.volunteerCount ?? 0) !== 1 ? "s" : ""}</span>
+            <div key={lang.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "13px 20px", gap: "12px", borderBottom: idx < languages.length - 1 ? "1px solid var(--card-border)" : "none" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                <span style={{ width: "8px", height: "8px", borderRadius: "50%", flexShrink: 0, background: lang.isActive ? "#22c55e" : "var(--gray-200)", display: "inline-block" }} />
+                <div>
+                  <div style={{ fontSize: "0.875rem", fontWeight: 600, color: lang.isActive ? "#111827" : "var(--gray-400)" }}>{lang.name}</div>
+                  <div style={{ fontSize: "0.72rem", color: "var(--gray-400)" }}>{lang.volunteerCount ?? 0} volunteer{(lang.volunteerCount ?? 0) !== 1 ? "s" : ""}</div>
+                </div>
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
                 {/* iOS-style toggle */}
@@ -320,25 +326,28 @@ export default function LanguagesPage() {
         </div>
       )}
 
-      {/* Delete confirm modal */}
-      {deleteConfirm && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.45)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <div style={{ background: "var(--card-bg)", borderRadius: "16px", border: "1.5px solid var(--card-border)", padding: "28px", maxWidth: "420px", width: "90%", boxShadow: "0 20px 60px rgba(0,0,0,.2)" }}>
-            <h3 style={{ fontSize: "1rem", fontWeight: 700, color: "#111827", marginBottom: "8px" }}>Delete Language?</h3>
-            <p style={{ fontSize: "0.875rem", color: "#111827", marginBottom: "6px" }}>
-              This will permanently remove <strong>{deleteConfirm.name}</strong> from the system.
-            </p>
-            <p style={{ fontSize: "0.8rem", color: "#DC2626", marginBottom: "20px" }}>
-              This cannot be undone. If any slots reference this language, deletion will be blocked.
-            </p>
-            {deleteError && (
-              <p style={{ marginBottom: "16px", fontSize: "0.875rem", color: "#DC2626", background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: "8px", padding: "8px 12px" }}>{deleteError}</p>
-            )}
+      {/* Deactivate simple confirm (A1) */}
+      {langDeactivateSimple && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.35)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 200, padding: "16px" }}>
+          <div style={{ background: "var(--card-bg)", border: "1.5px solid var(--card-border)", borderRadius: "18px", boxShadow: "0 8px 32px rgba(0,0,0,.18)", padding: "24px 24px 20px", width: "100%", maxWidth: "380px" }}>
+            <p style={{ fontSize: "0.9rem", fontWeight: 500, color: "var(--gray-900)", lineHeight: 1.5, marginBottom: "20px" }}>Deactivate <strong>{langDeactivateSimple.name}</strong>? It will no longer be available for new slots.</p>
             <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end" }}>
-              <button onClick={() => setDeleteConfirm(null)} style={{ padding: "8px 18px", fontSize: "0.875rem", background: "var(--card-bg)", color: "#111827", border: "1.5px solid var(--card-border)", borderRadius: "9px", cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>Cancel</button>
-              <button disabled={deleteLoading} onClick={() => void deleteLanguage()} style={{ padding: "8px 18px", fontSize: "0.875rem", background: "#DC2626", color: "#fff", border: "none", borderRadius: "9px", cursor: "pointer", fontFamily: "'DM Sans', sans-serif", fontWeight: 600, opacity: deleteLoading ? 0.5 : 1 }}>
-                {deleteLoading ? "Deleting…" : "Delete Permanently"}
-              </button>
+              <button onClick={() => setLangDeactivateSimple(null)} style={{ background: "none", border: "1.5px solid var(--card-border)", color: "#0F172A", fontFamily: "'DM Sans', sans-serif", fontSize: "0.82rem", fontWeight: 600, padding: "8px 18px", borderRadius: "99px", cursor: "pointer" }}>Cancel</button>
+              <button onClick={() => { const { id, name } = langDeactivateSimple; setLangDeactivateSimple(null); void toggleLanguageActive(id, false, name); }} style={{ background: "#DC2626", border: "none", color: "#fff", fontFamily: "'DM Sans', sans-serif", fontSize: "0.82rem", fontWeight: 600, padding: "8px 18px", borderRadius: "99px", cursor: "pointer" }}>Deactivate</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete confirm modal (A1) */}
+      {deleteConfirm && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.35)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center", padding: "16px" }}>
+          <div style={{ background: "var(--card-bg)", border: "1.5px solid var(--card-border)", borderRadius: "18px", boxShadow: "0 8px 32px rgba(0,0,0,.18)", padding: "24px 24px 20px", width: "100%", maxWidth: "380px" }}>
+            <p style={{ fontSize: "0.9rem", fontWeight: 500, color: "var(--gray-900)", lineHeight: 1.5, marginBottom: deleteError ? "12px" : "20px" }}>Permanently delete <strong>{deleteConfirm.name}</strong>? This cannot be undone.</p>
+            {deleteError && <p style={{ fontSize: "0.8rem", color: "#DC2626", background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: "8px", padding: "8px 12px", marginBottom: "16px" }}>{deleteError}</p>}
+            <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end" }}>
+              <button onClick={() => setDeleteConfirm(null)} style={{ background: "none", border: "1.5px solid var(--card-border)", color: "#0F172A", fontFamily: "'DM Sans', sans-serif", fontSize: "0.82rem", fontWeight: 600, padding: "8px 18px", borderRadius: "99px", cursor: "pointer" }}>Cancel</button>
+              <button disabled={deleteLoading} onClick={() => void deleteLanguage()} style={{ background: "#DC2626", border: "none", color: "#fff", fontFamily: "'DM Sans', sans-serif", fontSize: "0.82rem", fontWeight: 600, padding: "8px 18px", borderRadius: "99px", cursor: "pointer", opacity: deleteLoading ? 0.5 : 1 }}>{deleteLoading ? "Deleting…" : "Delete"}</button>
             </div>
           </div>
         </div>
