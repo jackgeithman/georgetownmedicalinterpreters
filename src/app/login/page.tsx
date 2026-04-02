@@ -99,9 +99,19 @@ function LoginContent() {
           </div>
           Volunteer &amp; Admin Login
         </button>
-        <p style={{ textAlign: "center", fontSize: "0.78rem", color: "#111827", marginTop: "8px" }}>
-          Use your Georgetown (@georgetown.edu) Google account
-        </p>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: "8px" }}>
+          <p style={{ fontSize: "0.78rem", color: "#111827", margin: 0 }}>
+            Use your Georgetown (@georgetown.edu) Google account
+          </p>
+          {/* Dev-only: bypass hd filter to allow non-Georgetown Google accounts */}
+          <button
+            onClick={() => signIn("google", { callbackUrl: "/dashboard" }, { prompt: "select_account", hd: "" })}
+            title="Developer login — sign in with any Google account"
+            style={{ background: "none", border: "none", cursor: "pointer", fontSize: "0.7rem", color: "#9CA3AF", fontFamily: "inherit", padding: 0, textDecoration: "underline" }}
+          >
+            Dev
+          </button>
+        </div>
 
         {/* Separator */}
         <div style={{ height: "1px", background: "var(--card-border)", margin: "20px 0" }} />
