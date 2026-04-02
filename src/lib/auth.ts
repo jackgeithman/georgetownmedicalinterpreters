@@ -153,6 +153,7 @@ export const authOptions: NextAuthOptions = {
         session.user.id = token.id as string;
         session.user.status = "ACTIVE";
         session.user.name = token.name as string;
+        session.user.onboardingComplete = true;
       } else if (session.user?.email) {
         const dbUser = await prisma.user.findUnique({
           where: { email: session.user.email },
@@ -164,6 +165,7 @@ export const authOptions: NextAuthOptions = {
           session.user.status = dbUser.status;
           session.user.id = dbUser.id;
           session.user.clinicId = dbUser.clinicId;
+          session.user.onboardingComplete = dbUser.onboardingComplete;
         } else {
           console.warn(`[AUTH] User not found in database: ${session.user.email}`);
         }
