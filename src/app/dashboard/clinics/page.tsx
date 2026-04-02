@@ -51,6 +51,10 @@ export default function ClinicsPage() {
   const [pinVisible, setPinVisible] = useState<Set<string>>(new Set());
   const [pinCopied, setPinCopied] = useState<string | null>(null);
   const [regenConfirm, setRegenConfirm] = useState<{ clinicId: string; clinicName: string } | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<{ clinicId: string; clinicName: string } | null>(null);
+  const [deleteConfirmText, setDeleteConfirmText] = useState("");
+  const [deleteError, setDeleteError] = useState("");
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   const copyPin = (pin: string, key: string) => {
     void navigator.clipboard.writeText(pin).then(() => {
@@ -91,17 +95,25 @@ export default function ClinicsPage() {
     setActionLoading(null);
   };
 
-  const deleteClinic = async (clinicId: string, clinicName: string) => {
-    if (!confirm(`Delete "${clinicName}"? This cannot be undone.`)) return;
-    setActionLoading(`delete-clinic-${clinicId}`);
-    const res = await fetch(`/api/admin/clinics/${clinicId}`, { method: "DELETE" });
+  const deleteClinic = (clinicId: string, clinicName: string) => {
+    setDeleteConfirm({ clinicId, clinicName });
+    setDeleteConfirmText("");
+    setDeleteError("");
+  };
+
+  const confirmDeleteClinic = async () => {
+    if (!deleteConfirm) return;
+    setDeleteLoading(true);
+    setDeleteError("");
+    const res = await fetch(`/api/admin/clinics/${deleteConfirm.clinicId}`, { method: "DELETE" });
     if (res.ok) {
       await fetchClinics();
+      setDeleteConfirm(null);
     } else {
       const data = await res.json().catch(() => ({}));
-      alert((data as { error?: string }).error ?? "Could not delete clinic.");
+      setDeleteError((data as { error?: string }).error ?? "Could not delete clinic.");
     }
-    setActionLoading(null);
+    setDeleteLoading(false);
   };
 
   const regeneratePin = async (clinicId: string, clinicName: string) => {
@@ -237,6 +249,29 @@ export default function ClinicsPage() {
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Delete clinic confirm modal */}
+      {deleteConfirm && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.35)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center", padding: "16px" }}>
+          <div style={{ background: "var(--card-bg)", border: "1.5px solid var(--card-border)", borderRadius: "18px", boxShadow: "0 8px 32px rgba(0,0,0,.18)", padding: "24px 24px 20px", width: "100%", maxWidth: "380px" }}>
+            <p style={{ fontSize: "0.9rem", fontWeight: 500, color: "#111827", lineHeight: 1.5, marginBottom: "16px" }}>Permanently delete <strong>{deleteConfirm.clinicName}</strong>? This cannot be undone.</p>
+            <p style={{ fontSize: "0.8rem", color: "#111827", marginBottom: "8px" }}>Type <strong>{deleteConfirm.clinicName}</strong> to confirm:</p>
+            <input
+              autoFocus
+              value={deleteConfirmText}
+              onChange={(e) => setDeleteConfirmText(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter" && deleteConfirmText === deleteConfirm.clinicName && !deleteLoading) void confirmDeleteClinic(); }}
+              placeholder={deleteConfirm.clinicName}
+              style={{ width: "100%", padding: "9px 12px", fontSize: "0.875rem", border: "1.5px solid var(--card-border)", borderRadius: "9px", background: "#fff", color: "#111827", outline: "none", fontFamily: "'DM Sans', sans-serif", marginBottom: "16px", boxSizing: "border-box" }}
+            />
+            {deleteError && <p style={{ fontSize: "0.8rem", color: "#DC2626", background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: "8px", padding: "8px 12px", marginBottom: "16px" }}>{deleteError}</p>}
+            <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end" }}>
+              <button onClick={() => setDeleteConfirm(null)} style={{ background: "none", border: "1.5px solid var(--card-border)", color: "#0F172A", fontFamily: "'DM Sans', sans-serif", fontSize: "0.82rem", fontWeight: 600, padding: "8px 18px", borderRadius: "99px", cursor: "pointer" }}>Cancel</button>
+              <button disabled={deleteLoading || deleteConfirmText !== deleteConfirm.clinicName} onClick={() => void confirmDeleteClinic()} style={{ background: "#DC2626", border: "none", color: "#fff", fontFamily: "'DM Sans', sans-serif", fontSize: "0.82rem", fontWeight: 600, padding: "8px 18px", borderRadius: "99px", cursor: deleteConfirmText === deleteConfirm.clinicName ? "pointer" : "not-allowed", opacity: (deleteLoading || deleteConfirmText !== deleteConfirm.clinicName) ? 0.4 : 1 }}>{deleteLoading ? "Deleting…" : "Delete"}</button>
+            </div>
+          </div>
         </div>
       )}
 
