@@ -150,8 +150,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </div>
       )}
 
-      {/* Tab ribbon */}
-      <div style={{ background: "var(--card-bg)", borderBottom: "1.5px solid var(--card-border)", padding: "0 32px" }}>
+      {/* Tab ribbon — hidden for clinic sessions */}
+      {role !== "CLINIC" && <div style={{ background: "var(--card-bg)", borderBottom: "1.5px solid var(--card-border)", padding: "0 32px" }}>
         <div style={{ display: "flex", gap: "2px", maxWidth: "1100px", margin: "0 auto", overflowX: "auto" }}>
           {allTabs.map((tab) => {
             const isActive = pathname === tab.path || pathname?.startsWith(tab.path + "/");
@@ -177,7 +177,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             );
           })}
         </div>
-      </div>
+      </div>}
 
       {/* Page content */}
       <div style={{ maxWidth: "1100px", margin: "0 auto", padding: "36px 32px" }}>
