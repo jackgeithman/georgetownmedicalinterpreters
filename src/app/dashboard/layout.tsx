@@ -87,8 +87,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   return (
     <div style={{ minHeight: "100vh", background: "var(--page-bg)", fontFamily: "'DM Sans', system-ui, sans-serif", color: "var(--gray-900)" }}>
-      {/* Header */}
-      <header style={{ background: "var(--navy)", height: "64px", position: "sticky", top: 0, zIndex: 100, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 32px" }}>
+      {/* Header — hidden for clinic sessions which render their own */}
+      {role !== "CLINIC" && <header style={{ background: "var(--navy)", height: "64px", position: "sticky", top: 0, zIndex: 100, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 32px" }}>
         <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/logo.svg" alt="GMI" style={{ width: "36px", height: "36px", borderRadius: "9px", flexShrink: 0 }} />
@@ -124,7 +124,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             Sign Out
           </button>
         </div>
-      </header>
+      </header>}
 
       {/* Clearance ribbon */}
       {showClearanceRibbon && (
