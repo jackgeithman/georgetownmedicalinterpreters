@@ -62,8 +62,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           if (!r.ok) { console.warn("[GMI] /api/admin/users returned", r.status); return []; }
           return r.json();
         })
-        .then((data: { status: string }[]) => {
-          const count = Array.isArray(data) ? data.filter((u) => u.status === "PENDING_APPROVAL").length : 0;
+        .then((data: { status: string; roles: string[] }[]) => {
+          const count = Array.isArray(data) ? data.filter((u) =>
+            u.status === "PENDING_APPROVAL" ||
+            (u.roles ?? []).some((r) => r.startsWith("LANG_") && !r.endsWith("_CLEARED") && !r.endsWith("_DENIED"))
+          ).length : 0;
           setPendingCount(count);
         })
         .catch((e) => console.error("[GMI] users fetch error:", e));
