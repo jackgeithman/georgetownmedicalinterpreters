@@ -280,19 +280,24 @@ export default function BrowsePage() {
     setRemoveVolunteerConfirm(null);
     setRemoveVolunteerError(null);
     setActionLoading(signupId);
-    const res = await fetch(`/api/admin/signups/${signupId}`, { method: "DELETE" });
-    if (res.ok) {
-      // Optimistically remove signup from local state immediately, then refresh
-      setAdminSlots((prev) => prev.map((slot) => ({
-        ...slot,
-        signups: slot.signups.filter((s) => s.id !== signupId),
-      })));
-      void fetchBrowseData();
-    } else {
-      const data = await res.json().catch(() => ({}));
-      setRemoveVolunteerError((data as { error?: string }).error ?? `Failed to remove volunteer (${res.status}). Please try again.`);
+    try {
+      const res = await fetch(`/api/admin/signups/${signupId}`, { method: "DELETE" });
+      if (res.ok) {
+        // Optimistically remove signup from local state immediately, then refresh
+        setAdminSlots((prev) => prev.map((slot) => ({
+          ...slot,
+          signups: slot.signups.filter((s) => s.id !== signupId),
+        })));
+        void fetchBrowseData();
+      } else {
+        const data = await res.json().catch(() => ({}));
+        setRemoveVolunteerError((data as { error?: string }).error ?? `Failed to remove volunteer (${res.status}). Please try again.`);
+      }
+    } catch {
+      setRemoveVolunteerError("Network error — please check your connection and try again.");
+    } finally {
+      setActionLoading(null);
     }
-    setActionLoading(null);
   };
 
   // Admin: assign volunteer
