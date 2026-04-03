@@ -229,8 +229,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
       {/* Tab ribbon — hidden for clinic sessions */}
       {role !== "CLINIC" && <div style={{ background: "var(--card-bg)", borderBottom: "1.5px solid var(--card-border)", padding: "0 32px" }}>
-        <div ref={folderRef} style={{ display: "flex", gap: "2px", maxWidth: "1100px", margin: "0 auto", overflowX: (isAdmin || isDev || isInstructor) ? "visible" : "auto", alignItems: "stretch" }}>
-          {(isAdmin || isDev || isInstructor) ? (
+        <div ref={folderRef} style={{ display: "flex", gap: "2px", maxWidth: "1100px", margin: "0 auto", overflowX: (isAdmin || isDev) ? "visible" : "auto", alignItems: "stretch" }}>
+          {(isAdmin || isDev) ? (
             <>
               {/* Folder tabs only — Browse Slots and All Users live inside folders */}
               {adminFolders.map((folder) => {
@@ -292,7 +292,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             </>
           ) : (
             // Flat ribbon for volunteers / instructors
-            volunteerTabs.map((tab) => (
+            [...volunteerTabs, ...(isInstructor ? [{ path: "/dashboard/users", label: "All Users" }] : [])].map((tab) => (
               <Link key={tab.path} href={tab.path} style={tabStyle(tab.path)}>{tab.label}</Link>
             ))
           )}
