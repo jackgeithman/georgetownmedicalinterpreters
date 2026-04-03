@@ -179,10 +179,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </div>
       </div>}
 
-      {/* Page content */}
-      <div style={{ maxWidth: "1100px", margin: "0 auto", padding: "36px 32px" }}>
-        {children}
-      </div>
+      {/* Page content — clinic manages its own layout */}
+      {role === "CLINIC" ? children : (
+        <div style={{ maxWidth: "1100px", margin: "0 auto", padding: "36px 32px" }}>
+          {children}
+        </div>
+      )}
     </div>
   );
 }

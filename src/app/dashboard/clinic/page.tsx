@@ -35,7 +35,6 @@ type CancelConfirm = { slotId: string; isRecurring: boolean };
 type ClinicNotifPrefs = {
   dailySummary: boolean;
   volunteerCancelWindow: number | null;
-  unfilledAlert24h: boolean;
 };
 
 
@@ -154,7 +153,7 @@ function ClinicDashboardInner() {
   const [editScope, setEditScope] = useState<"single" | "this_and_future">("single");
   const [cancelConfirm, setCancelConfirm] = useState<CancelConfirm | null>(null);
   const [editWarning, setEditWarning] = useState<{ cancelCount: number } | null>(null);
-  const [notifPrefs, setNotifPrefs] = useState<ClinicNotifPrefs>({ dailySummary: true, volunteerCancelWindow: null, unfilledAlert24h: true });
+  const [notifPrefs, setNotifPrefs] = useState<ClinicNotifPrefs>({ dailySummary: true, volunteerCancelWindow: null });
   const [notifSaved, setNotifSaved] = useState(false);
   const [form, setForm] = useState({ language: "ES", date: "", startTime: 9, endTime: 12, interpreterCount: 1, notes: "", isRecurring: false, recurrenceEndDate: "" });
   const [selectedSlotIds, setSelectedSlotIds] = useState<Set<string>>(new Set());
@@ -421,10 +420,6 @@ function ClinicDashboardInner() {
                 <label style={{ display: "flex", alignItems: "flex-start", gap: "12px", marginBottom: "18px", cursor: "pointer" }}>
                   <Toggle on={notifPrefs.dailySummary} onToggle={() => saveNotifPrefs({ ...notifPrefs, dailySummary: !notifPrefs.dailySummary })} />
                   <div><p style={{ fontSize: "0.9rem", fontWeight: 500, color: "var(--gray-900)" }}>Daily summary email</p><p style={{ fontSize: "0.8rem", color: "#111827", marginTop: "2px" }}>Sent each morning with all your upcoming slots and their current roster</p></div>
-                </label>
-                <label style={{ display: "flex", alignItems: "flex-start", gap: "12px", marginBottom: "22px", cursor: "pointer" }}>
-                  <Toggle on={notifPrefs.unfilledAlert24h} onToggle={() => saveNotifPrefs({ ...notifPrefs, unfilledAlert24h: !notifPrefs.unfilledAlert24h })} />
-                  <div><p style={{ fontSize: "0.9rem", fontWeight: 500, color: "var(--gray-900)" }}>Unfilled slot alert (24 hrs before)</p><p style={{ fontSize: "0.8rem", color: "#111827", marginTop: "2px" }}>Email if any sub-block is still open within 24 hours</p></div>
                 </label>
                 <div style={{ paddingTop: "18px", borderTop: "1px solid var(--card-border)" }}>
                   <p style={{ fontSize: "0.9rem", fontWeight: 500, color: "var(--gray-900)", marginBottom: "4px" }}>Volunteer cancellation alert</p>

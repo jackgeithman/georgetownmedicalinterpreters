@@ -956,7 +956,7 @@ export default function BrowsePage() {
               ) : (() => {
                 const myRoles = session?.user?.roles ?? [];
                 const langCode = slot.language;
-                if (myRoles.includes(`LANG_${langCode}_DENIED`) || (myRoles.includes(`LANG_${langCode}`) && !myRoles.includes(`LANG_${langCode}_CLEARED`))) {
+                if (!myRoles.includes(`LANG_${langCode}_CLEARED`)) {
                   return <button disabled style={{ background: "#fff", color: "#9CA3AF", border: "1.5px solid #D1D5DB", borderRadius: "8px", padding: "8px 20px", fontFamily: "'DM Sans', sans-serif", fontSize: "0.875rem", fontWeight: 600, cursor: "not-allowed", whiteSpace: "nowrap" }}>Not Cleared</button>;
                 }
                 return (
