@@ -1,6 +1,6 @@
 "use client";
 
-import { useSession, signOut } from "next-auth/react";
+import { useSession, signOut, getSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { LANGUAGE_MAP } from "@/lib/languages";
@@ -107,6 +107,8 @@ export default function OnboardingPage() {
         setSubmitting(false);
         return;
       }
+      // Force a fresh session fetch so /pending sees onboardingComplete: true
+      await getSession();
       router.push("/pending");
     } catch {
       setError("Network error. Please try again.");
