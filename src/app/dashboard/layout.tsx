@@ -2,6 +2,7 @@
 
 import { useSession, signOut } from "next-auth/react";
 import { useRouter, usePathname } from "next/navigation";
+import { useRef } from "react";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 
@@ -11,12 +12,28 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const pathname = usePathname();
   const [showClearanceRibbon, setShowClearanceRibbon] = useState(false);
   const [ribbonEventIds, setRibbonEventIds] = useState<string[]>([]);
+  const redirected = useRef(false);
 
   useEffect(() => {
+    if (redirected.current) return;
     if (status === "unauthenticated") {
+      redirected.current = true;
       router.push("/login");
+      return;
     }
-  }, [status, router]);
+    if (status === "authenticated" && session) {
+      if (!session.user.onboardingComplete) {
+        redirected.current = true;
+        router.push("/onboarding");
+        return;
+      }
+      if (session.user.status === "PENDING_APPROVAL") {
+        redirected.current = true;
+        router.push("/pending");
+        return;
+      }
+    }
+  }, [status, session, router]);
 
   // Load clearance ribbon for volunteers
   useEffect(() => {
@@ -51,29 +68,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const isDev = roles.includes("DEV");
   const isAdmin = role === "ADMIN";
   const isInstructor = role === "INSTRUCTOR";
-
-  // Show "awaiting role" screen if no meaningful role
-  const hasRole = role === "VOLUNTEER" || role === "ADMIN" || role === "INSTRUCTOR" || role === "CLINIC" || isDev;
-
-  if (status === "authenticated" && !hasRole) {
-    return (
-      <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--page-bg)", fontFamily: "'DM Sans', sans-serif" }}>
-        <div style={{ background: "var(--card-bg)", border: "1.5px solid var(--card-border)", borderRadius: "16px", padding: "40px", maxWidth: "420px", width: "90%", textAlign: "center" }}>
-          <div style={{ width: "52px", height: "52px", background: "#FFFBEB", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px", fontSize: "1.5rem" }}>⏳</div>
-          <h2 style={{ fontSize: "1.1rem", fontWeight: 700, color: "#111827", marginBottom: "8px" }}>Awaiting Role</h2>
-          <p style={{ fontSize: "0.875rem", color: "#111827", marginBottom: "24px", lineHeight: 1.5 }}>
-            Your account is pending role assignment. An admin will review and assign your role shortly.
-          </p>
-          <button
-            onClick={() => void signOut({ callbackUrl: "/login" })}
-            style={{ fontSize: "0.875rem", color: "#111827", background: "none", border: "none", cursor: "pointer", textDecoration: "underline", fontFamily: "'DM Sans', sans-serif" }}
-          >
-            Sign Out
-          </button>
-        </div>
-      </div>
-    );
-  }
 
   // Define tabs
   const allTabs = [
