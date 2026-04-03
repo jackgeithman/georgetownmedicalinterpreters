@@ -41,6 +41,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   // Load clearance ribbon for volunteers
   useEffect(() => {
     const role = session?.user?.role;
+    console.log("[GMI] badge effect fired | role:", role, "| session:", !!session, "| pathname:", pathname);
     if (role === "VOLUNTEER" || role === "ADMIN" || role === "INSTRUCTOR") {
       fetch("/api/volunteer/lang-clearance-events")
         .then((r) => r.json())
