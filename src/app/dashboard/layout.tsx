@@ -292,7 +292,17 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             </>
           ) : (
             // Flat ribbon for volunteers / instructors
-            [...volunteerTabs, ...(isInstructor ? [{ path: "/dashboard/users", label: "All Users" }] : [])].map((tab) => (
+            (isInstructor
+              ? [
+                  { path: "/dashboard/browse", label: "Browse Slots" },
+                  { path: "/dashboard/signups", label: "My Signups" },
+                  { path: "/dashboard/profile", label: "Profile" },
+                  { path: "/dashboard/users", label: "All Users" },
+                  { path: "/dashboard/training", label: "Training" },
+                  { path: "/dashboard/messages", label: "Messages" },
+                ]
+              : volunteerTabs
+            ).map((tab) => (
               <Link key={tab.path} href={tab.path} style={tabStyle(tab.path)}>{tab.label}</Link>
             ))
           )}
