@@ -41,7 +41,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   // Load clearance ribbon for volunteers
   useEffect(() => {
     const role = session?.user?.role;
-    console.log("[GMI] badge effect fired | role:", role, "| session:", !!session, "| pathname:", pathname);
     if (role === "VOLUNTEER" || role === "ADMIN" || role === "INSTRUCTOR") {
       fetch("/api/volunteer/lang-clearance-events")
         .then((r) => r.json())
@@ -65,7 +64,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         })
         .then((data: { status: string }[]) => {
           const count = Array.isArray(data) ? data.filter((u) => u.status === "PENDING_APPROVAL").length : 0;
-          console.log("[GMI] pendingCount:", count, "| role:", role, "| total users:", Array.isArray(data) ? data.length : "n/a");
           setPendingCount(count);
         })
         .catch((e) => console.error("[GMI] users fetch error:", e));
@@ -78,7 +76,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         })
         .then((data: { status: string }[]) => {
           const count = Array.isArray(data) ? data.filter((s) => s.status === "OPEN").length : 0;
-          console.log("[GMI] unreadMessages:", count, "| total suggestions:", Array.isArray(data) ? data.length : "n/a");
           setUnreadMessages(count);
         })
         .catch((e) => console.error("[GMI] suggestions fetch error:", e));
