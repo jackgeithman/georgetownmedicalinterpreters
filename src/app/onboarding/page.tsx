@@ -1,6 +1,6 @@
 "use client";
 
-import { useSession } from "next-auth/react";
+import { useSession, signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { LANGUAGE_MAP } from "@/lib/languages";
@@ -49,10 +49,16 @@ export default function OnboardingPage() {
       router.push("/login");
       return;
     }
-    if (status === "authenticated" && session.user.onboardingComplete) {
-      // Already done — send to appropriate place
-      if (session.user.status === "PENDING_APPROVAL") router.push("/pending");
-      else router.push("/dashboard");
+    if (status === "authenticated") {
+      if (session.user.status === "DELETED") {
+        void signOut({ callbackUrl: "/login" });
+        return;
+      }
+      if (session.user.onboardingComplete) {
+        // Already submitted — send to appropriate place
+        if (session.user.status === "PENDING_APPROVAL") router.push("/pending");
+        else router.push("/dashboard");
+      }
     }
   }, [status, session, router]);
 

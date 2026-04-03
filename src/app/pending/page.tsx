@@ -21,6 +21,10 @@ export default function PendingPage() {
       return;
     }
     if (status === "authenticated") {
+      if (session.user.status === "DELETED") {
+        void signOut({ callbackUrl: "/login" });
+        return;
+      }
       if (!session.user.onboardingComplete) {
         router.push("/onboarding");
         return;

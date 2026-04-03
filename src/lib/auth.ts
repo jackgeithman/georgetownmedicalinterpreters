@@ -145,6 +145,11 @@ export const authOptions: NextAuthOptions = {
         token.id = user.id;
         token.name = user.name;
       }
+      // On initial sign-in, fetch onboardingComplete so the JWT is never stale
+      if (account && user?.email && account.provider === "google") {
+        const dbUser = await prisma.user.findUnique({ where: { email: user.email }, select: { onboardingComplete: true } });
+        token.onboardingComplete = dbUser?.onboardingComplete ?? false;
+      }
       return token;
     },
 
