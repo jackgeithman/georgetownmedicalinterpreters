@@ -190,17 +190,7 @@ export default function BrowsePage() {
     }
   }, [role, fetchBrowseData]);
 
-  const fetchBrowseFilter = useCallback(async () => {
-    if (!isAdminView) {
-      const params = langFilter !== "ALL" ? `?language=${langFilter}` : "";
-      const res = await fetch(`/api/volunteer/slots${params}`);
-      if (res.ok) setBrowseSlots(await res.json());
-    }
-  }, [langFilter, isAdminView]);
-
-  useEffect(() => {
-    if (profile) fetchBrowseFilter();
-  }, [langFilter, fetchBrowseFilter, profile]);
+  // No server-side language filtering — always fetch all slots so button counts stay accurate across filters
 
   // Close "Other languages" dropdowns when clicking outside
   useEffect(() => {
@@ -842,7 +832,7 @@ export default function BrowsePage() {
     return true;
   });
 
-  const upcoming = filtered.filter((s) => slotEnd(s) > now);
+  const upcoming = filtered.filter((s) => slotEnd(s) > now && (langFilter === "ALL" || s.language === langFilter));
 
   // Compute fill stats respecting all active filters except language (so button counts stay accurate)
   const langStats: Record<string, { filled: number; total: number }> = {};
