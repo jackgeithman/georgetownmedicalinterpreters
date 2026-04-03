@@ -12,6 +12,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const pathname = usePathname();
   const [showClearanceRibbon, setShowClearanceRibbon] = useState(false);
   const [ribbonEventIds, setRibbonEventIds] = useState<string[]>([]);
+  const [pendingCount, setPendingCount] = useState(0);
   const redirected = useRef(false);
 
   useEffect(() => {
@@ -51,6 +52,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             }
           }
         })
+        .catch(() => {});
+    }
+    if (role === "ADMIN" || role === "INSTRUCTOR") {
+      fetch("/api/admin/users")
+        .then((r) => r.ok ? r.json() : [])
+        .then((data: { status: string }[]) => setPendingCount(Array.isArray(data) ? data.filter((u) => u.status === "PENDING_APPROVAL").length : 0))
         .catch(() => {});
     }
   }, [session]);
@@ -173,6 +180,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 }}
               >
                 {tab.label}
+                {tab.path === "/dashboard/users" && pendingCount > 0 && (
+                  <span style={{ background: "#EF4444", color: "#fff", fontSize: "0.65rem", fontWeight: 700, minWidth: "18px", height: "18px", borderRadius: "99px", display: "inline-flex", alignItems: "center", justifyContent: "center", padding: "0 5px", marginLeft: "4px" }}>
+                    {pendingCount}
+                  </span>
+                )}
               </Link>
             );
           })}

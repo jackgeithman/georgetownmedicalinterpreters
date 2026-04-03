@@ -36,7 +36,7 @@ const ROLE_CHIPS = [
   { key: "VOLUNTEER",  label: "Volunteer",  bg: "#DCFCE7", color: "#15803D", border: "#BBF7D0" },
   { key: "INSTRUCTOR", label: "Instructor", bg: "#EEF2FF", color: "#4338CA", border: "#C7D2FE" },
   { key: "DEV",        label: "Developer",  bg: "#EDE9FE", color: "#5B21B6", border: "#DDD6FE" },
-  { key: "PENDING",    label: "Unassigned", bg: "#F1F5F9", color: "#475569", border: "#CBD5E1" },
+  { key: "PENDING",    label: "Pending",    bg: "#FEF9C3", color: "#854D0E", border: "#FDE68A" },
 ] as const;
 
 function getLangLabel(code: string) {
