@@ -2,8 +2,7 @@
 
 import { useSession, signOut } from "next-auth/react";
 import { useRouter, usePathname } from "next/navigation";
-import { useRef } from "react";
-import { useEffect, useState } from "react";
+import { useRef, useEffect, useState } from "react";
 import Link from "next/link";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -13,6 +12,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [showClearanceRibbon, setShowClearanceRibbon] = useState(false);
   const [ribbonEventIds, setRibbonEventIds] = useState<string[]>([]);
   const [pendingCount, setPendingCount] = useState(0);
+  const [unreadMessages, setUnreadMessages] = useState(0);
+  const [openFolder, setOpenFolder] = useState<string | null>(null);
+  const folderRef = useRef<HTMLDivElement>(null);
   const redirected = useRef(false);
 
   useEffect(() => {
@@ -60,7 +62,24 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         .then((data: { status: string }[]) => setPendingCount(Array.isArray(data) ? data.filter((u) => u.status === "PENDING_APPROVAL").length : 0))
         .catch(() => {});
     }
+    if (role === "ADMIN" || role === "DEV") {
+      fetch("/api/suggestions")
+        .then((r) => r.ok ? r.json() : [])
+        .then((data: { status: string }[]) => setUnreadMessages(Array.isArray(data) ? data.filter((s) => s.status === "OPEN").length : 0))
+        .catch(() => {});
+    }
   }, [session]);
+
+  // Close folder dropdown on outside click
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (folderRef.current && !folderRef.current.contains(e.target as Node)) {
+        setOpenFolder(null);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
 
   if (status === "loading") {
     return (
@@ -76,21 +95,57 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const isAdmin = role === "ADMIN";
   const isInstructor = role === "INSTRUCTOR";
 
-  // Define tabs
-  const allTabs = [
-    { path: "/dashboard/browse", label: "Browse Slots", show: true },
-    { path: "/dashboard/signups", label: "My Signups", show: true },
-    { path: "/dashboard/profile", label: "Profile", show: true },
-    { path: "/dashboard/users", label: "All Users", show: isInstructor || isAdmin || isDev },
-    { path: "/dashboard/training", label: "Training", show: true },
-    { path: "/dashboard/messages", label: "Messages", show: true },
-    { path: "/dashboard/metrics", label: "Metrics", show: isInstructor || isAdmin || isDev },
-    { path: "/dashboard/clinics", label: "Clinics", show: isAdmin || isDev },
-    { path: "/dashboard/languages", label: "Languages", show: isAdmin || isDev },
-    { path: "/dashboard/activity", label: "Activity Log", show: isAdmin || isDev },
-    { path: "/dashboard/notes", label: "Notes", show: isAdmin || isDev },
-    { path: "/dashboard/access", label: "Access Control", show: isDev },
-  ].filter((t) => t.show);
+  // Flat tabs for non-admin roles
+  const volunteerTabs = [
+    { path: "/dashboard/browse", label: "Browse Slots" },
+    { path: "/dashboard/signups", label: "My Signups" },
+    { path: "/dashboard/profile", label: "Profile" },
+    { path: "/dashboard/training", label: "Training" },
+    { path: "/dashboard/messages", label: "Messages" },
+  ];
+
+  const tabActive = (path: string) => pathname === path || pathname?.startsWith(path + "/");
+
+  const tabStyle = (path: string): React.CSSProperties => ({
+    display: "inline-flex", alignItems: "center", gap: "5px",
+    padding: "14px 18px", fontSize: "0.875rem",
+    fontWeight: tabActive(path) ? 600 : 500,
+    color: tabActive(path) ? "var(--blue)" : "#111827",
+    textDecoration: "none",
+    borderBottom: tabActive(path) ? "2.5px solid var(--blue)" : "2.5px solid transparent",
+    whiteSpace: "nowrap", fontFamily: "'DM Sans', sans-serif",
+    transition: "color 0.1s, border-color 0.1s",
+  });
+
+  const adminFolders = [
+    {
+      id: "volunteering", label: "Volunteering", badge: 0,
+      items: [
+        { path: "/dashboard/browse", label: "Browse Slots" },
+        { path: "/dashboard/signups", label: "My Signups" },
+        { path: "/dashboard/profile", label: "My Profile" },
+        { path: "/dashboard/training", label: "Training" },
+      ],
+    },
+    {
+      id: "administration", label: "Administration", badge: pendingCount + unreadMessages,
+      items: [
+        { path: "/dashboard/users", label: "All Users", badge: pendingCount },
+        { path: "/dashboard/metrics", label: "Metrics" },
+        { path: "/dashboard/activity", label: "Activity Log" },
+        { path: "/dashboard/messages", label: "Messages", badge: unreadMessages },
+        { path: "/dashboard/notes", label: "Notes" },
+        ...(isDev ? [{ path: "/dashboard/access", label: "Access Control" }] : []),
+      ],
+    },
+    {
+      id: "lang-clinics", label: "Languages & Clinics", badge: 0,
+      items: [
+        { path: "/dashboard/languages", label: "Languages" },
+        { path: "/dashboard/clinics", label: "Clinics" },
+      ],
+    },
+  ];
 
   return (
     <div style={{ minHeight: "100vh", background: "var(--page-bg)", fontFamily: "'DM Sans', system-ui, sans-serif", color: "var(--gray-900)" }}>
@@ -159,35 +214,73 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
       {/* Tab ribbon — hidden for clinic sessions */}
       {role !== "CLINIC" && <div style={{ background: "var(--card-bg)", borderBottom: "1.5px solid var(--card-border)", padding: "0 32px" }}>
-        <div style={{ display: "flex", gap: "2px", maxWidth: "1100px", margin: "0 auto", overflowX: "auto" }}>
-          {allTabs.map((tab) => {
-            const isActive = pathname === tab.path || pathname?.startsWith(tab.path + "/");
-            return (
-              <Link
-                key={tab.path}
-                href={tab.path}
-                style={{
-                  display: "inline-block",
-                  padding: "14px 18px",
-                  fontSize: "0.875rem",
-                  fontWeight: isActive ? 600 : 500,
-                  color: isActive ? "var(--blue)" : "#111827",
-                  textDecoration: "none",
-                  borderBottom: isActive ? "2.5px solid var(--blue)" : "2.5px solid transparent",
-                  whiteSpace: "nowrap",
-                  fontFamily: "'DM Sans', sans-serif",
-                  transition: "color 0.1s, border-color 0.1s",
-                }}
-              >
-                {tab.label}
-                {tab.path === "/dashboard/users" && pendingCount > 0 && (
-                  <span style={{ background: "#EF4444", color: "#fff", fontSize: "0.65rem", fontWeight: 700, minWidth: "18px", height: "18px", borderRadius: "99px", display: "inline-flex", alignItems: "center", justifyContent: "center", padding: "0 5px", marginLeft: "4px" }}>
-                    {pendingCount}
-                  </span>
-                )}
-              </Link>
-            );
-          })}
+        <div ref={folderRef} style={{ display: "flex", gap: "2px", maxWidth: "1100px", margin: "0 auto", overflowX: "auto", alignItems: "stretch" }}>
+          {(isAdmin || isDev) ? (
+            <>
+              {/* Folder tabs only — Browse Slots and All Users live inside folders */}
+              {adminFolders.map((folder) => {
+                const folderActive = folder.items.some((item) => tabActive(item.path));
+                const isOpen = openFolder === folder.id;
+                return (
+                  <div key={folder.id} style={{ position: "relative", display: "flex", alignItems: "stretch" }}>
+                    <button
+                      onClick={() => setOpenFolder(isOpen ? null : folder.id)}
+                      style={{
+                        display: "inline-flex", alignItems: "center", gap: "5px",
+                        padding: "14px 18px", fontSize: "0.875rem",
+                        fontWeight: folderActive || isOpen ? 600 : 500,
+                        color: folderActive || isOpen ? "var(--blue)" : "#111827",
+                        background: "none", border: "none",
+                        borderBottom: folderActive || isOpen ? "2.5px solid var(--blue)" : "2.5px solid transparent",
+                        whiteSpace: "nowrap", fontFamily: "'DM Sans', sans-serif",
+                        cursor: "pointer", transition: "color 0.1s, border-color 0.1s",
+                      }}
+                    >
+                      {folder.label}
+                      {!isOpen && folder.badge > 0 && (
+                        <span style={{ background: "#EF4444", color: "#fff", fontSize: "0.65rem", fontWeight: 700, minWidth: "18px", height: "18px", borderRadius: "99px", display: "inline-flex", alignItems: "center", justifyContent: "center", padding: "0 5px" }}>
+                          {folder.badge}
+                        </span>
+                      )}
+                      <span style={{ fontSize: "0.6rem", opacity: 0.5, marginLeft: "1px" }}>{isOpen ? "▲" : "▼"}</span>
+                    </button>
+                    {isOpen && (
+                      <div style={{ position: "absolute", top: "calc(100% + 1px)", left: 0, background: "var(--card-bg)", borderRadius: "8px", padding: "4px", zIndex: 200, minWidth: "180px", boxShadow: "0 4px 20px rgba(0,0,0,.14)" }}>
+                        {folder.items.map((item) => (
+                          <Link
+                            key={item.path}
+                            href={item.path}
+                            onClick={() => setOpenFolder(null)}
+                            style={{
+                              display: "flex", alignItems: "center", justifyContent: "space-between",
+                              padding: "9px 14px", fontSize: "0.875rem",
+                              fontWeight: tabActive(item.path) ? 600 : 400,
+                              color: tabActive(item.path) ? "var(--blue)" : "#111827",
+                              textDecoration: "none", borderRadius: "7px",
+                              background: tabActive(item.path) ? "#EFF6FF" : "transparent",
+                              fontFamily: "'DM Sans', sans-serif", gap: "8px",
+                            }}
+                          >
+                            {item.label}
+                            {"badge" in item && (item as { badge: number }).badge > 0 && (
+                              <span style={{ background: "#EF4444", color: "#fff", fontSize: "0.6rem", fontWeight: 700, minWidth: "17px", height: "17px", borderRadius: "99px", display: "inline-flex", alignItems: "center", justifyContent: "center", padding: "0 4px", flexShrink: 0 }}>
+                                {(item as { badge: number }).badge}
+                              </span>
+                            )}
+                          </Link>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </>
+          ) : (
+            // Flat ribbon for volunteers / instructors
+            volunteerTabs.map((tab) => (
+              <Link key={tab.path} href={tab.path} style={tabStyle(tab.path)}>{tab.label}</Link>
+            ))
+          )}
         </div>
       </div>}
 
