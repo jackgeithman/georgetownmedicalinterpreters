@@ -344,7 +344,7 @@ export default function OnboardingPage() {
                 { key: "signupReceipt" as const, label: "Signup confirmation", desc: "Email when you sign up for a shift" },
                 { key: "cancellationReceipt" as const, label: "Cancellation receipt", desc: "Email when you cancel a shift" },
                 { key: "reminder24h" as const, label: "24-hour reminder", desc: "Day-before shift reminder" },
-                { key: "unfilledSlotAlert" as const, label: "Unfilled slot alerts", desc: "Open shifts in your languages" },
+                { key: "unfilledSlotAlert" as const, label: "Urgent opening alert", desc: "Get notified if a slot opens within 24 hrs of the shift — you may still be able to take it" },
               ] as const).map(({ key, label, desc }, i, arr) => (
                 <div key={key} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "11px 0", borderBottom: i < arr.length - 1 ? "1px solid #F3F4F6" : "none" }}>
                   <div>
