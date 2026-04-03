@@ -526,12 +526,19 @@ export default function BrowsePage() {
                       </button>
                     ) : isFull ? (
                       <span style={{ fontSize: "0.75rem", padding: "4px 10px", background: "var(--gray-200)", color: "var(--gray-400)", borderRadius: "6px" }}>Full</span>
+                    ) : !langCanSignUp ? (
+                      <button
+                        disabled
+                        title="You are not cleared for this language"
+                        style={{ background: "#fff", color: "#9CA3AF", border: "1.5px solid #D1D5DB", borderRadius: "8px", padding: "8px 20px", fontFamily: "'DM Sans', sans-serif", fontSize: "0.875rem", fontWeight: 600, cursor: "not-allowed", whiteSpace: "nowrap" }}
+                      >
+                        Not Cleared
+                      </button>
                     ) : (
                       <button
-                        disabled={actionLoading === signupKey || !langCanSignUp}
+                        disabled={actionLoading === signupKey}
                         onClick={() => signUp(slot.id, hour)}
-                        title={!langCanSignUp ? "Add this language to your volunteer profile first" : undefined}
-                        style={{ background: "var(--blue)", color: "#fff", border: "none", borderRadius: "8px", padding: "9px 22px", fontFamily: "'DM Sans', sans-serif", fontSize: "0.875rem", fontWeight: 600, cursor: "pointer", opacity: (actionLoading === signupKey || !langCanSignUp) ? 0.4 : 1, whiteSpace: "nowrap" }}
+                        style={{ background: "var(--blue)", color: "#fff", border: "none", borderRadius: "8px", padding: "9px 22px", fontFamily: "'DM Sans', sans-serif", fontSize: "0.875rem", fontWeight: 600, cursor: "pointer", opacity: actionLoading === signupKey ? 0.4 : 1, whiteSpace: "nowrap" }}
                       >
                         {actionLoading === signupKey ? "..." : "Sign Up"}
                       </button>
