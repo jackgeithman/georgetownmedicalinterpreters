@@ -844,9 +844,9 @@ export default function BrowsePage() {
 
   const upcoming = filtered.filter((s) => slotEnd(s) > now);
 
-  // Compute fill stats from upcoming slots only (before any language filter)
+  // Compute fill stats respecting all active filters except language (so button counts stay accurate)
   const langStats: Record<string, { filled: number; total: number }> = {};
-  for (const s of browseSlots.filter((s) => slotEnd(s) > now)) {
+  for (const s of filtered.filter((s) => slotEnd(s) > now)) {
     const key = s.language;
     langStats[key] = {
       filled: (langStats[key]?.filled ?? 0) + s.signups.length,
