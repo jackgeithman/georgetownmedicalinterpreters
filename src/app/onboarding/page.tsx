@@ -1,6 +1,6 @@
 "use client";
 
-import { useSession, signOut, getSession } from "next-auth/react";
+import { useSession, signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { LANGUAGE_MAP } from "@/lib/languages";
@@ -27,7 +27,7 @@ const ROLES: { id: Role; label: string; desc: string }[] = [
 ];
 
 export default function OnboardingPage() {
-  const { data: session, status } = useSession();
+  const { data: session, status, update } = useSession();
   const router = useRouter();
 
   const [firstName, setFirstName] = useState("");
@@ -107,8 +107,8 @@ export default function OnboardingPage() {
         setSubmitting(false);
         return;
       }
-      // Force a fresh session fetch so /pending sees onboardingComplete: true
-      await getSession();
+      // Force session context refresh so layout sees onboardingComplete: true before navigating
+      await update();
       router.push("/pending");
     } catch {
       setError("Network error. Please try again.");
