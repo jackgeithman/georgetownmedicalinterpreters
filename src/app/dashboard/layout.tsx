@@ -61,7 +61,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         .then((r) => r.ok ? r.json() : [])
         .then((data: { status: string }[]) => {
           const count = Array.isArray(data) ? data.filter((u) => u.status === "PENDING_APPROVAL").length : 0;
-          console.log("[GMI] pendingCount:", count, "| role:", role, "| raw length:", Array.isArray(data) ? data.length : "not array");
           setPendingCount(count);
         })
         .catch((e) => console.error("[GMI] users fetch error:", e));
@@ -71,12 +70,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         .then((r) => r.ok ? r.json() : [])
         .then((data: { status: string }[]) => {
           const count = Array.isArray(data) ? data.filter((s) => s.status === "OPEN").length : 0;
-          console.log("[GMI] unreadMessages:", count, "| raw length:", Array.isArray(data) ? data.length : "not array");
           setUnreadMessages(count);
         })
         .catch((e) => console.error("[GMI] suggestions fetch error:", e));
     }
-  }, [session]);
+  }, [session, pathname]);
 
   // Close folder dropdown on outside click
   useEffect(() => {
