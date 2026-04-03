@@ -25,7 +25,12 @@ export async function GET() {
     },
   });
 
-  return NextResponse.json(materials);
+  return NextResponse.json(
+    materials.map((m) => ({
+      ...m,
+      uploadedBy: m.uploadedBy ?? { name: "Deleted User", email: "" },
+    }))
+  );
 }
 
 export async function POST(req: NextRequest) {
