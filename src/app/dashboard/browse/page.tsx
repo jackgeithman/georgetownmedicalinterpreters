@@ -956,11 +956,8 @@ export default function BrowsePage() {
               ) : (() => {
                 const myRoles = session?.user?.roles ?? [];
                 const langCode = slot.language;
-                if (myRoles.includes(`LANG_${langCode}_DENIED`)) {
-                  return <span style={{ fontSize: "0.75rem", padding: "4px 10px", background: "#FEF2F2", color: "#DC2626", border: "1px solid #FECACA", borderRadius: "6px" }}>Not Cleared</span>;
-                }
-                if (myRoles.includes(`LANG_${langCode}`) && !myRoles.includes(`LANG_${langCode}_CLEARED`)) {
-                  return <span style={{ fontSize: "0.75rem", padding: "4px 10px", background: "#FFFBEB", color: "#92400E", border: "1px solid #FDE68A", borderRadius: "6px" }}>Clearance Pending</span>;
+                if (myRoles.includes(`LANG_${langCode}_DENIED`) || (myRoles.includes(`LANG_${langCode}`) && !myRoles.includes(`LANG_${langCode}_CLEARED`))) {
+                  return <button disabled style={{ background: "#fff", color: "#9CA3AF", border: "1.5px solid #D1D5DB", borderRadius: "8px", padding: "8px 20px", fontFamily: "'DM Sans', sans-serif", fontSize: "0.875rem", fontWeight: 600, cursor: "not-allowed", whiteSpace: "nowrap" }}>Not Cleared</button>;
                 }
                 return (
                   <button
