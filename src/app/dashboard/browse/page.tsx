@@ -382,9 +382,21 @@ export default function BrowsePage() {
     const pastAdminSlots = filteredAdminSlots.filter((s) => slotEnd(s) <= now)
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
-    // Compute fill stats from upcoming admin slots (before any language filter)
+    // Compute fill stats respecting all active filters except language (so button counts stay accurate)
     const adminLangStats: Record<string, { filled: number; total: number }> = {};
-    for (const s of adminSlots.filter((s) => slotEnd(s) > now)) {
+    const adminFilteredNoLang = adminSlots.filter((s) => {
+      if (slotEnd(s) <= now) return false;
+      if (clinicFilter !== "ALL" && s.clinic.name !== clinicFilter) return false;
+      if (dateFrom && new Date(s.date.slice(0, 10) + "T12:00:00") < new Date(dateFrom + "T00:00:00")) return false;
+      if (dateTo && new Date(s.date.slice(0, 10) + "T12:00:00") > new Date(dateTo + "T23:59:59")) return false;
+      if (availableOnly) {
+        const hasOpen = Array.from({ length: s.endTime - s.startTime }, (_, i) => s.startTime + i)
+          .some((h) => s.signups.filter((sg) => sg.subBlockHour === h).length < s.interpreterCount);
+        if (!hasOpen) return false;
+      }
+      return true;
+    });
+    for (const s of adminFilteredNoLang) {
       const key = s.language;
       adminLangStats[key] = {
         filled: (adminLangStats[key]?.filled ?? 0) + s.signups.length,
