@@ -25,4 +25,42 @@ body {
   color: var(--gray-900);
   min-height: 100vh;
   -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+/* Profile page: 2-col grid that stacks on mobile */
+.profile-grid {
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  gap: 20px;
+  align-items: start;
+}
+
+/* All Users page: table vs card layout */
+.users-table-wrap { display: block; }
+.users-card-list  { display: none; }
+
+@media (max-width: 640px) {
+  .profile-grid {
+    grid-template-columns: 1fr;
+  }
+
+  /* Header: hide secondary info on mobile to prevent overflow */
+  .dash-header-contact,
+  .dash-header-email,
+  .dash-header-rolebadge,
+  .dash-header-devbadge {
+    display: none !important;
+  }
+
+  .dash-header {
+    padding: 0 16px !important;
+  }
+
+  .dash-content {
+    padding: 24px 16px !important;
+  }
+
+  .users-table-wrap { display: none; }
+  .users-card-list  { display: flex; flex-direction: column; gap: 10px; }
 }
