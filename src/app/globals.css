@@ -40,12 +40,11 @@ body {
 .users-table-wrap { display: block; }
 .users-card-list  { display: none; }
 
-/* Tab ribbon: horizontal scroll on desktop, no scrollbar widget */
+/* Tab ribbon: overflow must stay visible on desktop so folder dropdowns aren't clipped.
+   overflow-x: auto forces overflow-y: auto too (CSS spec), which clips position:absolute children. */
 .tab-ribbon-scroll {
-  overflow-x: auto;
-  scrollbar-width: none;
+  overflow: visible;
 }
-.tab-ribbon-scroll::-webkit-scrollbar { display: none; }
 
 /* Clinic page responsive */
 .clinic-tab-row {
