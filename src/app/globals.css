@@ -40,7 +40,7 @@ body {
 .users-table-wrap { display: block; }
 .users-card-list  { display: none; }
 
-/* Tab ribbon: horizontal scroll, no scrollbar widget */
+/* Tab ribbon: horizontal scroll on desktop, no scrollbar widget */
 .tab-ribbon-scroll {
   overflow-x: auto;
   scrollbar-width: none;
