@@ -14,6 +14,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [pendingCount, setPendingCount] = useState(0);
   const [unreadMessages, setUnreadMessages] = useState(0);
   const [openFolder, setOpenFolder] = useState<string | null>(null);
+  const [volunteerView, setVolunteerView] = useState(false);
   const folderRef = useRef<HTMLDivElement>(null);
   const redirected = useRef(false);
 
@@ -227,8 +228,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <div ref={folderRef} className="tab-ribbon-scroll" style={{ display: "flex", gap: "2px", maxWidth: "1100px", margin: "0 auto", alignItems: "stretch" }}>
           {(isAdmin || isDev) ? (
             <>
-              {/* Folder tabs only — Browse Slots and All Users live inside folders */}
-              {adminFolders.map((folder) => {
+              {/* Folder tabs or volunteer preview */}
+              {volunteerView ? (
+                volunteerTabs.map((tab) => (
+                  <Link key={tab.path} href={tab.path} className="tab-ribbon-item" style={tabStyle(tab.path)}>{tab.label}</Link>
+                ))
+              ) : (
+              /* Folder tabs only — Browse Slots and All Users live inside folders */
+              adminFolders.map((folder) => {
                 const folderActive = folder.items.some((item) => tabActive(item.path));
                 const isOpen = openFolder === folder.id;
                 return (
@@ -283,7 +290,22 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                     )}
                   </div>
                 );
-              })}
+              }))}
+              {/* Toggle button — pushed to far right */}
+              <button
+                onClick={() => { setVolunteerView((v) => !v); setOpenFolder(null); }}
+                style={{
+                  marginLeft: "auto", alignSelf: "center", flexShrink: 0,
+                  padding: "5px 12px", borderRadius: "99px", fontSize: "0.72rem", fontWeight: 600,
+                  fontFamily: "'DM Sans', sans-serif", cursor: "pointer",
+                  border: volunteerView ? "1.5px solid var(--blue)" : "1.5px solid var(--card-border)",
+                  background: volunteerView ? "var(--blue-light)" : "transparent",
+                  color: volunteerView ? "var(--blue)" : "#111827",
+                  transition: "all 0.15s",
+                }}
+              >
+                {volunteerView ? "← Admin View" : "Volunteer View"}
+              </button>
             </>
           ) : (
             // Flat ribbon for volunteers / instructors
