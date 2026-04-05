@@ -111,13 +111,19 @@ body {
     justify-content: center !important;
     border-bottom: none !important;
     padding: 10px 6px !important;
-    font-size: 0.8rem !important;
+    font-size: 0.875rem !important;
   }
 
   /* Admin folder tab buttons fill their grid cell */
   .tab-ribbon-item > button {
     width: 100%;
     justify-content: center !important;
+    font-size: 0.9rem !important;
+  }
+
+  /* Clinic: push slot count + post button to the right on mobile */
+  .clinic-slot-actions {
+    align-self: flex-end;
   }
 
   /* Browse: hide desktop language button row, show dropdown row */
