@@ -332,7 +332,7 @@ function ClinicDashboardInner() {
             ))}
           </div>
           {tab === "upcoming" && (
-            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+            <div className="clinic-slot-actions" style={{ display: "flex", alignItems: "center", gap: "12px" }}>
               <span style={{ fontSize: "0.82rem", color: "#111827" }}>{upcoming.length}/100 slots</span>
               {!isAdminPreview && (!showPostForm
                 ? <button onClick={() => setShowPostForm(true)} disabled={upcoming.length >= 100} style={{ ...btnPrimary, opacity: upcoming.length >= 100 ? 0.4 : 1 }}>+ Post Slot</button>
