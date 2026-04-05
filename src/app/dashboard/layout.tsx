@@ -45,13 +45,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       fetch("/api/volunteer/lang-clearance-events")
         .then((r) => r.json())
         .then((events: { id: string }[]) => {
-          if (events.length > 0) {
-            const dismissed: string[] = JSON.parse(localStorage.getItem("gmi_dismissed_clearance") ?? "[]");
-            const unseen = events.filter((e) => !dismissed.includes(e.id));
-            if (unseen.length > 0) {
-              setShowClearanceRibbon(true);
-              setRibbonEventIds(unseen.map((e) => e.id));
-            }
+          if (Array.isArray(events) && events.length > 0) {
+            setShowClearanceRibbon(true);
+            setRibbonEventIds(events.map((e) => e.id));
           }
         })
         .catch(() => {});
@@ -218,9 +214,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </span>
           <button
             onClick={() => {
-              const dismissed: string[] = JSON.parse(localStorage.getItem("gmi_dismissed_clearance") ?? "[]");
-              localStorage.setItem("gmi_dismissed_clearance", JSON.stringify([...dismissed, ...ribbonEventIds]));
               setShowClearanceRibbon(false);
+              fetch("/api/volunteer/lang-clearance-events", {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ ids: ribbonEventIds }),
+              }).catch(() => {});
             }}
             style={{ background: "none", border: "none", cursor: "pointer", color: "#1D4ED8", opacity: 0.6, fontSize: "1.1rem", lineHeight: 1, flexShrink: 0, fontFamily: "'DM Sans', sans-serif" }}
           >×</button>

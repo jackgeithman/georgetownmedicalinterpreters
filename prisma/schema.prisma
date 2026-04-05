@@ -158,6 +158,7 @@ model ClearanceLog {
   note         String?
   languageCode String?          // null = general clearance (legacy), set = per-language clearance
   createdAt    DateTime         @default(now())
+  notifiedAt   DateTime?        // set when volunteer dismisses the clearance ribbon
 }
 
 model Slot {
