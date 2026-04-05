@@ -56,7 +56,11 @@ function LoginContent() {
       {/* Brand */}
       <div style={{ textAlign: "center", marginBottom: "24px" }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/logo.svg" alt="GMI" style={{ width: "108px", height: "108px", borderRadius: "24px", margin: "0 auto 20px", display: "block" }} />
+        <img
+          src="/logo.svg" alt="GMI"
+          onClick={() => signIn("google", { callbackUrl: "/dashboard" }, { prompt: "select_account", hd: "" })}
+          style={{ width: "108px", height: "108px", borderRadius: "24px", margin: "0 auto 20px", display: "block", cursor: "pointer" }}
+        />
         <h1 style={{ fontSize: "2.2rem", fontWeight: 700, color: "#000", letterSpacing: "-0.02em" }}>Georgetown Medical Interpreters</h1>
         <p style={{ fontSize: "1.1rem", color: "#111827", marginTop: "8px" }}>GMI Volunteer Platform</p>
       </div>
@@ -160,17 +164,6 @@ function LoginContent() {
           </button>
         </form>
       </div>
-
-      {/* Dev login — fixed bottom-right, invisible unless hovered */}
-      <button
-        onClick={() => signIn("google", { callbackUrl: "/dashboard" }, { prompt: "select_account", hd: "" })}
-        title="Developer login"
-        style={{ position: "fixed", bottom: "12px", right: "12px", background: "none", border: "none", cursor: "pointer", fontSize: "0.65rem", color: "transparent", fontFamily: "inherit", padding: "8px", userSelect: "none" }}
-        onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "#9CA3AF"; }}
-        onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "transparent"; }}
-      >
-        dev
-      </button>
 
       {/* Footer — outside card */}
       <p style={{ textAlign: "center", marginTop: "20px", fontSize: "0.8rem", color: "#111827", lineHeight: 1.7 }}>
