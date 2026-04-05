@@ -69,6 +69,7 @@ body {
   align-items: center;
 }
 
+
 @media (max-width: 640px) {
   .profile-grid {
     grid-template-columns: 1fr;
