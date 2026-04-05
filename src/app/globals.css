@@ -40,7 +40,7 @@ body {
 .users-table-wrap { display: block; }
 .users-card-list  { display: none; }
 
-/* Tab ribbon: horizontal scroll, no scrollbar widget */
+/* Tab ribbon: horizontal scroll on desktop, no scrollbar widget */
 .tab-ribbon-scroll {
   overflow-x: auto;
   scrollbar-width: none;
@@ -69,6 +69,9 @@ body {
   align-items: center;
 }
 
+/* Browse mobile: language + clinic dropdown row (hidden on desktop) */
+.browse-mobile-top { display: none; }
+
 
 @media (max-width: 640px) {
   .profile-grid {
@@ -94,13 +97,39 @@ body {
   .users-table-wrap { display: none; }
   .users-card-list  { display: flex; flex-direction: column; gap: 10px; }
 
-  /* Language filter row: single scrollable line */
-  .browse-langs-row {
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    scrollbar-width: none;
+  /* Tab ribbon: wrap into equal-width 2-row grid instead of scrolling */
+  .tab-ribbon-scroll {
+    overflow-x: visible;
+    flex-wrap: wrap;
+    align-items: center;
   }
-  .browse-langs-row::-webkit-scrollbar { display: none; }
+
+  /* Each tab fills 1/3 of the row — 3+3 for instructor, 3+2 for volunteer */
+  .tab-ribbon-item {
+    flex: 1 1 33.33%;
+    min-width: 0;
+    justify-content: center !important;
+    border-bottom: none !important;
+    padding: 10px 6px !important;
+    font-size: 0.8rem !important;
+  }
+
+  /* Admin folder tab buttons fill their grid cell */
+  .tab-ribbon-item > button {
+    width: 100%;
+    justify-content: center !important;
+  }
+
+  /* Browse: hide desktop language button row, show dropdown row */
+  .browse-langs-row { display: none; }
+
+  .browse-mobile-top {
+    display: flex;
+    gap: 10px;
+  }
+
+  /* Hide desktop-only elements (e.g. clinic select in secondary filter row) */
+  .browse-desktop-only { display: none !important; }
 
   /* Clinic page */
   .clinic-tab-row {

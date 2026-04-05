@@ -592,7 +592,28 @@ export default function BrowsePage() {
 
         {/* Filters */}
         <div style={{ display: "flex", flexDirection: "column", gap: "10px", marginBottom: "28px" }}>
-          {/* Row 1: Language buttons */}
+          {/* Mobile: Language + Clinic dropdowns on one row */}
+          <div className="browse-mobile-top">
+            <select
+              value={langFilter}
+              onChange={(e) => { setLangFilter(e.target.value); setAdminOtherDropdownOpen(false); }}
+              style={{ flex: 1, minWidth: 0, padding: "9px 12px", borderRadius: "9px", fontSize: "0.875rem", fontWeight: 500, border: "1.5px solid var(--card-border)", background: "var(--card-bg)", color: "#111827", fontFamily: "'DM Sans', sans-serif", outline: "none", cursor: "pointer" }}
+            >
+              <option value="ALL">All Languages</option>
+              {languages.filter((l) => l.isActive).sort((a, b) => a.name.localeCompare(b.name)).map((l) => (
+                <option key={l.code} value={l.code}>{l.name}</option>
+              ))}
+            </select>
+            <select
+              value={clinicFilter}
+              onChange={(e) => setClinicFilter(e.target.value)}
+              style={{ flex: 1, minWidth: 0, padding: "9px 12px", borderRadius: "9px", fontSize: "0.875rem", fontWeight: 500, border: "1.5px solid var(--card-border)", background: "var(--card-bg)", color: "#111827", fontFamily: "'DM Sans', sans-serif", outline: "none", cursor: "pointer" }}
+            >
+              <option value="ALL">All Clinics</option>
+              {uniqueClinics.map((c) => <option key={c} value={c}>{c}</option>)}
+            </select>
+          </div>
+          {/* Row 1: Language buttons — desktop only */}
           <div className="browse-langs-row">
             {adminFixedLangs.map((lang) => (
               <button
@@ -632,7 +653,7 @@ export default function BrowsePage() {
           </div>
           {/* Row 2: Secondary filters */}
           <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "10px" }}>
-            <select value={clinicFilter} onChange={(e) => setClinicFilter(e.target.value)} style={{ padding: "9px 14px", borderRadius: "9px", fontSize: "0.875rem", fontWeight: 500, border: "1.5px solid var(--card-border)", background: "var(--card-bg)", color: "var(--gray-900)", fontFamily: "'DM Sans', sans-serif", cursor: "pointer", outline: "none" }}>
+            <select className="browse-desktop-only" value={clinicFilter} onChange={(e) => setClinicFilter(e.target.value)} style={{ padding: "9px 14px", borderRadius: "9px", fontSize: "0.875rem", fontWeight: 500, border: "1.5px solid var(--card-border)", background: "var(--card-bg)", color: "var(--gray-900)", fontFamily: "'DM Sans', sans-serif", cursor: "pointer", outline: "none" }}>
               <option value="ALL">All Clinics</option>
               {uniqueClinics.map((c) => <option key={c} value={c}>{c}</option>)}
             </select>
@@ -985,7 +1006,26 @@ export default function BrowsePage() {
     <div>
       {/* Filters */}
       <div style={{ display: "flex", flexDirection: "column", gap: "10px", marginBottom: "28px" }}>
-        {/* Row 1: Language buttons */}
+        {/* Mobile: Language + Clinic dropdowns on one row */}
+        <div className="browse-mobile-top">
+          <select
+            value={langFilter}
+            onChange={(e) => { setLangFilter(e.target.value); setOtherDropdownOpen(false); }}
+            style={{ flex: 1, minWidth: 0, padding: "9px 12px", borderRadius: "9px", fontSize: "0.875rem", fontWeight: 500, border: "1.5px solid var(--card-border)", background: "var(--card-bg)", color: "#111827", fontFamily: "'DM Sans', sans-serif", outline: "none", cursor: "pointer" }}
+          >
+            <option value="ALL">All Languages</option>
+            {availableLanguages.map((l) => <option key={l.code} value={l.code}>{l.name}</option>)}
+          </select>
+          <select
+            value={clinicFilter}
+            onChange={(e) => setClinicFilter(e.target.value)}
+            style={{ flex: 1, minWidth: 0, padding: "9px 12px", borderRadius: "9px", fontSize: "0.875rem", fontWeight: 500, border: "1.5px solid var(--card-border)", background: "var(--card-bg)", color: "#111827", fontFamily: "'DM Sans', sans-serif", outline: "none", cursor: "pointer" }}
+          >
+            <option value="ALL">All Clinics</option>
+            {uniqueClinics.map((c) => <option key={c} value={c}>{c}</option>)}
+          </select>
+        </div>
+        {/* Row 1: Language buttons — desktop only */}
         <div className="browse-langs-row">
           {fixedLangs.map((lang) => (
             <button
@@ -1025,7 +1065,7 @@ export default function BrowsePage() {
         </div>
         {/* Row 2: Secondary filters */}
         <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "10px" }}>
-          <select value={clinicFilter} onChange={(e) => setClinicFilter(e.target.value)} style={{ padding: "9px 14px", borderRadius: "9px", fontSize: "0.875rem", fontWeight: 500, border: "1.5px solid var(--card-border)", background: "var(--card-bg)", color: "var(--gray-900)", fontFamily: "'DM Sans', sans-serif", cursor: "pointer", outline: "none" }}>
+          <select className="browse-desktop-only" value={clinicFilter} onChange={(e) => setClinicFilter(e.target.value)} style={{ padding: "9px 14px", borderRadius: "9px", fontSize: "0.875rem", fontWeight: 500, border: "1.5px solid var(--card-border)", background: "var(--card-bg)", color: "var(--gray-900)", fontFamily: "'DM Sans', sans-serif", cursor: "pointer", outline: "none" }}>
             <option value="ALL">All Clinics</option>
             {uniqueClinics.map((c) => <option key={c} value={c}>{c}</option>)}
           </select>

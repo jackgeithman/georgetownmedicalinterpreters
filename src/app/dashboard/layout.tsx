@@ -232,7 +232,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 const folderActive = folder.items.some((item) => tabActive(item.path));
                 const isOpen = openFolder === folder.id;
                 return (
-                  <div key={folder.id} style={{ position: "relative", display: "flex", alignItems: "stretch" }}>
+                  <div key={folder.id} className="tab-ribbon-item" style={{ position: "relative", display: "flex", alignItems: "stretch" }}>
                     <button
                       onClick={() => setOpenFolder(isOpen ? null : folder.id)}
                       style={{
@@ -298,7 +298,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 ]
               : volunteerTabs
             ).map((tab) => (
-              <Link key={tab.path} href={tab.path} style={tabStyle(tab.path)}>{tab.label}</Link>
+              <Link key={tab.path} href={tab.path} className="tab-ribbon-item" style={tabStyle(tab.path)}>{tab.label}</Link>
             ))
           )}
         </div>
