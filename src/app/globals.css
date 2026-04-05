@@ -40,6 +40,35 @@ body {
 .users-table-wrap { display: block; }
 .users-card-list  { display: none; }
 
+/* Tab ribbon: horizontal scroll, no scrollbar widget */
+.tab-ribbon-scroll {
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.tab-ribbon-scroll::-webkit-scrollbar { display: none; }
+
+/* Clinic page responsive */
+.clinic-tab-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 28px;
+}
+
+.clinic-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+/* Browse filter rows */
+.browse-langs-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
 @media (max-width: 640px) {
   .profile-grid {
     grid-template-columns: 1fr;
@@ -63,4 +92,23 @@ body {
 
   .users-table-wrap { display: none; }
   .users-card-list  { display: flex; flex-direction: column; gap: 10px; }
+
+  /* Language filter row: single scrollable line */
+  .browse-langs-row {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .browse-langs-row::-webkit-scrollbar { display: none; }
+
+  /* Clinic page */
+  .clinic-tab-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .clinic-form-grid {
+    grid-template-columns: 1fr !important;
+  }
 }

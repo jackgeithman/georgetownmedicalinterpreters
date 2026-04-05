@@ -308,24 +308,21 @@ function ClinicDashboardInner() {
         </div>
       )}
       {/* Topbar */}
-      <header style={{ background: "var(--navy)", height: "64px", position: "sticky", top: 0, zIndex: 100, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 32px" }}>
+      <header className="dash-header" style={{ background: "var(--navy)", height: "64px", position: "sticky", top: 0, zIndex: 100, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 32px" }}>
         <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/logo.svg" alt="GMI" style={{ width: "36px", height: "36px", borderRadius: "9px" }} />
-          <div>
-            <div style={{ color: "#fff", fontSize: "0.95rem", fontWeight: 600 }}>Georgetown Medical Interpreters</div>
-            <div style={{ color: "#94A3B8", fontSize: "0.72rem" }}>Clinic Dashboard{session?.user?.name ? ` — ${session.user.name}` : ""}</div>
-          </div>
+          <div style={{ color: "#fff", fontSize: "0.95rem", fontWeight: 600 }}>Georgetown Medical Interpreters</div>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
-          <a href="mailto:georgetownmedicalinterpreters@gmail.com" style={{ color: "#CBD5E1", fontSize: "0.8rem", textDecoration: "none", padding: "6px 12px", borderRadius: "8px", border: "1px solid rgba(255,255,255,.15)" }}>Contact Us</a>
+          <a href="mailto:georgetownmedicalinterpreters@gmail.com" className="dash-header-contact" style={{ color: "#CBD5E1", fontSize: "0.8rem", textDecoration: "none", padding: "6px 12px", borderRadius: "8px", border: "1px solid rgba(255,255,255,.15)" }}>Contact Us</a>
           <button onClick={() => signOut({ callbackUrl: "/login" })} style={{ background: "rgba(255,255,255,.08)", border: "1px solid rgba(255,255,255,.2)", color: "#fff", fontFamily: "inherit", fontSize: "0.8rem", fontWeight: 500, padding: "7px 16px", borderRadius: "8px", cursor: "pointer" }}>Sign Out</button>
         </div>
       </header>
 
-      <main style={{ maxWidth: "920px", margin: "0 auto", padding: "36px 24px" }}>
+      <main className="dash-content" style={{ maxWidth: "920px", margin: "0 auto", padding: "36px 24px" }}>
         {/* Tabs + action */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "28px" }}>
+        <div className="clinic-tab-row">
           <div style={{ display: "flex", gap: "4px", background: "var(--card-bg)", padding: "5px", borderRadius: "12px", boxShadow: "0 1px 3px rgba(0,0,0,.08)", border: "1px solid var(--card-border)" }}>
             {[{ key: "upcoming" as Tab, label: "Upcoming", count: upcoming.length }, { key: "past" as Tab, label: "Past", count: past.length }, { key: "settings" as Tab, label: "Notifications" }].map((t) => (
               <button key={t.key} onClick={() => setTab(t.key)} style={{ padding: "9px 20px", borderRadius: "9px", fontSize: "0.9rem", fontWeight: 500, cursor: "pointer", border: "none", fontFamily: "inherit", transition: "all .15s", background: tab === t.key ? "var(--blue)" : "none", color: tab === t.key ? "#fff" : "var(--gray-900)", whiteSpace: "nowrap" }}>
@@ -349,7 +346,7 @@ function ClinicDashboardInner() {
         {showPostForm && tab === "upcoming" && (
           <div style={{ ...card, padding: "24px", marginBottom: "20px" }}>
             <h3 style={{ fontSize: "1.05rem", fontWeight: 700, color: "var(--navy)", marginBottom: "18px" }}>New Slot</h3>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" }}>
+            <div className="clinic-form-grid">
               <div><FieldLabel>Language</FieldLabel><select value={form.language} onChange={(e) => setForm({ ...form, language: e.target.value })} style={{ ...iStyle, cursor: "pointer" }}>
                 <optgroup label="Supported">
                   {activeLanguages.filter((l) => l.isActive).map((l) => <option key={l.code} value={l.code}>{l.name}</option>)}
@@ -464,7 +461,7 @@ function ClinicDashboardInner() {
                   ))}
                 </div>
               )}
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+              <div className="clinic-form-grid">
                 <div><FieldLabel>Language</FieldLabel><select value={editSlot.language} onChange={(e) => setEditSlot({ ...editSlot, language: e.target.value })} style={{ ...iStyle, cursor: "pointer" }}>
                   <optgroup label="Supported">
                     {activeLanguages.filter((l) => l.isActive).map((l) => <option key={l.code} value={l.code}>{l.name}</option>)}
@@ -596,7 +593,8 @@ function SlotCard({ slot, isPast, selectedSlotIds, actionLoading, onToggleSelect
       </div>
 
       {/* Sub-blocks table */}
-      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.875rem" }}>
+      <div style={{ overflowX: "auto" }}>
+      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.875rem", minWidth: "420px" }}>
         <thead>
           <tr style={{ background: "#FAFAF9", borderBottom: "1px solid var(--card-border)" }}>
             {["Hour", "Volunteer", "Status", ...(isPast ? ["Action"] : [])].map((h) => (
@@ -638,6 +636,7 @@ function SlotCard({ slot, isPast, selectedSlotIds, actionLoading, onToggleSelect
           })}
         </tbody>
       </table>
+      </div>
     </div>
   );
 }

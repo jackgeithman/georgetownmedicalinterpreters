@@ -591,64 +591,67 @@ export default function BrowsePage() {
         )}
 
         {/* Filters */}
-        <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "10px", marginBottom: "28px" }}>
-          {adminFixedLangs.map((lang) => (
-            <button
-              key={lang.code}
-              onClick={() => { setLangFilter(langFilter === lang.code && lang.code !== "ALL" ? "ALL" : lang.code); setAdminOtherDropdownOpen(false); }}
-              style={{ padding: "9px 14px", borderRadius: "9px", fontSize: "0.875rem", fontWeight: 500, cursor: "pointer", fontFamily: "'DM Sans', sans-serif", border: langFilter === lang.code ? "1.5px solid var(--blue)" : "1.5px solid var(--card-border)", background: langFilter === lang.code ? "var(--blue)" : "var(--card-bg)", color: langFilter === lang.code ? "#fff" : "#111827" }}
-            >{lang.label}</button>
-          ))}
-          {adminOtherLangs.length > 0 && (
-            <div ref={adminOtherDropdownRef} style={{ position: "relative" }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: "10px", marginBottom: "28px" }}>
+          {/* Row 1: Language buttons */}
+          <div className="browse-langs-row">
+            {adminFixedLangs.map((lang) => (
               <button
-                onClick={() => setAdminOtherDropdownOpen((o) => !o)}
-                style={{ padding: "9px 14px", borderRadius: "9px", fontSize: "0.875rem", fontWeight: 500, cursor: "pointer", fontFamily: "'DM Sans', sans-serif", border: adminOtherSelected ? "1.5px solid var(--blue)" : "1.5px solid var(--card-border)", background: adminOtherSelected ? "var(--blue)" : "var(--card-bg)", color: adminOtherSelected ? "#fff" : "#111827", display: "flex", alignItems: "center", gap: "6px" }}
-              >
-                {adminOtherSelected ? (languages.find((l) => l.code === langFilter)?.name ?? langFilter) : "Other languages…"}
-                <span style={{ fontSize: "0.7rem", opacity: 0.7 }}>{adminOtherDropdownOpen ? "▲" : "▼"}</span>
-              </button>
-              {adminOtherDropdownOpen && (
-                <div style={{ position: "absolute", top: "calc(100% + 6px)", left: 0, zIndex: 50, background: "var(--card-bg)", border: "1.5px solid var(--card-border)", borderRadius: "10px", boxShadow: "0 4px 16px rgba(0,0,0,.10)", minWidth: "200px", maxHeight: "260px", overflowY: "auto" }}>
-                  {adminOtherSelected && (
-                    <button
-                      onClick={() => { setLangFilter("ALL"); setAdminOtherDropdownOpen(false); }}
-                      style={{ display: "block", width: "100%", textAlign: "left", padding: "9px 14px", fontSize: "0.875rem", background: "none", border: "none", borderBottom: "1px solid var(--card-border)", cursor: "pointer", color: "#111827", fontFamily: "'DM Sans', sans-serif" }}
-                    >Clear filter</button>
-                  )}
-                  {adminOtherLangs.map((l) => (
-                    <button
-                      key={l.code}
-                      onClick={() => { setLangFilter(l.code); setAdminOtherDropdownOpen(false); }}
-                      style={{ display: "block", width: "100%", textAlign: "left", padding: "9px 14px", fontSize: "0.875rem", background: langFilter === l.code ? "var(--blue)" : "none", color: langFilter === l.code ? "#fff" : "#111827", border: "none", cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}
-                    >{l.name}{adminStatLabel(l.code)}</button>
-                  ))}
-                </div>
-              )}
+                key={lang.code}
+                onClick={() => { setLangFilter(langFilter === lang.code && lang.code !== "ALL" ? "ALL" : lang.code); setAdminOtherDropdownOpen(false); }}
+                style={{ padding: "9px 14px", borderRadius: "9px", fontSize: "0.875rem", fontWeight: 500, cursor: "pointer", fontFamily: "'DM Sans', sans-serif", border: langFilter === lang.code ? "1.5px solid var(--blue)" : "1.5px solid var(--card-border)", background: langFilter === lang.code ? "var(--blue)" : "var(--card-bg)", color: langFilter === lang.code ? "#fff" : "#111827", whiteSpace: "nowrap" }}
+              >{lang.label}</button>
+            ))}
+            {adminOtherLangs.length > 0 && (
+              <div ref={adminOtherDropdownRef} style={{ position: "relative", flexShrink: 0 }}>
+                <button
+                  onClick={() => setAdminOtherDropdownOpen((o) => !o)}
+                  style={{ padding: "9px 14px", borderRadius: "9px", fontSize: "0.875rem", fontWeight: 500, cursor: "pointer", fontFamily: "'DM Sans', sans-serif", border: adminOtherSelected ? "1.5px solid var(--blue)" : "1.5px solid var(--card-border)", background: adminOtherSelected ? "var(--blue)" : "var(--card-bg)", color: adminOtherSelected ? "#fff" : "#111827", display: "flex", alignItems: "center", gap: "6px", whiteSpace: "nowrap" }}
+                >
+                  {adminOtherSelected ? (languages.find((l) => l.code === langFilter)?.name ?? langFilter) : "Other languages…"}
+                  <span style={{ fontSize: "0.7rem", opacity: 0.7 }}>{adminOtherDropdownOpen ? "▲" : "▼"}</span>
+                </button>
+                {adminOtherDropdownOpen && (
+                  <div style={{ position: "absolute", top: "calc(100% + 6px)", left: 0, zIndex: 50, background: "var(--card-bg)", border: "1.5px solid var(--card-border)", borderRadius: "10px", boxShadow: "0 4px 16px rgba(0,0,0,.10)", minWidth: "200px", maxHeight: "260px", overflowY: "auto" }}>
+                    {adminOtherSelected && (
+                      <button
+                        onClick={() => { setLangFilter("ALL"); setAdminOtherDropdownOpen(false); }}
+                        style={{ display: "block", width: "100%", textAlign: "left", padding: "9px 14px", fontSize: "0.875rem", background: "none", border: "none", borderBottom: "1px solid var(--card-border)", cursor: "pointer", color: "#111827", fontFamily: "'DM Sans', sans-serif" }}
+                      >Clear filter</button>
+                    )}
+                    {adminOtherLangs.map((l) => (
+                      <button
+                        key={l.code}
+                        onClick={() => { setLangFilter(l.code); setAdminOtherDropdownOpen(false); }}
+                        style={{ display: "block", width: "100%", textAlign: "left", padding: "9px 14px", fontSize: "0.875rem", background: langFilter === l.code ? "var(--blue)" : "none", color: langFilter === l.code ? "#fff" : "#111827", border: "none", cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}
+                      >{l.name}{adminStatLabel(l.code)}</button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+          {/* Row 2: Secondary filters */}
+          <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "10px" }}>
+            <select value={clinicFilter} onChange={(e) => setClinicFilter(e.target.value)} style={{ padding: "9px 14px", borderRadius: "9px", fontSize: "0.875rem", fontWeight: 500, border: "1.5px solid var(--card-border)", background: "var(--card-bg)", color: "var(--gray-900)", fontFamily: "'DM Sans', sans-serif", cursor: "pointer", outline: "none" }}>
+              <option value="ALL">All Clinics</option>
+              {uniqueClinics.map((c) => <option key={c} value={c}>{c}</option>)}
+            </select>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "0.875rem", fontWeight: 500, color: "var(--gray-900)" }}>
+              From
+              <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} style={{ padding: "9px 12px", border: "1.5px solid var(--card-border)", borderRadius: "9px", fontSize: "0.875rem", fontFamily: "'DM Sans', sans-serif", color: "var(--gray-900)", outline: "none", background: "var(--card-bg)" }} />
             </div>
-          )}
-          <div style={{ width: "1px", background: "var(--card-border)", alignSelf: "stretch", margin: "0 4px" }} />
-          <select value={clinicFilter} onChange={(e) => setClinicFilter(e.target.value)} style={{ padding: "9px 14px", borderRadius: "9px", fontSize: "0.875rem", fontWeight: 500, border: "1.5px solid var(--card-border)", background: "var(--card-bg)", color: "var(--gray-900)", fontFamily: "'DM Sans', sans-serif", cursor: "pointer", outline: "none" }}>
-            <option value="ALL">All Clinics</option>
-            {uniqueClinics.map((c) => <option key={c} value={c}>{c}</option>)}
-          </select>
-          <div style={{ width: "1px", background: "var(--card-border)", alignSelf: "stretch", margin: "0 4px" }} />
-          <div style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "0.875rem", fontWeight: 500, color: "var(--gray-900)" }}>
-            From
-            <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} style={{ padding: "9px 12px", border: "1.5px solid var(--card-border)", borderRadius: "9px", fontSize: "0.875rem", fontFamily: "'DM Sans', sans-serif", color: "var(--gray-900)", outline: "none", background: "var(--card-bg)" }} />
+            <div style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "0.875rem", fontWeight: 500, color: "var(--gray-900)" }}>
+              To
+              <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} style={{ padding: "9px 12px", border: "1.5px solid var(--card-border)", borderRadius: "9px", fontSize: "0.875rem", fontFamily: "'DM Sans', sans-serif", color: "var(--gray-900)", outline: "none", background: "var(--card-bg)" }} />
+            </div>
+            {(dateFrom || dateTo) && (
+              <button onClick={() => { setDateFrom(""); setDateTo(""); }} style={{ fontSize: "0.8rem", color: "var(--gray-400)", background: "none", border: "none", cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>Clear</button>
+            )}
+            <button
+              onClick={() => setAvailableOnly(!availableOnly)}
+              style={{ padding: "9px 14px", borderRadius: "9px", fontSize: "0.875rem", fontWeight: 500, border: availableOnly ? "1.5px solid var(--green)" : "1.5px solid var(--card-border)", background: availableOnly ? "var(--green)" : "var(--card-bg)", color: availableOnly ? "#fff" : "var(--gray-900)", fontFamily: "'DM Sans', sans-serif", cursor: "pointer" }}
+            >Available Only</button>
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "0.875rem", fontWeight: 500, color: "var(--gray-900)" }}>
-            To
-            <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} style={{ padding: "9px 12px", border: "1.5px solid var(--card-border)", borderRadius: "9px", fontSize: "0.875rem", fontFamily: "'DM Sans', sans-serif", color: "var(--gray-900)", outline: "none", background: "var(--card-bg)" }} />
-          </div>
-          {(dateFrom || dateTo) && (
-            <button onClick={() => { setDateFrom(""); setDateTo(""); }} style={{ fontSize: "0.8rem", color: "var(--gray-400)", background: "none", border: "none", cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>Clear</button>
-          )}
-          <div style={{ width: "1px", background: "var(--card-border)", alignSelf: "stretch", margin: "0 4px" }} />
-          <button
-            onClick={() => setAvailableOnly(!availableOnly)}
-            style={{ padding: "9px 14px", borderRadius: "9px", fontSize: "0.875rem", fontWeight: 500, border: availableOnly ? "1.5px solid var(--green)" : "1.5px solid var(--card-border)", background: availableOnly ? "var(--green)" : "var(--card-bg)", color: availableOnly ? "#fff" : "var(--gray-900)", fontFamily: "'DM Sans', sans-serif", cursor: "pointer" }}
-          >Available Only</button>
         </div>
 
         {upcomingAdminSlots.length === 0 && pastAdminSlots.length === 0 ? (
@@ -981,64 +984,67 @@ export default function BrowsePage() {
   return (
     <div>
       {/* Filters */}
-      <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "10px", marginBottom: "28px" }}>
-        {fixedLangs.map((lang) => (
-          <button
-            key={lang.code}
-            onClick={() => { setLangFilter(lang.code); setOtherDropdownOpen(false); }}
-            style={{ padding: "9px 14px", borderRadius: "9px", fontSize: "0.875rem", fontWeight: 500, cursor: "pointer", fontFamily: "'DM Sans', sans-serif", border: langFilter === lang.code ? "1.5px solid var(--blue)" : "1.5px solid var(--card-border)", background: langFilter === lang.code ? "var(--blue)" : "var(--card-bg)", color: langFilter === lang.code ? "#fff" : "#111827" }}
-          >{lang.label}</button>
-        ))}
-        {otherLangs.length > 0 && (
-          <div ref={otherDropdownRef} style={{ position: "relative" }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: "10px", marginBottom: "28px" }}>
+        {/* Row 1: Language buttons */}
+        <div className="browse-langs-row">
+          {fixedLangs.map((lang) => (
             <button
-              onClick={() => setOtherDropdownOpen((o) => !o)}
-              style={{ padding: "9px 14px", borderRadius: "9px", fontSize: "0.875rem", fontWeight: 500, cursor: "pointer", fontFamily: "'DM Sans', sans-serif", border: otherSelected ? "1.5px solid var(--blue)" : "1.5px solid var(--card-border)", background: otherSelected ? "var(--blue)" : "var(--card-bg)", color: otherSelected ? "#fff" : "#111827", display: "flex", alignItems: "center", gap: "6px" }}
-            >
-              {otherSelected ? (availableLanguages.find((l) => l.code === langFilter)?.name ?? langFilter) : "Other languages…"}
-              <span style={{ fontSize: "0.7rem", opacity: 0.7 }}>{otherDropdownOpen ? "▲" : "▼"}</span>
-            </button>
-            {otherDropdownOpen && (
-              <div style={{ position: "absolute", top: "calc(100% + 6px)", left: 0, zIndex: 50, background: "var(--card-bg)", border: "1.5px solid var(--card-border)", borderRadius: "10px", boxShadow: "0 4px 16px rgba(0,0,0,.10)", minWidth: "200px", maxHeight: "260px", overflowY: "auto" }}>
-                {otherSelected && (
-                  <button
-                    onClick={() => { setLangFilter("ALL"); setOtherDropdownOpen(false); }}
-                    style={{ display: "block", width: "100%", textAlign: "left", padding: "9px 14px", fontSize: "0.875rem", background: "none", border: "none", borderBottom: "1px solid var(--card-border)", cursor: "pointer", color: "#111827", fontFamily: "'DM Sans', sans-serif" }}
-                  >Clear filter</button>
-                )}
-                {otherLangs.map((l) => (
-                  <button
-                    key={l.code}
-                    onClick={() => { setLangFilter(l.code); setOtherDropdownOpen(false); }}
-                    style={{ display: "block", width: "100%", textAlign: "left", padding: "9px 14px", fontSize: "0.875rem", background: langFilter === l.code ? "var(--blue)" : "none", color: langFilter === l.code ? "#fff" : "#111827", border: "none", cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}
-                  >{l.name}{statLabel(l.code)}</button>
-                ))}
-              </div>
-            )}
+              key={lang.code}
+              onClick={() => { setLangFilter(lang.code); setOtherDropdownOpen(false); }}
+              style={{ padding: "9px 14px", borderRadius: "9px", fontSize: "0.875rem", fontWeight: 500, cursor: "pointer", fontFamily: "'DM Sans', sans-serif", border: langFilter === lang.code ? "1.5px solid var(--blue)" : "1.5px solid var(--card-border)", background: langFilter === lang.code ? "var(--blue)" : "var(--card-bg)", color: langFilter === lang.code ? "#fff" : "#111827", whiteSpace: "nowrap" }}
+            >{lang.label}</button>
+          ))}
+          {otherLangs.length > 0 && (
+            <div ref={otherDropdownRef} style={{ position: "relative", flexShrink: 0 }}>
+              <button
+                onClick={() => setOtherDropdownOpen((o) => !o)}
+                style={{ padding: "9px 14px", borderRadius: "9px", fontSize: "0.875rem", fontWeight: 500, cursor: "pointer", fontFamily: "'DM Sans', sans-serif", border: otherSelected ? "1.5px solid var(--blue)" : "1.5px solid var(--card-border)", background: otherSelected ? "var(--blue)" : "var(--card-bg)", color: otherSelected ? "#fff" : "#111827", display: "flex", alignItems: "center", gap: "6px", whiteSpace: "nowrap" }}
+              >
+                {otherSelected ? (availableLanguages.find((l) => l.code === langFilter)?.name ?? langFilter) : "Other languages…"}
+                <span style={{ fontSize: "0.7rem", opacity: 0.7 }}>{otherDropdownOpen ? "▲" : "▼"}</span>
+              </button>
+              {otherDropdownOpen && (
+                <div style={{ position: "absolute", top: "calc(100% + 6px)", left: 0, zIndex: 50, background: "var(--card-bg)", border: "1.5px solid var(--card-border)", borderRadius: "10px", boxShadow: "0 4px 16px rgba(0,0,0,.10)", minWidth: "200px", maxHeight: "260px", overflowY: "auto" }}>
+                  {otherSelected && (
+                    <button
+                      onClick={() => { setLangFilter("ALL"); setOtherDropdownOpen(false); }}
+                      style={{ display: "block", width: "100%", textAlign: "left", padding: "9px 14px", fontSize: "0.875rem", background: "none", border: "none", borderBottom: "1px solid var(--card-border)", cursor: "pointer", color: "#111827", fontFamily: "'DM Sans', sans-serif" }}
+                    >Clear filter</button>
+                  )}
+                  {otherLangs.map((l) => (
+                    <button
+                      key={l.code}
+                      onClick={() => { setLangFilter(l.code); setOtherDropdownOpen(false); }}
+                      style={{ display: "block", width: "100%", textAlign: "left", padding: "9px 14px", fontSize: "0.875rem", background: langFilter === l.code ? "var(--blue)" : "none", color: langFilter === l.code ? "#fff" : "#111827", border: "none", cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}
+                    >{l.name}{statLabel(l.code)}</button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+        {/* Row 2: Secondary filters */}
+        <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "10px" }}>
+          <select value={clinicFilter} onChange={(e) => setClinicFilter(e.target.value)} style={{ padding: "9px 14px", borderRadius: "9px", fontSize: "0.875rem", fontWeight: 500, border: "1.5px solid var(--card-border)", background: "var(--card-bg)", color: "var(--gray-900)", fontFamily: "'DM Sans', sans-serif", cursor: "pointer", outline: "none" }}>
+            <option value="ALL">All Clinics</option>
+            {uniqueClinics.map((c) => <option key={c} value={c}>{c}</option>)}
+          </select>
+          <div style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "0.875rem", fontWeight: 500, color: "var(--gray-900)" }}>
+            From
+            <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} style={{ padding: "9px 12px", border: "1.5px solid var(--card-border)", borderRadius: "9px", fontSize: "0.875rem", fontFamily: "'DM Sans', sans-serif", color: "var(--gray-900)", outline: "none", background: "var(--card-bg)" }} />
           </div>
-        )}
-        <div style={{ width: "1px", background: "var(--card-border)", alignSelf: "stretch", margin: "0 4px" }} />
-        <select value={clinicFilter} onChange={(e) => setClinicFilter(e.target.value)} style={{ padding: "9px 14px", borderRadius: "9px", fontSize: "0.875rem", fontWeight: 500, border: "1.5px solid var(--card-border)", background: "var(--card-bg)", color: "var(--gray-900)", fontFamily: "'DM Sans', sans-serif", cursor: "pointer", outline: "none" }}>
-          <option value="ALL">All Clinics</option>
-          {uniqueClinics.map((c) => <option key={c} value={c}>{c}</option>)}
-        </select>
-        <div style={{ width: "1px", background: "var(--card-border)", alignSelf: "stretch", margin: "0 4px" }} />
-        <div style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "0.875rem", fontWeight: 500, color: "var(--gray-900)" }}>
-          From
-          <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} style={{ padding: "9px 12px", border: "1.5px solid var(--card-border)", borderRadius: "9px", fontSize: "0.875rem", fontFamily: "'DM Sans', sans-serif", color: "var(--gray-900)", outline: "none", background: "var(--card-bg)" }} />
+          <div style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "0.875rem", fontWeight: 500, color: "var(--gray-900)" }}>
+            To
+            <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} style={{ padding: "9px 12px", border: "1.5px solid var(--card-border)", borderRadius: "9px", fontSize: "0.875rem", fontFamily: "'DM Sans', sans-serif", color: "var(--gray-900)", outline: "none", background: "var(--card-bg)" }} />
+          </div>
+          {(dateFrom || dateTo) && (
+            <button onClick={() => { setDateFrom(""); setDateTo(""); }} style={{ fontSize: "0.8rem", color: "var(--gray-400)", background: "none", border: "none", cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>Clear</button>
+          )}
+          <button
+            onClick={() => setAvailableOnly(!availableOnly)}
+            style={{ padding: "9px 14px", borderRadius: "9px", fontSize: "0.875rem", fontWeight: 500, border: availableOnly ? "1.5px solid var(--green)" : "1.5px solid var(--card-border)", background: availableOnly ? "var(--green)" : "var(--card-bg)", color: availableOnly ? "#fff" : "var(--gray-900)", fontFamily: "'DM Sans', sans-serif", cursor: "pointer" }}
+          >Available Only</button>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "0.875rem", fontWeight: 500, color: "var(--gray-900)" }}>
-          To
-          <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} style={{ padding: "9px 12px", border: "1.5px solid var(--card-border)", borderRadius: "9px", fontSize: "0.875rem", fontFamily: "'DM Sans', sans-serif", color: "var(--gray-900)", outline: "none", background: "var(--card-bg)" }} />
-        </div>
-        {(dateFrom || dateTo) && (
-          <button onClick={() => { setDateFrom(""); setDateTo(""); }} style={{ fontSize: "0.8rem", color: "var(--gray-400)", background: "none", border: "none", cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>Clear</button>
-        )}
-        <div style={{ width: "1px", background: "var(--card-border)", alignSelf: "stretch", margin: "0 4px" }} />
-        <button
-          onClick={() => setAvailableOnly(!availableOnly)}
-          style={{ padding: "9px 14px", borderRadius: "9px", fontSize: "0.875rem", fontWeight: 500, border: availableOnly ? "1.5px solid var(--green)" : "1.5px solid var(--card-border)", background: availableOnly ? "var(--green)" : "var(--card-bg)", color: availableOnly ? "#fff" : "var(--gray-900)", fontFamily: "'DM Sans', sans-serif", cursor: "pointer" }}
-        >Available Only</button>
       </div>
 
       {upcoming.length === 0 ? (
