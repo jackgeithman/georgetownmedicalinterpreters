@@ -224,7 +224,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
       {/* Tab ribbon — hidden for clinic sessions */}
       {role !== "CLINIC" && <div style={{ background: "var(--card-bg)", borderBottom: "1.5px solid var(--card-border)", padding: "0 32px" }}>
-        <div ref={folderRef} style={{ display: "flex", gap: "2px", maxWidth: "1100px", margin: "0 auto", flexWrap: "wrap", alignItems: "stretch" }}>
+        <div ref={folderRef} className="tab-ribbon-scroll" style={{ display: "flex", gap: "2px", maxWidth: "1100px", margin: "0 auto", alignItems: "stretch" }}>
           {(isAdmin || isDev) ? (
             <>
               {/* Folder tabs only — Browse Slots and All Users live inside folders */}
