@@ -204,7 +204,7 @@ export default function ProfilePage() {
     <div>
       <h1 style={{ fontSize: "1.15rem", fontWeight: 700, color: "#111827", marginBottom: "24px" }}>My Profile</h1>
 
-      <div style={{ display: "grid", gridTemplateColumns: "240px 1fr", gap: "20px", alignItems: "start" }}>
+      <div className="profile-grid">
 
         {/* Left sidebar */}
         <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>

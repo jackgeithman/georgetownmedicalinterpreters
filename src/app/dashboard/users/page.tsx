@@ -372,6 +372,7 @@ export default function UsersPage() {
         </span>
       </div>
 
+      <div className="users-table-wrap">
       <div style={{ background: "var(--card-bg)", borderRadius: "14px", border: "1.5px solid var(--card-border)", overflow: "hidden" }}>
         <table style={{ width: "100%", borderCollapse: "collapse" }}>
           <thead>
@@ -654,6 +655,134 @@ export default function UsersPage() {
             })}
           </tbody>
         </table>
+      </div>
+      </div>{/* end users-table-wrap */}
+
+      {/* Mobile card list */}
+      <div className="users-card-list">
+        {filteredUsers.map((user) => {
+          const { roleChips, langChips } = parseUserRoles(user.roles ?? []);
+          const isUserSuperAdmin = user.roles?.includes("DEV");
+          const canModify = isSuperAdmin || (!isUserSuperAdmin && user.role !== "ADMIN");
+          const canAdminModify = viewerIsAdmin && canModify;
+          const pendingRoles = (user.roles ?? []).filter((r) => r.endsWith("_PENDING"));
+          const ROLE_LABEL: Record<string, string> = { VOLUNTEER_PENDING: "Volunteer", INSTRUCTOR_PENDING: "Instructor", ADMIN_PENDING: "Admin" };
+          return (
+            <div key={user.id} style={{ background: "var(--card-bg)", borderRadius: "14px", border: user.status === "PENDING_APPROVAL" ? "1.5px solid #FDE68A" : "1.5px solid var(--card-border)", padding: "16px", boxShadow: "0 1px 4px rgba(0,0,0,.04)" }}>
+
+              {/* Name + role chips */}
+              <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "8px", marginBottom: "3px" }}>
+                <span style={{ fontSize: "0.95rem", fontWeight: 700, color: "#111827" }}>{user.name}</span>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: "4px", justifyContent: "flex-end" }}>
+                  {user.status === "SUSPENDED" && (
+                    <span style={{ fontSize: "0.7rem", padding: "2px 8px", borderRadius: "99px", fontWeight: 600, background: "#FEF2F2", color: "#DC2626", border: "1px solid #FECACA" }}>Suspended</span>
+                  )}
+                  {roleChips.map(r => {
+                    const chip = ROLE_CHIPS.find(c => c.key === r);
+                    return (
+                      <span key={r} style={{ fontSize: "0.7rem", padding: "2px 8px", borderRadius: "99px", fontWeight: 600, background: chip?.bg ?? "#F1F5F9", color: chip?.color ?? "#475569", border: `1px solid ${chip?.border ?? "#CBD5E1"}` }}>
+                        {chip?.label ?? r}
+                      </span>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Email */}
+              <p style={{ fontSize: "0.78rem", color: "#111827", marginBottom: langChips.length > 0 ? "12px" : "0" }}>{user.email}</p>
+
+              {/* Languages */}
+              {langChips.length > 0 && (
+                <div style={{ borderTop: "1px solid var(--card-border)", paddingTop: "10px", marginBottom: "10px" }}>
+                  <p style={{ fontSize: "0.65rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", color: "#111827", marginBottom: "8px" }}>Languages</p>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "7px" }}>
+                    {langChips.map(({ code, state }) => {
+                      const isLoading = roleActionLoading === `lang-${user.id}-${code}`;
+                      const chipStyle = state === "cleared"
+                        ? { bg: "#BBF7D0", color: "#15803D", border: "1px solid #86EFAC", dot: "#10B981", label: "Cleared" }
+                        : state === "denied"
+                        ? { bg: "#FEF2F2", color: "#DC2626", border: "1px solid #FECACA", dot: "#EF4444", label: "Denied" }
+                        : { bg: "#FFFBEB", color: "#92400E", border: "1px solid #FDE68A", dot: "#F59E0B", label: "Pending" };
+                      return (
+                        <div key={code} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px" }}>
+                          <span style={{ display: "inline-flex", alignItems: "center", gap: "6px", fontSize: "0.78rem", fontWeight: 600, padding: "4px 10px", borderRadius: "99px", background: chipStyle.bg, color: chipStyle.color, border: chipStyle.border, opacity: isLoading ? 0.5 : 1, flexShrink: 0 }}>
+                            <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: chipStyle.dot, flexShrink: 0 }} />
+                            {getLangLabel(code)}
+                            <span style={{ fontSize: "0.68rem", opacity: 0.75 }}>· {chipStyle.label}</span>
+                          </span>
+                          <div style={{ display: "flex", gap: "4px", flexShrink: 0 }}>
+                            {state === "pending" && (viewerIsAdmin || viewerClearedLangs.has(code)) && (
+                              <>
+                                <button onClick={() => handleLangAction(user.id, code, "approve")} disabled={isLoading} style={{ padding: "5px 12px", fontSize: "0.72rem", background: "#DCFCE7", color: "#15803D", border: "none", borderRadius: "6px", cursor: "pointer", fontFamily: "'DM Sans', sans-serif", fontWeight: 600 }}>Approve</button>
+                                <button onClick={() => setLangActionModal({ userId: user.id, langCode: code, action: "deny", note: "" })} disabled={isLoading} style={{ padding: "5px 12px", fontSize: "0.72rem", background: "#FEE2E2", color: "#DC2626", border: "none", borderRadius: "6px", cursor: "pointer", fontFamily: "'DM Sans', sans-serif", fontWeight: 600 }}>Deny</button>
+                              </>
+                            )}
+                            {state === "cleared" && canModify && (viewerIsAdmin || viewerClearedLangs.has(code)) && (
+                              <button onClick={() => setLangActionModal({ userId: user.id, langCode: code, action: "revoke", note: "" })} style={{ padding: "5px 12px", fontSize: "0.72rem", background: "#F1F5F9", color: "#475569", border: "none", borderRadius: "6px", cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>Revoke</button>
+                            )}
+                            {state === "denied" && (viewerIsAdmin || viewerClearedLangs.has(code)) && (
+                              <button onClick={() => setLangActionModal({ userId: user.id, langCode: code, action: "override", note: "" })} style={{ padding: "5px 12px", fontSize: "0.72rem", background: "#DBEAFE", color: "#1D4ED8", border: "none", borderRadius: "6px", cursor: "pointer", fontFamily: "'DM Sans', sans-serif", fontWeight: 600 }}>Override</button>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Volunteer stats */}
+              {user.volunteer && (user.volunteer.hoursVolunteered > 0 || user.volunteer.noShows > 0 || user.volunteer.cancellationsWithin24h > 0 || user.volunteer.cancellationsWithin2h > 0) && (
+                <div style={{ borderTop: "1px solid var(--card-border)", paddingTop: "8px", marginBottom: "8px", display: "flex", gap: "12px", fontSize: "0.75rem", color: "#111827", flexWrap: "wrap" }}>
+                  <span>⏱ {user.volunteer.hoursVolunteered}h</span>
+                  {user.volunteer.noShows > 0 && <span style={{ color: "#EF4444" }}>NS {user.volunteer.noShows}</span>}
+                  {user.volunteer.cancellationsWithin24h > 0 && <span style={{ color: "#D97706" }}>24h {user.volunteer.cancellationsWithin24h}</span>}
+                  {user.volunteer.cancellationsWithin2h > 0 && <span style={{ color: "#D97706" }}>2h {user.volunteer.cancellationsWithin2h}</span>}
+                </div>
+              )}
+
+              {/* Pending approval actions */}
+              {canAdminModify && user.status === "PENDING_APPROVAL" && (
+                <div style={{ borderTop: "1px solid var(--card-border)", paddingTop: "10px" }}>
+                  {!user.onboardingComplete ? (
+                    <span style={{ fontSize: "0.72rem", color: "#92400E", background: "#FEF3C7", border: "1px solid #FDE68A", borderRadius: "6px", padding: "4px 8px" }}>Awaiting onboarding</span>
+                  ) : (
+                    <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                      {pendingRoles.map((pr) => {
+                        const roleKey = pr.replace("_PENDING", "");
+                        const loading = roleActionLoading === `role-decision-${user.id}-${roleKey}`;
+                        return (
+                          <div key={pr} style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                            <span style={{ fontSize: "0.72rem", fontWeight: 600, color: "#92400E", background: "#FEF3C7", border: "1px solid #FDE68A", borderRadius: "99px", padding: "2px 8px" }}>
+                              {ROLE_LABEL[pr] ?? roleKey}
+                            </span>
+                            <button disabled={loading} onClick={() => void handleRoleDecision(user.id, roleKey, "approve")} style={{ padding: "5px 12px", fontSize: "0.72rem", background: "#DCFCE7", color: "#15803D", border: "none", borderRadius: "6px", cursor: "pointer", fontFamily: "'DM Sans', sans-serif", fontWeight: 600 }}>✓ Approve</button>
+                            <button disabled={loading} onClick={() => void handleRoleDecision(user.id, roleKey, "reject")} style={{ padding: "5px 12px", fontSize: "0.72rem", background: "#FEF2F2", color: "#DC2626", border: "none", borderRadius: "6px", cursor: "pointer", fontFamily: "'DM Sans', sans-serif", fontWeight: 600 }}>✗ Reject</button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Admin: suspend / delete */}
+              {canAdminModify && !isUserSuperAdmin && user.status !== "PENDING_APPROVAL" && (
+                <div style={{ borderTop: "1px solid var(--card-border)", paddingTop: "10px", display: "flex", gap: "6px" }}>
+                  {user.status === "ACTIVE" ? (
+                    <button onClick={() => setSuspendUserConfirm({ userId: user.id, userName: user.name ?? user.email })} style={{ padding: "6px 14px", fontSize: "0.75rem", background: "#FEF2F2", color: "#DC2626", border: "none", borderRadius: "6px", cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>Suspend</button>
+                  ) : user.status === "SUSPENDED" ? (
+                    <button onClick={() => updateUser(user.id, { status: "ACTIVE" })} style={{ padding: "6px 14px", fontSize: "0.75rem", background: "#DCFCE7", color: "#15803D", border: "none", borderRadius: "6px", cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>Activate</button>
+                  ) : null}
+                  {isSuperAdmin && (
+                    <button onClick={() => setDeleteUserConfirm({ userId: user.id, userName: user.name ?? user.email })} style={{ padding: "6px 14px", fontSize: "0.75rem", background: "#111827", color: "#fff", border: "none", borderRadius: "6px", cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>Delete</button>
+                  )}
+                </div>
+              )}
+
+            </div>
+          );
+        })}
       </div>
 
       {/* Volunteer-remove warning modal */}
