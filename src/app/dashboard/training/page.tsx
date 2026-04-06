@@ -170,7 +170,7 @@ export default function TrainingPage() {
                       <div style={{ minWidth: 0, flex: 1 }}>
                         <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap", marginBottom: "4px" }}>
                           <span style={{ fontWeight: 600, color: "var(--gray-900)", fontSize: "0.875rem" }}>{m.title}</span>
-                          {canAdd && session?.user?.email === m.uploadedBy.email && (
+                          {canAdd && (isAdmin || isDev || session?.user?.email === m.uploadedBy.email) && (
                             <button onClick={() => void deleteTraining(m.id)} style={{ fontSize: "0.72rem", padding: "2px 8px", background: "#FEF2F2", color: "#DC2626", border: "none", borderRadius: "6px", cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>Delete</button>
                           )}
                           {m.languageCode && (
