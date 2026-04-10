@@ -3,7 +3,6 @@
 import { signIn, useSession } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState, useCallback, Suspense } from "react";
-import Link from "next/link";
 
 const ERROR_MESSAGES: Record<string, string> = {
   DomainNotAllowed: "Only Georgetown (@georgetown.edu) accounts are permitted. If you need access, contact your coordinator.",
@@ -33,8 +32,8 @@ function Carousel() {
   }, [next]);
 
   return (
-    <div style={{ position: "relative", borderRadius: "16px", overflow: "hidden", width: "100%", maxWidth: "960px", margin: "0 auto" }}>
-      <div style={{ position: "relative", paddingTop: "52%", background: "#1a1a1a" }}>
+    <div style={{ position: "relative", borderRadius: "16px", overflow: "hidden", width: "100%" }}>
+      <div style={{ position: "relative", paddingTop: "56%", background: "#1a1a1a" }}>
         {CAROUSEL_IMAGES.map((img, i) => (
           <img
             key={i}
@@ -49,36 +48,26 @@ function Carousel() {
           />
         ))}
       </div>
-
-      {/* Arrows */}
       <button onClick={prev} aria-label="Previous" style={{
-        position: "absolute", left: "16px", top: "50%", transform: "translateY(-50%)",
+        position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)",
         background: "rgba(0,0,0,.45)", border: "none", borderRadius: "50%",
-        width: "40px", height: "40px", color: "#fff", fontSize: "18px",
+        width: "36px", height: "36px", color: "#fff", fontSize: "18px",
         cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
       }}>‹</button>
       <button onClick={next} aria-label="Next" style={{
-        position: "absolute", right: "16px", top: "50%", transform: "translateY(-50%)",
+        position: "absolute", right: "12px", top: "50%", transform: "translateY(-50%)",
         background: "rgba(0,0,0,.45)", border: "none", borderRadius: "50%",
-        width: "40px", height: "40px", color: "#fff", fontSize: "18px",
+        width: "36px", height: "36px", color: "#fff", fontSize: "18px",
         cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
       }}>›</button>
-
-      {/* Dots */}
-      <div style={{ position: "absolute", bottom: "14px", left: "50%", transform: "translateX(-50%)", display: "flex", gap: "8px" }}>
+      <div style={{ position: "absolute", bottom: "12px", left: "50%", transform: "translateX(-50%)", display: "flex", gap: "7px" }}>
         {CAROUSEL_IMAGES.map((_, i) => (
-          <button
-            key={i}
-            onClick={() => setCurrent(i)}
-            aria-label={`Slide ${i + 1}`}
-            style={{
-              width: i === current ? "24px" : "8px", height: "8px",
-              borderRadius: "4px", border: "none",
-              background: i === current ? "#fff" : "rgba(255,255,255,.55)",
-              cursor: "pointer", padding: 0,
-              transition: "all 0.3s ease",
-            }}
-          />
+          <button key={i} onClick={() => setCurrent(i)} aria-label={`Slide ${i + 1}`} style={{
+            width: i === current ? "22px" : "7px", height: "7px",
+            borderRadius: "4px", border: "none",
+            background: i === current ? "#fff" : "rgba(255,255,255,.55)",
+            cursor: "pointer", padding: 0, transition: "all 0.3s ease",
+          }} />
         ))}
       </div>
     </div>
@@ -127,7 +116,7 @@ function SignInCard() {
   return (
     <div style={{
       background: "var(--card-bg)", border: "1.5px solid var(--card-border)",
-      borderRadius: "16px", padding: "28px", width: "100%", maxWidth: "400px",
+      borderRadius: "16px", padding: "28px",
       boxShadow: "0 4px 20px rgba(0,0,0,.08)",
     }}>
       {errorKey && (
@@ -136,7 +125,6 @@ function SignInCard() {
         </div>
       )}
 
-      {/* Google sign-in */}
       <button
         onClick={() => signIn("google", { callbackUrl: "/dashboard" })}
         style={{
@@ -163,10 +151,8 @@ function SignInCard() {
         Volunteer &amp; Admin Login
       </button>
 
-      {/* Separator */}
       <div style={{ height: "1px", background: "var(--card-border)", margin: "20px 0" }} />
 
-      {/* Clinic PIN */}
       {clinicError && (
         <div style={{ marginBottom: "12px", padding: "10px 14px", background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: "10px", fontSize: "0.875rem", color: "#DC2626" }}>
           {clinicError}
@@ -193,12 +179,8 @@ function SignInCard() {
                 background: "#fff", outline: "none", boxSizing: "border-box",
               }}
             />
-            <button
-              type="button"
-              onClick={() => setPinVisible(!pinVisible)}
-              tabIndex={-1}
-              style={{ position: "absolute", right: "12px", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: "var(--gray-400)", display: "flex", alignItems: "center", padding: 0 }}
-            >
+            <button type="button" onClick={() => setPinVisible(!pinVisible)} tabIndex={-1}
+              style={{ position: "absolute", right: "12px", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: "var(--gray-400)", display: "flex", alignItems: "center", padding: 0 }}>
               {pinVisible ? (
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
               ) : (
@@ -207,20 +189,23 @@ function SignInCard() {
             </button>
           </div>
         </div>
-        <button
-          type="submit"
-          disabled={pin.length < 6 || clinicLoading}
-          style={{
-            width: "100%", padding: "13px", border: "none", borderRadius: "10px",
-            background: "var(--blue)", color: "#fff", fontFamily: "inherit",
-            fontSize: "1.05rem", fontWeight: 600, cursor: "pointer",
-            opacity: pin.length < 6 || clinicLoading ? 0.5 : 1,
-            transition: "all .18s",
-          }}
-        >
+        <button type="submit" disabled={pin.length < 6 || clinicLoading} style={{
+          width: "100%", padding: "13px", border: "none", borderRadius: "10px",
+          background: "var(--blue)", color: "#fff", fontFamily: "inherit",
+          fontSize: "1.05rem", fontWeight: 600, cursor: "pointer",
+          opacity: pin.length < 6 || clinicLoading ? 0.5 : 1,
+          transition: "all .18s",
+        }}>
           {clinicLoading ? "Signing in…" : "Sign In"}
         </button>
       </form>
+
+      <p style={{ textAlign: "center", marginTop: "16px", fontSize: "0.78rem", color: "#111827", lineHeight: 1.7 }}>
+        By signing in you agree to our{" "}
+        <a href="/terms" style={{ color: "var(--blue)", textDecoration: "none" }}>Terms of Service</a>
+        {" "}and{" "}
+        <a href="/privacy" style={{ color: "var(--blue)", textDecoration: "none" }}>Privacy Policy</a>.
+      </p>
     </div>
   );
 }
@@ -240,7 +225,7 @@ function LandingContent() {
       <nav style={{
         position: "sticky", top: 0, zIndex: 100,
         background: "var(--navy)", height: "64px",
-        display: "flex", alignItems: "center", justifyContent: "space-between",
+        display: "flex", alignItems: "center",
         padding: "0 32px",
       }}>
         <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
@@ -251,29 +236,35 @@ function LandingContent() {
             <div style={{ color: "#94A3B8", fontSize: "0.72rem" }}>Volunteer Platform</div>
           </div>
         </div>
-        <a href="#signin" style={{
-          background: "rgba(255,255,255,.08)", border: "1px solid rgba(255,255,255,.2)",
-          color: "#fff", padding: "7px 16px", borderRadius: "8px",
-          fontWeight: 500, fontSize: "0.8rem", textDecoration: "none",
-        }}>
-          Sign In
-        </a>
       </nav>
 
-      {/* Hero */}
-      <section style={{ padding: "56px 24px 48px", textAlign: "center" }}>
-        <p style={{ fontSize: "1.25rem", color: "#111827", maxWidth: "640px", margin: "0 auto 36px", lineHeight: 1.6, fontWeight: 500 }}>
-          Georgetown Medical Interpreters connects bilingual volunteers with patients
-          who need language support at local clinics across the DMV area.
-        </p>
-        <Carousel />
+      {/* Hero — two columns */}
+      <section style={{ maxWidth: "1100px", margin: "0 auto", padding: "48px 32px", display: "grid", gridTemplateColumns: "1fr 380px", gap: "48px", alignItems: "start" }}>
+
+        {/* Left: what we do + carousel */}
+        <div>
+          <h1 style={{ fontSize: "2rem", fontWeight: 700, color: "#0D1F3C", marginBottom: "16px", lineHeight: 1.25, letterSpacing: "-0.02em" }}>
+            Connecting bilingual volunteers with patients who need language support
+          </h1>
+          <p style={{ fontSize: "1.05rem", color: "#111827", lineHeight: 1.65, marginBottom: "32px" }}>
+            Georgetown Medical Interpreters partners with clinics across the DMV area to provide
+            free medical interpretation services — bridging language gaps between patients and their care teams.
+          </p>
+          <Carousel />
+        </div>
+
+        {/* Right: sign-in card */}
+        <div>
+          <p style={{ fontSize: "0.8rem", fontWeight: 600, color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "12px" }}>Sign In</p>
+          <Suspense>
+            <SignInCard />
+          </Suspense>
+        </div>
       </section>
 
       {/* How It Works */}
-      <section style={{ padding: "48px 24px", maxWidth: "680px", margin: "0 auto" }}>
-        <h2 style={{ fontSize: "2rem", fontWeight: 700, color: "#0D1F3C", marginBottom: "36px" }}>
-          How It Works
-        </h2>
+      <section style={{ padding: "48px 32px", maxWidth: "720px", margin: "0 auto" }}>
+        <h2 style={{ fontSize: "2rem", fontWeight: 700, color: "#0D1F3C", marginBottom: "36px" }}>How It Works</h2>
         <div style={{ display: "flex", flexDirection: "column", gap: "28px" }}>
           {[
             { n: "1", title: "We train interpreters", desc: "Bilingual Georgetown students complete our training program to become medical interpreters." },
@@ -281,11 +272,7 @@ function LandingContent() {
             { n: "3", title: "Patients get language support", desc: "Volunteers arrive at the clinic and provide real-time interpretation so patients can communicate with their care team." },
           ].map(({ n, title, desc }) => (
             <div key={n} style={{ display: "flex", gap: "20px", alignItems: "flex-start" }}>
-              <div style={{
-                width: "44px", height: "44px", borderRadius: "50%", background: "var(--blue)",
-                color: "#fff", fontWeight: 700, fontSize: "1.1rem",
-                display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
-              }}>{n}</div>
+              <div style={{ width: "44px", height: "44px", borderRadius: "50%", background: "var(--blue)", color: "#fff", fontWeight: 700, fontSize: "1.1rem", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{n}</div>
               <div>
                 <div style={{ fontWeight: 700, fontSize: "1.1rem", color: "#0D1F3C", marginBottom: "6px" }}>{title}</div>
                 <div style={{ color: "#111827", fontSize: "1rem", lineHeight: 1.55 }}>{desc}</div>
@@ -293,8 +280,6 @@ function LandingContent() {
             </div>
           ))}
         </div>
-
-        {/* Second photo */}
         <div style={{ marginTop: "40px", borderRadius: "16px", overflow: "hidden" }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/stock2.webp" alt="Medical interpretation session" style={{ width: "100%", display: "block", objectFit: "cover", maxHeight: "400px" }} />
@@ -302,10 +287,8 @@ function LandingContent() {
       </section>
 
       {/* Get Involved */}
-      <section style={{ padding: "48px 24px", maxWidth: "960px", margin: "0 auto" }}>
-        <h2 style={{ fontSize: "2rem", fontWeight: 700, color: "#0D1F3C", marginBottom: "32px", textAlign: "center" }}>
-          Get Involved
-        </h2>
+      <section style={{ padding: "48px 32px", maxWidth: "960px", margin: "0 auto" }}>
+        <h2 style={{ fontSize: "2rem", fontWeight: 700, color: "#0D1F3C", marginBottom: "32px", textAlign: "center" }}>Get Involved</h2>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "20px" }}>
           <div style={{ background: "var(--card-bg)", border: "1.5px solid var(--card-border)", borderRadius: "16px", padding: "28px", display: "flex", flexDirection: "column" }}>
             <h3 style={{ fontWeight: 700, fontSize: "1.25rem", color: "#0D1F3C", marginBottom: "12px" }}>Want to Volunteer?</h3>
@@ -328,27 +311,8 @@ function LandingContent() {
         </div>
       </section>
 
-      {/* Sign In */}
-      <section id="signin" style={{ padding: "48px 24px 64px", display: "flex", flexDirection: "column", alignItems: "center" }}>
-        <h2 style={{ fontSize: "2rem", fontWeight: 700, color: "#0D1F3C", marginBottom: "8px", textAlign: "center" }}>Sign In</h2>
-        <p style={{ color: "#111827", marginBottom: "28px", fontSize: "1rem" }}>Access your GMI dashboard</p>
-        <Suspense>
-          <SignInCard />
-        </Suspense>
-        <p style={{ textAlign: "center", marginTop: "20px", fontSize: "0.8rem", color: "#111827", lineHeight: 1.7 }}>
-          By signing in you agree to our{" "}
-          <a href="/terms" style={{ color: "var(--blue)", textDecoration: "none" }}>Terms of Service</a>
-          {" "}and{" "}
-          <a href="/privacy" style={{ color: "var(--blue)", textDecoration: "none" }}>Privacy Policy</a>.
-        </p>
-      </section>
-
       {/* Footer */}
-      <footer style={{
-        borderTop: "1.5px solid var(--card-border)", padding: "24px 32px",
-        display: "flex", alignItems: "center", justifyContent: "space-between",
-        flexWrap: "wrap", gap: "12px",
-      }}>
+      <footer style={{ borderTop: "1.5px solid var(--card-border)", padding: "24px 32px", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "12px", marginTop: "32px" }}>
         <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/logo.svg" alt="GMI" style={{ width: "28px", height: "28px", borderRadius: "6px" }} />
