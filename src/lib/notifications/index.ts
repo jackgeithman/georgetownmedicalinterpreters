@@ -23,7 +23,7 @@ function fmtDate(d: Date): string {
 }
 
 function wrap(title: string, body: string): string {
-  return `<!DOCTYPE html><html><body style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:24px;color:#1a1a1a">
+  return `<!DOCTYPE html><html><head><meta charset="utf-8"></head><body style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:24px;color:#1a1a1a">
 <div style="border-bottom:3px solid #002147;padding-bottom:12px;margin-bottom:24px">
   <h2 style="color:#002147;margin:0;font-size:20px">Georgetown Medical Interpreters</h2>
 </div>

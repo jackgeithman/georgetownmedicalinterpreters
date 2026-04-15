@@ -72,6 +72,27 @@ body {
 .browse-mobile-top { display: none; }
 
 
+/* ── Landing page responsive ─────────────────────────────────────────────── */
+.landing-hero {
+  display: grid;
+  grid-template-columns: 1fr 380px;
+  gap: 48px;
+  align-items: start;
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 48px 32px;
+}
+
+.landing-signin-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #94A3B8;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 12px;
+}
+
+/* ── Shared mobile breakpoint ────────────────────────────────────────────── */
 @media (max-width: 640px) {
   .profile-grid {
     grid-template-columns: 1fr;
@@ -146,4 +167,24 @@ body {
   .clinic-form-grid {
     grid-template-columns: 1fr !important;
   }
+
+  /* Landing page: stack to single column, sign-in card first */
+  .landing-hero {
+    grid-template-columns: 1fr !important;
+    padding: 24px 16px !important;
+    gap: 28px !important;
+  }
+
+  .landing-hero-left {
+    order: 2;
+  }
+
+  .landing-hero-right {
+    order: 1;
+  }
+
+  .landing-hero-right h1 {
+    font-size: 1.5rem !important;
+  }
+
 }

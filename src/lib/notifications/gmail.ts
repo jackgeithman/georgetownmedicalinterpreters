@@ -15,6 +15,14 @@ export interface IcsAttachment {
   method: "REQUEST" | "CANCEL";
 }
 
+// RFC 2047 B-encoding for non-ASCII subject headers.
+// Without this, raw UTF-8 bytes in the Subject line are misread as Latin-1
+// by some clients, producing garbled output like "Ã¢Â€Â"" for an em dash.
+function encodeSubject(subject: string): string {
+  if (!/[^\x00-\x7F]/.test(subject)) return subject;
+  return `=?UTF-8?B?${Buffer.from(subject).toString("base64")}?=`;
+}
+
 function buildRaw(to: string, subject: string, html: string, ics?: IcsAttachment): string {
   const from = `Georgetown Medical Interpreters <${process.env.GOOGLE_GMAIL_SENDER_EMAIL}>`;
   const date = new Date().toUTCString();
@@ -23,10 +31,11 @@ function buildRaw(to: string, subject: string, html: string, ics?: IcsAttachment
     const lines = [
       `From: ${from}`,
       `To: ${to}`,
-      `Subject: ${subject}`,
+      `Subject: ${encodeSubject(subject)}`,
       `Date: ${date}`,
       "MIME-Version: 1.0",
       "Content-Type: text/html; charset=UTF-8",
+      "Content-Transfer-Encoding: 8bit",
       "",
       html,
     ];
@@ -38,13 +47,14 @@ function buildRaw(to: string, subject: string, html: string, ics?: IcsAttachment
   const lines = [
     `From: ${from}`,
     `To: ${to}`,
-    `Subject: ${subject}`,
+    `Subject: ${encodeSubject(subject)}`,
     `Date: ${date}`,
     "MIME-Version: 1.0",
     `Content-Type: multipart/mixed; boundary="${boundary}"`,
     "",
     `--${boundary}`,
     "Content-Type: text/html; charset=UTF-8",
+    "Content-Transfer-Encoding: 8bit",
     "",
     html,
     "",

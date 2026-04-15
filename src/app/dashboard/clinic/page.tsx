@@ -165,7 +165,10 @@ function ClinicDashboardInner() {
   const [submittingFeedbackFor, setSubmittingFeedbackFor] = useState<string | null>(null);
 
   useEffect(() => {
-    if (status === "unauthenticated") router.push("/login");
+    if (status === "unauthenticated") {
+      const t = setTimeout(() => router.push("/login"), 500);
+      return () => clearTimeout(t);
+    }
     if (session?.user?.role && session.user.role !== "CLINIC" && !isAdminPreview) router.push("/dashboard");
   }, [status, session, router, isAdminPreview]);
 
