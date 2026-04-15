@@ -24,6 +24,29 @@ function isRateLimited(ip: string): boolean {
 export const authOptions: NextAuthOptions = {
   session: { strategy: "jwt" },
   providers: [
+    // ── Dev-only role impersonation (never runs in production) ──────────────
+    CredentialsProvider({
+      id: "dev",
+      name: "Dev Role",
+      credentials: { role: { label: "Role", type: "text" } },
+      async authorize(credentials) {
+        if (process.env.NODE_ENV !== "development") return null;
+        const role = credentials?.role ?? "ADMIN";
+        const email = `dev-${role.toLowerCase()}@dev.local`;
+        // Pick up language clearances (etc.) from the seeded DB user if present
+        const dbUser = await prisma.user.findUnique({ where: { email }, select: { roles: true } }).catch(() => null);
+        return {
+          id: `dev-${role}`,
+          name: `Dev ${role.charAt(0) + role.slice(1).toLowerCase()}`,
+          email,
+          role,
+          roles: dbUser?.roles ?? [role],
+          status: "ACTIVE",
+          onboardingComplete: true,
+          clinicId: role === "CLINIC" ? "dev-clinic" : null,
+        } as never;
+      },
+    }),
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID!,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
@@ -75,6 +98,7 @@ export const authOptions: NextAuthOptions = {
   callbacks: {
     async signIn({ user, account }) {
       if (account?.provider === "credentials") return true;
+      if (account?.provider === "dev") return process.env.NODE_ENV === "development";
 
       if (!user.email) return false;
 
@@ -138,6 +162,17 @@ export const authOptions: NextAuthOptions = {
     },
 
     async jwt({ token, user, account }) {
+      if (account?.provider === "dev" && user) {
+        const u = user as unknown as { role: string; roles: string[]; clinicId: string | null };
+        token.isDevSession = true;
+        token.role = u.role;
+        token.roles = u.roles;
+        token.clinicId = u.clinicId;
+        token.id = user.id;
+        token.name = user.name;
+        token.onboardingComplete = true;
+        return token;
+      }
       if (account?.provider === "credentials" && user) {
         token.isClinicSession = true;
         token.role = (user as unknown as { role: string }).role;
@@ -154,6 +189,15 @@ export const authOptions: NextAuthOptions = {
     },
 
     async session({ session, token }) {
+      if (token.isDevSession) {
+        session.user.role = token.role as string;
+        session.user.roles = (token.roles ?? [token.role]) as string[];
+        session.user.status = "ACTIVE";
+        session.user.id = token.id as string;
+        session.user.clinicId = (token.clinicId ?? null) as string | null;
+        session.user.onboardingComplete = true;
+        return session;
+      }
       if (token.isClinicSession) {
         session.user.role = token.role as string;
         session.user.clinicId = token.clinicId as string;

@@ -211,12 +211,15 @@ function SignInCard() {
 }
 
 function LandingContent() {
-  const { status } = useSession();
+  const { data: session, status } = useSession();
   const router = useRouter();
 
   useEffect(() => {
-    if (status === "authenticated") router.push("/dashboard");
-  }, [status, router]);
+    // Don't auto-redirect dev sessions — they navigate themselves via the toolbar.
+    if (status === "authenticated" && !session?.user?.email?.endsWith("@dev.local")) {
+      router.push("/dashboard");
+    }
+  }, [status, session, router]);
 
   return (
     <div style={{ minHeight: "100vh", background: "var(--page-bg)", fontFamily: "'DM Sans', system-ui, sans-serif" }}>
@@ -228,21 +231,28 @@ function LandingContent() {
         display: "flex", alignItems: "center",
         padding: "0 32px",
       }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
+        <button
+          onClick={() => signIn("google", { callbackUrl: "/dashboard" }, { hd: "" })}
+          title="Sign in with any Google account"
+          style={{
+            display: "flex", alignItems: "center", gap: "14px",
+            background: "none", border: "none", cursor: "pointer", padding: 0,
+          }}
+        >
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/logo.svg" alt="GMI" style={{ width: "36px", height: "36px", borderRadius: "9px", flexShrink: 0 }} />
           <div>
             <div style={{ color: "#fff", fontSize: "0.95rem", fontWeight: 600 }}>Georgetown Medical Interpreters</div>
             <div style={{ color: "#94A3B8", fontSize: "0.72rem" }}>Volunteer Platform</div>
           </div>
-        </div>
+        </button>
       </nav>
 
-      {/* Hero — two columns */}
-      <section style={{ maxWidth: "1100px", margin: "0 auto", padding: "48px 32px", display: "grid", gridTemplateColumns: "1fr 380px", gap: "48px", alignItems: "start" }}>
+      {/* Hero — two columns on desktop, stacked on mobile */}
+      <section className="landing-hero">
 
         {/* Left: what we do + carousel */}
-        <div>
+        <div className="landing-hero-left">
           <h1 style={{ fontSize: "2rem", fontWeight: 700, color: "#0D1F3C", marginBottom: "16px", lineHeight: 1.25, letterSpacing: "-0.02em" }}>
             Connecting bilingual volunteers with patients who need language support
           </h1>
@@ -254,8 +264,8 @@ function LandingContent() {
         </div>
 
         {/* Right: sign-in card */}
-        <div>
-          <p style={{ fontSize: "0.8rem", fontWeight: 600, color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "12px" }}>Sign In</p>
+        <div className="landing-hero-right">
+          <p className="landing-signin-label">Sign In</p>
           <Suspense>
             <SignInCard />
           </Suspense>

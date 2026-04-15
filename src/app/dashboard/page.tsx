@@ -8,10 +8,11 @@ export default function DashboardPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
 
+  // Defer redirect to allow session to hydrate on client-side navigation.
   useEffect(() => {
-    if (status === "unauthenticated") {
-      router.push("/login");
-    }
+    if (status !== "unauthenticated") return;
+    const t = setTimeout(() => router.push("/login"), 500);
+    return () => clearTimeout(t);
   }, [status, router]);
 
   useEffect(() => {

@@ -20,11 +20,20 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   useEffect(() => {
     if (redirected.current) return;
+
+    // For unauthenticated, wait a tick to let the session load before redirecting.
+    // This prevents a race where client-side navigation lands here before
+    // SessionProvider has re-hydrated the JWT cookie.
     if (status === "unauthenticated") {
-      redirected.current = true;
-      router.push("/login");
-      return;
+      const t = setTimeout(() => {
+        if (!redirected.current) {
+          redirected.current = true;
+          router.push("/login");
+        }
+      }, 500);
+      return () => clearTimeout(t);
     }
+
     if (status === "authenticated" && session) {
       if (!session.user.onboardingComplete) {
         redirected.current = true;
