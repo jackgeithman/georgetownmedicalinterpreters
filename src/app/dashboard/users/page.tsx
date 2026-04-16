@@ -20,6 +20,7 @@ type User = {
   id: string;
   email: string;
   name: string;
+  phone: string | null;
   role: string;
   roles: string[];
   status: string;
@@ -390,7 +391,7 @@ export default function UsersPage() {
           <thead>
             <tr style={{ borderBottom: "1.5px solid var(--card-border)" }}>
               <th style={{ textAlign: "left", fontSize: "0.68rem", fontWeight: 700, color: "#000", textTransform: "uppercase", letterSpacing: "0.09em", padding: "12px 20px" }}>Name</th>
-              <th style={{ textAlign: "left", fontSize: "0.68rem", fontWeight: 700, color: "#000", textTransform: "uppercase", letterSpacing: "0.09em", padding: "12px 20px" }}>Email</th>
+              <th style={{ textAlign: "left", fontSize: "0.68rem", fontWeight: 700, color: "#000", textTransform: "uppercase", letterSpacing: "0.09em", padding: "12px 20px" }}>Contact Info</th>
               <th style={{ textAlign: "left", fontSize: "0.68rem", fontWeight: 700, color: "#000", textTransform: "uppercase", letterSpacing: "0.09em", padding: "12px 20px" }}>Roles</th>
               <th style={{ textAlign: "left", fontSize: "0.68rem", fontWeight: 700, color: "#000", textTransform: "uppercase", letterSpacing: "0.09em", padding: "12px 20px" }}>Languages</th>
               <th style={{ textAlign: "left", fontSize: "0.68rem", fontWeight: 700, color: "#000", textTransform: "uppercase", letterSpacing: "0.09em", padding: "12px 20px" }}>Stats</th>
@@ -418,15 +419,18 @@ export default function UsersPage() {
                   {/* Name */}
                   <td style={{ padding: "14px 20px", fontSize: "0.875rem", color: "#111827", fontWeight: 500, whiteSpace: "nowrap" }}>{user.name}</td>
 
-                  {/* Email — truncated, click to expand */}
+                  {/* Contact Info — email + phone */}
                   <td style={{ padding: "14px 20px" }}>
                     <button
                       onClick={() => setEmailExpanded(prev => { const n = new Set(prev); isExpanded ? n.delete(user.id) : n.add(user.id); return n; })}
                       title={emailFull}
-                      style={{ fontSize: "0.82rem", color: "#111827", background: "none", border: "none", cursor: emailFull.length > 18 ? "pointer" : "default", fontFamily: "'DM Sans', sans-serif", padding: 0, textAlign: "left" }}
+                      style={{ display: "block", fontSize: "0.82rem", color: "#111827", background: "none", border: "none", cursor: emailFull.length > 18 ? "pointer" : "default", fontFamily: "'DM Sans', sans-serif", padding: 0, textAlign: "left" }}
                     >
                       {isExpanded ? emailFull : emailFull.length > 18 ? `${emailFull.slice(0, 18)}…` : emailFull}
                     </button>
+                    {user.phone && (
+                      <div style={{ fontSize: "0.75rem", color: "#374151", marginTop: "2px" }}>{user.phone}</div>
+                    )}
                   </td>
 
                   {/* Roles */}
@@ -714,8 +718,9 @@ export default function UsersPage() {
                 </div>
               </div>
 
-              {/* Email */}
-              <p style={{ fontSize: "0.78rem", color: "#111827", marginBottom: langChips.length > 0 ? "12px" : "0" }}>{user.email}</p>
+              {/* Contact */}
+              <p style={{ fontSize: "0.78rem", color: "#111827", marginBottom: "2px" }}>{user.email}</p>
+              {user.phone && <p style={{ fontSize: "0.78rem", color: "#111827", marginBottom: langChips.length > 0 ? "12px" : "0" }}>{user.phone}</p>}
 
               {/* Languages */}
               {langChips.length > 0 && (

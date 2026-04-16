@@ -22,7 +22,7 @@ export async function GET() {
     const profile = await prisma.volunteerProfile.create({
       data: { userId: user.id, languages: [] },
     });
-    return NextResponse.json(profile);
+    return NextResponse.json({ ...profile, phone: user.phone ?? null, clearanceStatus: null, clearanceDate: null, userCreatedAt: user.createdAt });
   }
 
   // Fetch clearance status
@@ -34,6 +34,7 @@ export async function GET() {
 
   return NextResponse.json({
     ...user.volunteer,
+    phone: user.phone ?? null,
     clearanceStatus: clearance?.isCleared ? "APPROVED" : clearance ? "PENDING" : null,
     clearanceDate: clearance?.createdAt ?? null,
     userCreatedAt: user.createdAt,
@@ -45,13 +46,18 @@ export async function PATCH(req: NextRequest) {
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
 
   const body = await req.json();
-  const { languages, backgroundInfo } = body;
+  const { languages, backgroundInfo, phone } = body;
+
+  // Update phone on User model if provided
+  if (phone !== undefined) {
+    await prisma.user.update({ where: { id: user.id }, data: { phone: phone?.trim() || null } });
+  }
 
   if (!user.volunteer) {
     const profile = await prisma.volunteerProfile.create({
       data: { userId: user.id, languages: languages ?? [] },
     });
-    return NextResponse.json(profile);
+    return NextResponse.json({ ...profile, phone: phone?.trim() || null });
   }
 
   const updateData: Record<string, unknown> = {};

@@ -9,8 +9,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const { data: session, status } = useSession();
   const router = useRouter();
   const pathname = usePathname();
-  const [showClearanceRibbon, setShowClearanceRibbon] = useState(false);
-  const [ribbonEventIds, setRibbonEventIds] = useState<string[]>([]);
   const [pendingCount, setPendingCount] = useState(0);
   const [unreadMessages, setUnreadMessages] = useState(0);
   const [openFolder, setOpenFolder] = useState<string | null>(null);
@@ -48,20 +46,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     }
   }, [status, session, router]);
 
-  // Load clearance ribbon for volunteers
   useEffect(() => {
     const role = session?.user?.role;
-    if (role === "VOLUNTEER" || role === "ADMIN" || role === "INSTRUCTOR") {
-      fetch("/api/volunteer/lang-clearance-events")
-        .then((r) => r.json())
-        .then((events: { id: string }[]) => {
-          if (Array.isArray(events) && events.length > 0) {
-            setShowClearanceRibbon(true);
-            setRibbonEventIds(events.map((e) => e.id));
-          }
-        })
-        .catch(() => {});
-    }
     if (role === "ADMIN" || role === "INSTRUCTOR") {
       fetch("/api/admin/users")
         .then((r) => {
@@ -152,6 +138,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       id: "administration", label: "Administration", badge: pendingCount + unreadMessages,
       items: [
         { path: "/dashboard/users", label: "All Users", badge: pendingCount },
+        { path: "/dashboard/upcoming", label: "Upcoming Shifts" },
         { path: "/dashboard/metrics", label: "Metrics" },
         { path: "/dashboard/activity", label: "Activity Log" },
         { path: "/dashboard/messages", label: "Messages", badge: unreadMessages },
@@ -204,33 +191,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </button>
         </div>
       </header>}
-
-      {/* Clearance ribbon */}
-      {showClearanceRibbon && (
-        <div style={{ background: "#EFF6FF", borderBottom: "1px solid #BFDBFE", padding: "9px 32px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px" }}>
-          <span style={{ fontSize: "0.82rem", fontWeight: 500, color: "#1D4ED8" }}>
-            Your language clearance status has been updated —{" "}
-            <Link
-              href="/dashboard/profile"
-              style={{ fontWeight: 700, textDecoration: "underline", color: "#1D4ED8" }}
-            >
-              see your Profile
-            </Link>
-            {" "}for details.
-          </span>
-          <button
-            onClick={() => {
-              setShowClearanceRibbon(false);
-              fetch("/api/volunteer/lang-clearance-events", {
-                method: "PATCH",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ ids: ribbonEventIds }),
-              }).catch(() => {});
-            }}
-            style={{ background: "none", border: "none", cursor: "pointer", color: "#1D4ED8", opacity: 0.6, fontSize: "1.1rem", lineHeight: 1, flexShrink: 0, fontFamily: "'DM Sans', sans-serif" }}
-          >×</button>
-        </div>
-      )}
 
       {/* Tab ribbon — hidden for clinic sessions */}
       {role !== "CLINIC" && <div style={{ background: "var(--card-bg)", borderBottom: "1.5px solid var(--card-border)", padding: "0 32px" }}>

@@ -27,12 +27,13 @@ export async function POST(req: NextRequest) {
   const body = await req.json() as {
     firstName?: string;
     lastName?: string;
+    phone?: string | null;
     roles?: string[];
     languages?: string[];
     notifPrefs?: NotifPrefs | null;
   };
 
-  const { firstName, lastName, roles, languages, notifPrefs } = body;
+  const { firstName, lastName, phone, roles, languages, notifPrefs } = body;
 
   if (!firstName?.trim() || !lastName?.trim()) {
     return NextResponse.json({ error: "First and last name are required." }, { status: 400 });
@@ -56,6 +57,7 @@ export async function POST(req: NextRequest) {
         firstName: firstName.trim(),
         lastName: lastName.trim(),
         name: `${firstName.trim()} ${lastName.trim()}`,
+        phone: phone?.trim() || null,
         roles: newRoles,
         status: "PENDING_APPROVAL",
         onboardingComplete: true,

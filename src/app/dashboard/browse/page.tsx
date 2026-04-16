@@ -409,8 +409,15 @@ export default function BrowsePage() {
       if (dateFrom && new Date(s.date.slice(0, 10) + "T12:00:00") < new Date(dateFrom + "T00:00:00")) return false;
       if (dateTo && new Date(s.date.slice(0, 10) + "T12:00:00") > new Date(dateTo + "T23:59:59")) return false;
       if (availableOnly) {
-        const hasOpen = s.positions.some((p) => p.status === "OPEN" || p.status === "LOCKED");
-        if (!hasOpen) return false;
+        if (langFilter !== "ALL") {
+          // Driver open + language needed → driver could take that language
+          const driverOpen = s.positions.some((p) => p.isDriver && p.status === "OPEN");
+          const hasOpenLang = s.positions.some((p) => !p.isDriver && p.status === "OPEN" && p.languageCode === langFilter);
+          if (!driverOpen && !hasOpenLang) return false;
+        } else {
+          const hasOpen = s.positions.some((p) => p.status === "OPEN" || p.status === "LOCKED");
+          if (!hasOpen) return false;
+        }
       }
       return true;
     });
@@ -424,6 +431,16 @@ export default function BrowsePage() {
     const renderAdminShift = (shift: AdminShift, isPast: boolean) => {
       const openCount = shift.positions.filter((p) => p.status === "OPEN" || p.status === "LOCKED").length;
       const filledCount = shift.positions.filter((p) => p.status === "FILLED").length;
+      const langCounts: Record<string, { filled: number; total: number }> = {};
+      for (const lang of shift.languagesNeeded) {
+        langCounts[lang] = langCounts[lang] ?? { filled: 0, total: 0 };
+        langCounts[lang].total++;
+      }
+      for (const pos of shift.positions) {
+        if (pos.languageCode && pos.status === "FILLED") {
+          if (langCounts[pos.languageCode]) langCounts[pos.languageCode].filled++;
+        }
+      }
 
       return (
         <div key={shift.id} style={{ background: "var(--card-bg)", borderRadius: "14px", border: "1.5px solid var(--card-border)", overflow: "hidden", marginBottom: "14px", boxShadow: "0 2px 6px rgba(0,0,0,.05)", opacity: isPast ? 0.55 : 1 }}>
@@ -432,17 +449,22 @@ export default function BrowsePage() {
             <div>
               <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
                 <div style={{ fontSize: "1.1rem", fontWeight: 700, color: "var(--navy)" }}>{shift.clinic.name}</div>
-                {shift.languagesNeeded.map((lang) => (
-                  <span key={lang} style={{ fontSize: "0.72rem", fontWeight: 600, padding: "2px 8px", borderRadius: "99px", background: "#EFF6FF", color: "#1D4ED8" }}>{langName(lang)}</span>
-                ))}
+                {Object.entries(langCounts).map(([lang, { filled, total }]) => {
+                  const allFilled = filled >= total;
+                  return (
+                    <span key={lang} style={{ fontSize: "0.72rem", fontWeight: 600, padding: "2px 8px", borderRadius: "99px", background: allFilled ? "#DCFCE7" : "#EFF6FF", color: allFilled ? "#15803D" : "#1D4ED8", whiteSpace: "nowrap" }}>
+                      {langName(lang)}: {filled}/{total}
+                    </span>
+                  );
+                })}
               </div>
               <div style={{ display: "flex", gap: "24px", marginTop: "12px", flexWrap: "wrap" }}>
                 <div style={{ display: "flex", flexDirection: "column", gap: "3px" }}>
-                  <span style={{ fontSize: "0.68rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.09em", color: "var(--gray-400)" }}>Date</span>
-                  <span style={{ fontSize: "0.95rem", fontWeight: 600, color: "var(--gray-900)" }}>{fmtDate(shift.date)}</span>
+                  <span style={{ fontSize: "0.68rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.09em", color: "#111827" }}>Date</span>
+                  <span style={{ fontSize: "0.95rem", fontWeight: 600, color: "#111827" }}>{fmtDate(shift.date)}</span>
                 </div>
                 <div style={{ display: "flex", flexDirection: "column", gap: "3px" }}>
-                  <span style={{ fontSize: "0.68rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.09em", color: "#111827" }}>Full Commitment</span>
+                  <span style={{ fontSize: "0.68rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.09em", color: "#111827" }}>Time Commitment</span>
                   <span style={{ fontSize: "0.95rem", fontWeight: 600, color: "#111827" }}>
                     {fmtMin(shift.volunteerStart - shift.travelMinutes - 30)} – {fmtMin(shift.volunteerEnd + shift.travelMinutes + 15)}
                     <span style={{ fontSize: "0.78rem", fontWeight: 400, marginLeft: "5px" }}>({Math.round((shift.volunteerEnd + shift.travelMinutes + 15 - (shift.volunteerStart - shift.travelMinutes - 30)) / 60 * 10) / 10} hrs)</span>
@@ -457,8 +479,8 @@ export default function BrowsePage() {
                 </div>
                 {shift.clinic.address && (
                   <div style={{ display: "flex", flexDirection: "column", gap: "3px" }}>
-                    <span style={{ fontSize: "0.68rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.09em", color: "var(--gray-400)" }}>Location</span>
-                    <span style={{ fontSize: "0.95rem", fontWeight: 600, color: "var(--gray-900)" }}>
+                    <span style={{ fontSize: "0.68rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.09em", color: "#111827" }}>Location</span>
+                    <span style={{ fontSize: "0.95rem", fontWeight: 600, color: "#111827" }}>
                       {shift.clinic.address}
                       <MapsLinks address={shift.clinic.address} />
                     </span>
@@ -471,29 +493,6 @@ export default function BrowsePage() {
                 <span style={{ background: "var(--gray-200)", color: "var(--gray-600)", fontSize: "0.7rem", fontWeight: 600, padding: "4px 10px", borderRadius: "99px", textTransform: "uppercase" }}>Past</span>
               ) : (
                 <>
-                  <div style={{ display: "flex", flexDirection: "column", gap: "4px", alignItems: "flex-end" }}>
-                    {(() => {
-                      // Group positions by language to show per-language fill status
-                      const langCounts: Record<string, { filled: number; total: number }> = {};
-                      for (const lang of shift.languagesNeeded) {
-                        langCounts[lang] = langCounts[lang] ?? { filled: 0, total: 0 };
-                        langCounts[lang].total++;
-                      }
-                      for (const pos of shift.positions) {
-                        if (pos.languageCode && pos.status === "FILLED") {
-                          if (langCounts[pos.languageCode]) langCounts[pos.languageCode].filled++;
-                        }
-                      }
-                      return Object.entries(langCounts).map(([lang, { filled, total }]) => {
-                        const allFilled = filled >= total;
-                        return (
-                          <span key={lang} style={{ fontSize: "0.72rem", fontWeight: 600, padding: "2px 8px", borderRadius: "99px", background: allFilled ? "#DCFCE7" : "#EFF6FF", color: allFilled ? "#15803D" : "#1D4ED8", whiteSpace: "nowrap" }}>
-                            {langName(lang)}: {filled}/{total}
-                          </span>
-                        );
-                      });
-                    })()}
-                  </div>
                   <div style={{ display: "flex", gap: "6px" }}>
                     <button
                       onClick={() => openEdit(shift)}
@@ -527,10 +526,13 @@ export default function BrowsePage() {
                     <span style={{ marginLeft: "6px", fontSize: "0.75rem", color: "#374151" }}>{langName(pos.languageCode)}</span>
                   )}
                   {!pos.languageCode && pos.status === "LOCKED" && (
-                    <span style={{ marginLeft: "6px", fontSize: "0.75rem", color: "#9CA3AF" }}>Language TBD</span>
+                    <span style={{ marginLeft: "6px", fontSize: "0.75rem", color: "#111827" }}>(Language TBD)</span>
                   )}
                 </div>
                 <span style={{ fontSize: "0.72rem", fontWeight: 600, padding: "2px 8px", borderRadius: "99px", background: st.bg, color: st.color }}>{st.label}</span>
+                {pos.status === "LOCKED" && (
+                  <span style={{ fontSize: "0.72rem", color: "#111827" }}>Unlocks after driver signs up</span>
+                )}
                 <div style={{ flex: 1 }}>
                   {pos.volunteer && (
                     <span style={{ fontSize: "0.82rem", color: "#111827" }}>
@@ -961,8 +963,8 @@ export default function BrowsePage() {
                       </div>
                       {shift.clinic.address && (
                         <div style={{ display: "flex", flexDirection: "column", gap: "3px" }}>
-                          <span style={{ fontSize: "0.68rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.09em", color: "var(--gray-400)" }}>Location</span>
-                          <span style={{ fontSize: "0.95rem", fontWeight: 600, color: "var(--gray-900)" }}>
+                          <span style={{ fontSize: "0.68rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.09em", color: "#111827" }}>Location</span>
+                          <span style={{ fontSize: "0.95rem", fontWeight: 600, color: "#111827" }}>
                             {shift.clinic.address}
                             <MapsLinks address={shift.clinic.address} />
                           </span>

@@ -32,6 +32,7 @@ export default function OnboardingPage() {
 
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
+  const [phone, setPhone] = useState("");
   const [selectedRoles, setSelectedRoles] = useState<Role[]>([]);
   const [languages, setLanguages] = useState<string[]>([]);
   const [langSearch, setLangSearch] = useState("");
@@ -96,6 +97,7 @@ export default function OnboardingPage() {
         body: JSON.stringify({
           firstName: firstName.trim(),
           lastName: lastName.trim(),
+          phone: phone.trim() || null,
           roles: selectedRoles,
           languages,
           notifPrefs: selectedRoles.includes("VOLUNTEER") ? notifPrefs : null,
@@ -184,6 +186,18 @@ export default function OnboardingPage() {
                 value={lastName}
                 onChange={(e) => setLastName(e.target.value)}
                 placeholder="e.g. Smith"
+                style={{ width: "100%", padding: "10px 13px", fontSize: "0.9rem", border: "1.5px solid var(--card-border)", borderRadius: "9px", fontFamily: "'DM Sans', sans-serif", color: "#111827", outline: "none", background: "#fff", boxSizing: "border-box" }}
+              />
+            </div>
+            <div>
+              <label style={{ display: "block", fontSize: "0.8rem", fontWeight: 600, color: "#111827", marginBottom: "6px" }}>
+                Phone number <span style={{ fontSize: "0.75rem", fontWeight: 400, color: "#374151" }}>(optional)</span>
+              </label>
+              <input
+                type="tel"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                placeholder="e.g. (202) 555-0100"
                 style={{ width: "100%", padding: "10px 13px", fontSize: "0.9rem", border: "1.5px solid var(--card-border)", borderRadius: "9px", fontFamily: "'DM Sans', sans-serif", color: "#111827", outline: "none", background: "#fff", boxSizing: "border-box" }}
               />
             </div>

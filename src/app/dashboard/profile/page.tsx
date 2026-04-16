@@ -8,6 +8,7 @@ type VolunteerProfile = {
   languages: string[];
   backgroundInfo: string | null;
   hoursVolunteered: number;
+  phone: string | null;
   clearanceStatus: string | null;
   clearanceDate: string | null;
   userCreatedAt?: string;
@@ -131,6 +132,8 @@ export default function ProfilePage() {
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [langSearch, setLangSearch] = useState("");
   const [availableLanguages, setAvailableLanguages] = useState<{ code: string; name: string }[]>([]);
+  const [phoneEdit, setPhoneEdit] = useState<string | null>(null);
+  const [phoneSaving, setPhoneSaving] = useState(false);
 
   const fetchData = useCallback(async () => {
     const [profileRes, notifRes] = await Promise.all([
@@ -190,6 +193,21 @@ export default function ProfilePage() {
     setActionLoading(null);
   };
 
+  const savePhone = async () => {
+    if (phoneEdit === null) return;
+    setPhoneSaving(true);
+    const res = await fetch("/api/volunteer/profile", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ phone: phoneEdit.trim() || null }),
+    });
+    if (res.ok) {
+      setProfile((p) => p ? { ...p, phone: phoneEdit.trim() || null } : p);
+    }
+    setPhoneEdit(null);
+    setPhoneSaving(false);
+  };
+
   if (loading) {
     return (
       <div style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "80px 0" }}>
@@ -213,6 +231,36 @@ export default function ProfilePage() {
           <div style={{ background: "var(--card-bg)", borderRadius: "16px", border: "1.5px solid var(--card-border)", boxShadow: "0 1px 4px rgba(0,0,0,.04)", padding: "20px" }}>
             <p style={{ fontSize: "1rem", fontWeight: 700, color: "#111827" }}>{session?.user?.name}</p>
             <p style={{ fontSize: "0.75rem", color: "#111827", marginTop: "3px" }}>{session?.user?.email}</p>
+
+            {/* Phone — inline edit */}
+            {phoneEdit !== null ? (
+              <div style={{ display: "flex", flexDirection: "column", gap: "5px", marginTop: "4px" }}>
+                <input
+                  type="tel"
+                  value={phoneEdit}
+                  onChange={(e) => setPhoneEdit(e.target.value)}
+                  placeholder="(202) 555-0100"
+                  autoFocus
+                  style={{ width: "100%", fontSize: "0.75rem", padding: "5px 8px", border: "1.5px solid #D1D5DB", borderRadius: "6px", fontFamily: "'DM Sans', sans-serif", color: "#111827", outline: "none", boxSizing: "border-box" }}
+                />
+                <div style={{ display: "flex", gap: "5px" }}>
+                  <button onClick={savePhone} disabled={phoneSaving} style={{ fontSize: "0.7rem", fontWeight: 600, padding: "3px 10px", borderRadius: "5px", border: "none", background: "var(--blue)", color: "#fff", cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>
+                    {phoneSaving ? "…" : "Save"}
+                  </button>
+                  <button onClick={() => setPhoneEdit(null)} style={{ fontSize: "0.7rem", fontWeight: 500, padding: "3px 10px", borderRadius: "5px", border: "1px solid #D1D5DB", background: "#fff", color: "#111827", cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button
+                onClick={() => setPhoneEdit(profile.phone ?? "")}
+                style={{ display: "block", fontSize: "0.75rem", color: profile.phone ? "#111827" : "#9CA3AF", marginTop: "4px", background: "none", border: "none", padding: 0, cursor: "pointer", fontFamily: "'DM Sans', sans-serif", textAlign: "left" }}
+              >
+                {profile.phone ?? "Add phone number"}
+              </button>
+            )}
+
             {profile.userCreatedAt && (
               <p style={{ fontSize: "0.7rem", color: "#111827", marginTop: "6px" }}>
                 Member since {new Date(profile.userCreatedAt).toLocaleDateString("en-US", { month: "short", year: "numeric" })}

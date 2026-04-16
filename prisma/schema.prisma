@@ -74,6 +74,7 @@ model User {
   name              String?
   firstName         String?
   lastName          String?
+  phone             String?
   emailVerified     DateTime?
   image             String?
   role              Role                @default(PENDING)
