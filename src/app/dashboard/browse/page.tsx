@@ -83,6 +83,28 @@ function posStatus(pos: Position) {
   return { label: pos.status, bg: "#F3F4F6", color: "#374151" };
 }
 
+function TimeSelect({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const options: { value: string; label: string }[] = [];
+  for (let h = 5; h <= 23; h++) {
+    for (const m of [0, 15, 30, 45]) {
+      const val = `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+      const ampm = h < 12 ? "AM" : "PM";
+      const h12 = h % 12 === 0 ? 12 : h % 12;
+      const mStr = m === 0 ? "" : `:${String(m).padStart(2, "0")}`;
+      options.push({ value: val, label: `${h12}${mStr} ${ampm}` });
+    }
+  }
+  return (
+    <select
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      style={{ width: "100%", padding: "9px 12px", fontSize: "0.875rem", border: "1.5px solid var(--card-border)", borderRadius: "9px", background: "var(--card-bg)", color: "var(--gray-900)", fontFamily: "'DM Sans', sans-serif", outline: "none", boxSizing: "border-box" as const }}
+    >
+      {options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+    </select>
+  );
+}
+
 function MapsLinks({ address }: { address: string }) {
   const [open, setOpen] = useState(false);
   const q = encodeURIComponent(address);
@@ -143,7 +165,7 @@ export default function BrowsePage() {
     shift: AdminShift;
   } | null>(null);
   const [assignSearch, setAssignSearch] = useState("");
-  const [assignSelected, setAssignSelected] = useState<{ id: string; name: string | null; email: string } | null>(null);
+  const [assignSelected, setAssignSelected] = useState<{ id: string; name: string | null; email: string; volunteer?: { languages: string[]; driverCleared: boolean } | null } | null>(null);
   const [assignLangChoice, setAssignLangChoice] = useState("");
   const [assignLoading, setAssignLoading] = useState(false);
   const [assignError, setAssignError] = useState("");
@@ -409,8 +431,14 @@ export default function BrowsePage() {
       if (dateFrom && new Date(s.date.slice(0, 10) + "T12:00:00") < new Date(dateFrom + "T00:00:00")) return false;
       if (dateTo && new Date(s.date.slice(0, 10) + "T12:00:00") > new Date(dateTo + "T23:59:59")) return false;
       if (availableOnly) {
-        const hasOpen = s.positions.some((p) => p.status === "OPEN" || p.status === "LOCKED");
-        if (!hasOpen) return false;
+        if (langFilter !== "ALL") {
+          const driverOpen = s.positions.some((p) => p.isDriver && p.status === "OPEN");
+          const hasOpenLang = s.positions.some((p) => p.status === "OPEN" && p.languageCode === langFilter);
+          if (!driverOpen && !hasOpenLang) return false;
+        } else {
+          const hasOpen = s.positions.some((p) => p.status === "OPEN" || p.status === "LOCKED");
+          if (!hasOpen) return false;
+        }
       }
       return true;
     });
@@ -432,9 +460,6 @@ export default function BrowsePage() {
             <div>
               <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
                 <div style={{ fontSize: "1.1rem", fontWeight: 700, color: "var(--navy)" }}>{shift.clinic.name}</div>
-                {shift.languagesNeeded.map((lang) => (
-                  <span key={lang} style={{ fontSize: "0.72rem", fontWeight: 600, padding: "2px 8px", borderRadius: "99px", background: "#EFF6FF", color: "#1D4ED8" }}>{langName(lang)}</span>
-                ))}
               </div>
               <div style={{ display: "flex", gap: "24px", marginTop: "12px", flexWrap: "wrap" }}>
                 <div style={{ display: "flex", flexDirection: "column", gap: "3px" }}>
@@ -651,12 +676,12 @@ export default function BrowsePage() {
                 {/* Times */}
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
                   <div>
-                    <label style={{ fontSize: "0.78rem", fontWeight: 600, color: "#374151", display: "block", marginBottom: "5px" }}>Interpreting Start (XX1)</label>
-                    <input type="time" value={formStart} onChange={(e) => setFormStart(e.target.value)} style={{ width: "100%", padding: "9px 12px", fontSize: "0.875rem", border: "1.5px solid var(--card-border)", borderRadius: "9px", background: "var(--card-bg)", color: "var(--gray-900)", fontFamily: "'DM Sans', sans-serif", outline: "none", boxSizing: "border-box" }} />
+                    <label style={{ fontSize: "0.78rem", fontWeight: 600, color: "#374151", display: "block", marginBottom: "5px" }}>Interpreting Start</label>
+                    <TimeSelect value={formStart} onChange={setFormStart} />
                   </div>
                   <div>
-                    <label style={{ fontSize: "0.78rem", fontWeight: 600, color: "#374151", display: "block", marginBottom: "5px" }}>Interpreting End (XX2)</label>
-                    <input type="time" value={formEnd} onChange={(e) => setFormEnd(e.target.value)} style={{ width: "100%", padding: "9px 12px", fontSize: "0.875rem", border: "1.5px solid var(--card-border)", borderRadius: "9px", background: "var(--card-bg)", color: "var(--gray-900)", fontFamily: "'DM Sans', sans-serif", outline: "none", boxSizing: "border-box" }} />
+                    <label style={{ fontSize: "0.78rem", fontWeight: 600, color: "#374151", display: "block", marginBottom: "5px" }}>Interpreting End</label>
+                    <TimeSelect value={formEnd} onChange={setFormEnd} />
                   </div>
                 </div>
                 {/* Preview full commitment */}
@@ -664,17 +689,22 @@ export default function BrowsePage() {
                   const vs = timeInputToMinutes(formStart);
                   const ve = timeInputToMinutes(formEnd);
                   const t = formTravel ?? clinics.find((c) => c.id === formClinicId)?.travelMinutes ?? 30;
+                  if (ve <= vs) return null;
                   const keyRetrieval = vs - t - 30;
+                  const driveStart = vs - t;
                   const keyReturn = ve + t + 15;
-                  if (ve > vs) {
-                    return (
-                      <div style={{ background: "#F0F9FF", border: "1px solid #BAE6FD", borderRadius: "9px", padding: "10px 14px", fontSize: "0.82rem", color: "#0369A1" }}>
-                        <strong>Full commitment:</strong> {fmtMin(keyRetrieval)} – {fmtMin(keyReturn)}
-                        <span style={{ marginLeft: "8px", opacity: 0.8 }}>({fmtMin(vs)} – {fmtMin(ve)} interpreting)</span>
+                  return (
+                    <div style={{ background: "#F0F9FF", border: "1px solid #BAE6FD", borderRadius: "9px", padding: "12px 14px", fontSize: "0.82rem", color: "#0369A1" }}>
+                      <div style={{ fontWeight: 700, marginBottom: "8px", color: "#0369A1" }}>How times are calculated (t = {t} min drive)</div>
+                      <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                        <div><span style={{ fontWeight: 600 }}>Key retrieval</span> (Start − t − 30 min): <strong>{fmtMin(keyRetrieval)}</strong></div>
+                        <div><span style={{ fontWeight: 600 }}>Drive to clinic</span> (Start − t): <strong>{fmtMin(driveStart)}</strong></div>
+                        <div><span style={{ fontWeight: 600 }}>Interpreting window</span>: <strong>{fmtMin(vs)} – {fmtMin(ve)}</strong> ({Math.round((ve - vs) / 60 * 10) / 10} hrs)</div>
+                        <div><span style={{ fontWeight: 600 }}>Key return</span> (End + t + 15 min): <strong>{fmtMin(keyReturn)}</strong></div>
+                        <div style={{ marginTop: "6px", paddingTop: "6px", borderTop: "1px solid #BAE6FD", fontWeight: 700 }}>Full commitment: {fmtMin(keyRetrieval)} – {fmtMin(keyReturn)} ({Math.round((keyReturn - keyRetrieval) / 60 * 10) / 10} hrs)</div>
                       </div>
-                    );
-                  }
-                  return null;
+                    </div>
+                  );
                 })()}
                 {/* Travel Minutes */}
                 <div>
@@ -706,8 +736,8 @@ export default function BrowsePage() {
                   {formLangs.length > 0 && (
                     <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", padding: "8px 10px", background: "#F9FAFB", borderRadius: "8px", border: "1px solid var(--card-border)" }}>
                       {formLangs.map((code, i) => (
-                        <span key={i} style={{ display: "flex", alignItems: "center", gap: "4px", padding: "3px 10px", borderRadius: "99px", background: i === 0 ? "#FEF3C7" : "#EFF6FF", color: i === 0 ? "#92400E" : "#1D4ED8", fontSize: "0.78rem", fontWeight: 600 }}>
-                          {i === 0 ? "Driver: " : `Seat ${i + 1}: `}{langName(code)}
+                        <span key={i} style={{ display: "flex", alignItems: "center", gap: "4px", padding: "3px 10px", borderRadius: "99px", background: "#EFF6FF", color: "#1D4ED8", fontSize: "0.78rem", fontWeight: 600 }}>
+                          {`Seat ${i + 1}: `}{langName(code)}
                           <button onClick={() => removeFormLang(i)} style={{ background: "none", border: "none", cursor: "pointer", padding: 0, lineHeight: 1, color: "inherit", fontSize: "0.9rem", opacity: 0.7 }}>×</button>
                         </span>
                       ))}
@@ -715,7 +745,7 @@ export default function BrowsePage() {
                   )}
                   {formLangs.length > 0 && (
                     <p style={{ fontSize: "0.75rem", color: "#6B7280", marginTop: "4px" }}>
-                      {formLangs.length} position{formLangs.length !== 1 ? "s" : ""}: 1 driver + {formLangs.length - 1} interpreter{formLangs.length - 1 !== 1 ? "s" : ""}
+                      {formLangs.length} seat{formLangs.length !== 1 ? "s" : ""} — seat 1 is always the driver
                     </p>
                   )}
                 </div>
@@ -772,6 +802,18 @@ export default function BrowsePage() {
                       {users
                         .filter((u) => (u.role === "VOLUNTEER" || u.role === "ADMIN") && u.status === "ACTIVE")
                         .filter((u) => {
+                          // Language clearance filter
+                          const volLangs = u.volunteer?.languages ?? [];
+                          if (assignModal.position.isDriver) {
+                            if (!u.volunteer?.driverCleared) return false;
+                            return assignModal.shift.languagesNeeded.some((l) => volLangs.includes(l));
+                          } else {
+                            const reqLang = assignModal.position.languageCode;
+                            if (reqLang && !volLangs.includes(reqLang)) return false;
+                            return true;
+                          }
+                        })
+                        .filter((u) => {
                           const q = assignSearch.toLowerCase();
                           return !q || (u.name?.toLowerCase().includes(q) ?? false) || u.email.toLowerCase().includes(q);
                         })
@@ -798,13 +840,19 @@ export default function BrowsePage() {
                       <div style={{ marginBottom: "12px" }}>
                         <p style={{ fontSize: "0.78rem", fontWeight: 600, color: "#374151", marginBottom: "8px" }}>Which language will they interpret?</p>
                         <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
-                          {assignModal.shift.languagesNeeded.map((lang) => (
+                          {Array.from(new Set(assignModal.shift.languagesNeeded))
+                            .filter((lang) => (assignSelected?.volunteer?.languages ?? []).includes(lang))
+                            .map((lang) => (
                             <button
                               key={lang}
                               onClick={() => setAssignLangChoice(lang)}
                               style={{ padding: "6px 14px", borderRadius: "99px", fontSize: "0.82rem", fontWeight: 500, cursor: "pointer", fontFamily: "'DM Sans', sans-serif", border: assignLangChoice === lang ? "1.5px solid var(--blue)" : "1.5px solid var(--card-border)", background: assignLangChoice === lang ? "var(--blue)" : "var(--card-bg)", color: assignLangChoice === lang ? "#fff" : "#111827" }}
                             >{langName(lang)}</button>
                           ))}
+                          {Array.from(new Set(assignModal.shift.languagesNeeded))
+                            .filter((lang) => (assignSelected?.volunteer?.languages ?? []).includes(lang)).length === 0 && (
+                            <p style={{ fontSize: "0.78rem", color: "#DC2626" }}>This volunteer is not cleared for any required language.</p>
+                          )}
                         </div>
                       </div>
                     )}
@@ -812,7 +860,7 @@ export default function BrowsePage() {
                     <div style={{ display: "flex", gap: "8px" }}>
                       <button onClick={() => setAssignSelected(null)} style={{ flex: 1, padding: "9px", fontSize: "0.875rem", border: "1.5px solid var(--card-border)", color: "#111827", borderRadius: "10px", background: "none", cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>← Back</button>
                       <button
-                        disabled={assignLoading || (assignModal.position.isDriver && !assignLangChoice)}
+                        disabled={assignLoading || (assignModal.position.isDriver && (!assignLangChoice || Array.from(new Set(assignModal.shift.languagesNeeded)).filter((l) => (assignSelected?.volunteer?.languages ?? []).includes(l)).length === 0))}
                         onClick={confirmAssign}
                         style={{ flex: 1, padding: "9px", fontSize: "0.875rem", background: "var(--blue)", color: "#fff", border: "none", borderRadius: "10px", cursor: "pointer", fontWeight: 600, opacity: (assignLoading || (assignModal.position.isDriver && !assignLangChoice)) ? 0.5 : 1, fontFamily: "'DM Sans', sans-serif" }}
                       >{assignLoading ? "Assigning…" : "Confirm"}</button>
@@ -882,8 +930,14 @@ export default function BrowsePage() {
     if (dateFrom && new Date(s.date.slice(0, 10) + "T12:00:00") < new Date(dateFrom + "T00:00:00")) return false;
     if (dateTo && new Date(s.date.slice(0, 10) + "T12:00:00") > new Date(dateTo + "T23:59:59")) return false;
     if (availableOnly) {
-      const hasOpen = s.positions.some((p) => p.canSignUp);
-      if (!hasOpen) return false;
+      if (langFilter !== "ALL") {
+        const driverOpenCanSignUp = s.positions.some((p) => p.isDriver && p.canSignUp);
+        const hasOpenLang = s.positions.some((p) => p.canSignUp && p.languageCode === langFilter);
+        if (!driverOpenCanSignUp && !hasOpenLang) return false;
+      } else {
+        const hasOpen = s.positions.some((p) => p.canSignUp);
+        if (!hasOpen) return false;
+      }
     }
     return true;
   });
@@ -935,9 +989,26 @@ export default function BrowsePage() {
                   <div>
                     <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
                       <div style={{ fontSize: "1.1rem", fontWeight: 700, color: "var(--navy)" }}>{shift.clinic.name}</div>
-                      {shift.languagesNeeded.map((lang) => (
-                        <span key={lang} style={{ fontSize: "0.72rem", fontWeight: 600, padding: "2px 8px", borderRadius: "99px", background: "#EFF6FF", color: "#1D4ED8" }}>{langName(lang)}</span>
-                      ))}
+                      {(() => {
+                        const langCounts: Record<string, { filled: number; total: number }> = {};
+                        for (const lang of shift.languagesNeeded) {
+                          langCounts[lang] = langCounts[lang] ?? { filled: 0, total: 0 };
+                          langCounts[lang].total++;
+                        }
+                        for (const pos of shift.positions) {
+                          if (pos.languageCode && pos.status === "FILLED") {
+                            if (langCounts[pos.languageCode]) langCounts[pos.languageCode].filled++;
+                          }
+                        }
+                        return Object.entries(langCounts).map(([lang, { filled, total }]) => {
+                          const allFilled = filled >= total;
+                          return (
+                            <span key={lang} style={{ fontSize: "0.72rem", fontWeight: 600, padding: "2px 8px", borderRadius: "99px", background: allFilled ? "#DCFCE7" : "#EFF6FF", color: allFilled ? "#15803D" : "#1D4ED8", whiteSpace: "nowrap" }}>
+                              {langName(lang)}: {filled}/{total}
+                            </span>
+                          );
+                        });
+                      })()}
                       {anyMine && <span style={{ fontSize: "0.72rem", fontWeight: 600, padding: "2px 8px", borderRadius: "99px", background: "#DCFCE7", color: "#15803D" }}>Signed up</span>}
                     </div>
                     <div style={{ display: "flex", gap: "24px", marginTop: "12px", flexWrap: "wrap" }}>

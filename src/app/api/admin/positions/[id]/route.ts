@@ -62,6 +62,14 @@ export async function PATCH(
     assignedLanguage = position.languageCode;
   }
 
+  // Validate language clearance
+  if (!profile.languages.includes(assignedLanguage)) {
+    return NextResponse.json({ error: `Volunteer is not cleared for ${assignedLanguage}` }, { status: 400 });
+  }
+  if (position.isDriver && !profile.driverCleared) {
+    return NextResponse.json({ error: "Volunteer is not cleared to drive" }, { status: 400 });
+  }
+
   await prisma.$transaction(async (tx) => {
     await tx.shiftPosition.update({
       where: { id: positionId },
