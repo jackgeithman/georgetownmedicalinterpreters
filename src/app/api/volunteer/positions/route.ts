@@ -148,7 +148,8 @@ export async function POST(req: NextRequest) {
       const remaining = position.shift.languagesNeeded.filter((l) => l !== assignedLanguage);
       // Re-add the driver's language at end if there are duplicates (e.g. 2 Spanish needed)
       const otherNeeded = [...position.shift.languagesNeeded];
-      otherNeeded.splice(0, 1); // remove first occurrence (driver's slot)
+      const driverLangIdx = otherNeeded.findIndex((l) => l === assignedLanguage);
+      otherNeeded.splice(driverLangIdx !== -1 ? driverLangIdx : 0, 1);
 
       const otherPositions = position.shift.positions
         .filter((p) => !p.isDriver)
