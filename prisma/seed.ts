@@ -212,27 +212,50 @@ async function seedDevData() {
     ],
   });
 
-  const pastSlot1 = await prisma.slot.create({ data: { clinicId: devClinic.id, language: "ES", date: d(-14), startTime: 9, endTime: 12, interpreterCount: 2, status: "COMPLETED", notes: "Morning general medicine clinic." } });
-  const pastSlot2 = await prisma.slot.create({ data: { clinicId: medstar.id, language: "ZH", date: d(-7), startTime: 13, endTime: 16, interpreterCount: 1, status: "COMPLETED" } });
-  const slot1 = await prisma.slot.create({ data: { clinicId: devClinic.id, language: "ES", date: d(2), startTime: 9, endTime: 13, interpreterCount: 2, notes: "General medicine. Expect 15-20 patients." } });
-  const slot2 = await prisma.slot.create({ data: { clinicId: devClinic.id, language: "ZH", date: d(2), startTime: 13, endTime: 16, interpreterCount: 1 } });
-  await prisma.slot.create({ data: { clinicId: medstar.id, language: "ES", date: d(5), startTime: 8, endTime: 12, interpreterCount: 3, notes: "Busy Saturday clinic." } });
-  await prisma.slot.create({ data: { clinicId: medstar.id, language: "AR", date: d(9), startTime: 10, endTime: 14, interpreterCount: 1 } });
-  await prisma.slot.create({ data: { clinicId: childrens.id, language: "ES", date: d(12), startTime: 9, endTime: 12, interpreterCount: 2, notes: "Pediatric immunization clinic." } });
-  await prisma.slot.create({ data: { clinicId: devClinic.id, language: "HI", date: d(16), startTime: 14, endTime: 17, interpreterCount: 1 } });
+  // ── Shifts (admin-created, new model) ─────────────────────────────────────
+  // Past shift 1: devClinic, ES + ZH, completed — driver devVolunteer (ES), alice (ZH)
+  const pastShift1 = await prisma.shift.create({
+    data: { clinicId: devClinic.id, date: d(-14), volunteerStart: 540, volunteerEnd: 720, travelMinutes: 30, languagesNeeded: ["ES", "ZH"], status: "COMPLETED", notes: "Morning general medicine clinic.", postedById: devAdmin.id },
+  });
+  const ps1p1 = await prisma.shiftPosition.create({ data: { shiftId: pastShift1.id, positionNumber: 1, isDriver: true, languageCode: "ES", volunteerId: devVolProf.id, status: "COMPLETED", signedUpAt: d(-20) } });
+  const ps1p2 = await prisma.shiftPosition.create({ data: { shiftId: pastShift1.id, positionNumber: 2, isDriver: false, languageCode: "ZH", volunteerId: aliceProf.id, status: "COMPLETED", signedUpAt: d(-20) } });
 
-  const su1 = await prisma.subBlockSignup.create({ data: { slotId: pastSlot1.id, volunteerId: devVolProf.id, subBlockHour: 9, status: "COMPLETED" } });
-  const su2 = await prisma.subBlockSignup.create({ data: { slotId: pastSlot1.id, volunteerId: aliceProf.id, subBlockHour: 9, status: "COMPLETED" } });
-  const su3 = await prisma.subBlockSignup.create({ data: { slotId: pastSlot2.id, volunteerId: aliceProf.id, subBlockHour: 13, status: "COMPLETED" } });
-  await prisma.subBlockSignup.create({ data: { slotId: slot1.id, volunteerId: devVolProf.id, subBlockHour: 9, status: "ACTIVE" } });
-  await prisma.subBlockSignup.create({ data: { slotId: slot2.id, volunteerId: aliceProf.id, subBlockHour: 13, status: "ACTIVE" } });
+  // Past shift 2: medstar, ZH only, completed — driver alice (ZH)
+  const pastShift2 = await prisma.shift.create({
+    data: { clinicId: medstar.id, date: d(-7), volunteerStart: 780, volunteerEnd: 960, travelMinutes: 45, languagesNeeded: ["ZH"], status: "COMPLETED", postedById: devAdmin.id },
+  });
+  const ps2p1 = await prisma.shiftPosition.create({ data: { shiftId: pastShift2.id, positionNumber: 1, isDriver: true, languageCode: "ZH", volunteerId: aliceProf.id, status: "COMPLETED", signedUpAt: d(-14) } });
+
+  // Upcoming shift 1: devClinic, ES + ZH — driver devVolunteer (ES) filled, ZH seat open
+  const shift1 = await prisma.shift.create({
+    data: { clinicId: devClinic.id, date: d(2), volunteerStart: 540, volunteerEnd: 780, travelMinutes: 30, languagesNeeded: ["ES", "ZH"], notes: "General medicine. Expect 15-20 patients.", postedById: devAdmin.id },
+  });
+  const s1p1 = await prisma.shiftPosition.create({ data: { shiftId: shift1.id, positionNumber: 1, isDriver: true, languageCode: "ES", volunteerId: devVolProf.id, status: "FILLED", signedUpAt: new Date() } });
+  await prisma.shiftPosition.create({ data: { shiftId: shift1.id, positionNumber: 2, isDriver: false, languageCode: "ZH", status: "OPEN" } });
+
+  // Upcoming shift 2: medstar, ES + AR — no one signed up yet
+  await prisma.shift.create({
+    data: { clinicId: medstar.id, date: d(5), volunteerStart: 480, volunteerEnd: 720, travelMinutes: 45, languagesNeeded: ["ES", "AR"], notes: "Busy Saturday clinic.", postedById: devAdmin.id },
+  }).then(async (s) => {
+    await prisma.shiftPosition.createMany({ data: [
+      { shiftId: s.id, positionNumber: 1, isDriver: true, status: "OPEN" },
+      { shiftId: s.id, positionNumber: 2, isDriver: false, status: "LOCKED" },
+    ]});
+  });
+
+  // Upcoming shift 3: childrens, ES only
+  await prisma.shift.create({
+    data: { clinicId: childrens.id, date: d(12), volunteerStart: 540, volunteerEnd: 720, travelMinutes: 20, languagesNeeded: ["ES"], notes: "Pediatric immunization clinic.", postedById: devAdmin.id },
+  }).then(async (s) => {
+    await prisma.shiftPosition.create({ data: { shiftId: s.id, positionNumber: 1, isDriver: true, status: "OPEN" } });
+  });
 
   await prisma.feedback.createMany({
     data: [
-      { signupId: su1.id, authorRole: "CLINIC", rating: 5, note: "Excellent interpreter, very professional." },
-      { signupId: su1.id, authorRole: "VOLUNTEER", rating: 4, note: "Great experience." },
-      { signupId: su2.id, authorRole: "CLINIC", rating: 5, note: "Alice was fantastic." },
-      { signupId: su3.id, authorRole: "CLINIC", rating: 4, note: "Good interpretation." },
+      { positionId: ps1p1.id, authorRole: "CLINIC", rating: 5, note: "Excellent interpreter, very professional." },
+      { positionId: ps1p1.id, authorRole: "VOLUNTEER", rating: 4, note: "Great experience." },
+      { positionId: ps1p2.id, authorRole: "CLINIC", rating: 5, note: "Alice was fantastic." },
+      { positionId: ps2p1.id, authorRole: "CLINIC", rating: 4, note: "Good interpretation." },
     ],
   });
 
@@ -256,7 +279,7 @@ async function seedDevData() {
     create: { key: "main", content: "Dev environment. Use the dev toolbar to switch roles.", updatedBy: devAdmin.email, updatedAt: new Date() },
   });
 
-  console.log("✓ Seeded dev sample data (5 users, 3 clinics, 8 slots, signups, feedback, training materials)");
+  console.log("✓ Seeded dev sample data (5 users, 3 clinics, 5 shifts, positions, feedback, training materials)");
 }
 
 main().catch(console.error).finally(() => prisma.$disconnect());

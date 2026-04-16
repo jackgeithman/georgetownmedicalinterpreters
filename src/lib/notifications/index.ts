@@ -1,15 +1,16 @@
 import { sendGmail } from "./gmail";
-import { createCalEvent, deleteCalEvent, updateCalEvent, type SlotInfo } from "./gcal";
+import { createCalEvent, deleteCalEvent, updateCalEvent, type ShiftPositionInfo } from "./gcal";
 import { sendResendEmail } from "./resend";
+import { langName } from "@/lib/languages";
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
-import { langName } from "@/lib/languages";
-
-function fmt12(h: number): string {
+function minutesTo12(minutes: number): string {
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
   const period = h < 12 ? "AM" : "PM";
   const h12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
-  return `${h12}:00 ${period}`;
+  return m === 0 ? `${h12}:00 ${period}` : `${h12}:${String(m).padStart(2, "0")} ${period}`;
 }
 
 function fmtDate(d: Date): string {
@@ -47,89 +48,114 @@ function table(...rows: string[]): string {
   return `<table style="margin:16px 0;border-collapse:collapse">${rows.join("")}</table>`;
 }
 
-// ─── Volunteer Notifications (Google Calendar) ───────────────────────────────
+function shiftTimeBlock(params: {
+  volunteerStart: number;
+  volunteerEnd: number;
+  travelMinutes: number;
+  isDriver: boolean;
+}): string {
+  const { volunteerStart, volunteerEnd, travelMinutes, isDriver } = params;
+  const keyRetrieval = volunteerStart - travelMinutes - 30;
+  const driveStart   = volunteerStart - travelMinutes;
+  const driveEnd     = volunteerEnd   + travelMinutes;
+  const keyReturn    = volunteerEnd   + travelMinutes + 15;
 
-/**
- * Volunteer signs up for a slot.
- * Creates a Google Calendar event with full shift details — GCal sends its
- * own invite email to the volunteer, which serves as the confirmation.
- * No separate GMI email is sent to avoid duplicates.
- */
-export async function notifyVolunteerSignup(params: {
-  signupId: string;
-  volunteerEmail: string;
-  clinicName: string;
-  clinicAddress: string;
-  language: string;
-  date: Date;
-  subBlockHour: number;
-  notes?: string | null;
-}): Promise<void> {
-  const { signupId, volunteerEmail, clinicName, clinicAddress, language, date, subBlockHour, notes } = params;
-  const slot: SlotInfo = { date, subBlockHour, clinicName, clinicAddress, language, notes };
-  await createCalEvent(signupId, volunteerEmail, slot).catch(console.error);
+  const rows = [
+    detail("Key retrieval", minutesTo12(keyRetrieval)),
+    ...(isDriver ? [detail("Depart Georgetown", minutesTo12(driveStart))] : []),
+    detail("Interpreting", `${minutesTo12(volunteerStart)} &ndash; ${minutesTo12(volunteerEnd)}`),
+    ...(isDriver ? [detail("Return + park", minutesTo12(driveEnd))] : []),
+    detail("Return key by", minutesTo12(keyReturn)),
+  ];
+
+  return table(...rows);
 }
 
+// ─── Volunteer Signup Notification ──────────────────────────────────────────
+
 /**
- * Volunteer cancels their own signup.
- * Always sends Gmail confirmation to the volunteer and deletes their calendar event.
- * Only emails the clinic if the cancellation is within 24h of the slot AND
- * the clinic has urgentCancellationAlerts enabled.
+ * Volunteer signs up for a shift position.
+ * Creates a Google Calendar event (GCal sends its own invite email).
  */
-export async function notifyVolunteerCancellation(params: {
-  signupId: string;
+export async function notifyVolunteerPositionSignup(params: {
+  positionId: string;
   volunteerEmail: string;
-  volunteerName: string;
   clinicName: string;
   clinicAddress: string;
-  clinicContactEmail: string;
-  clinicUrgentAlerts: boolean;
   language: string;
   date: Date;
-  subBlockHour: number;
-  hoursUntilSlot: number;
+  volunteerStart: number;
+  volunteerEnd: number;
+  travelMinutes: number;
+  isDriver: boolean;
+  notes?: string | null;
+}): Promise<void> {
+  const info: ShiftPositionInfo = {
+    date: params.date,
+    volunteerStart: params.volunteerStart,
+    volunteerEnd: params.volunteerEnd,
+    travelMinutes: params.travelMinutes,
+    clinicName: params.clinicName,
+    clinicAddress: params.clinicAddress,
+    language: params.language,
+    isDriver: params.isDriver,
+    notes: params.notes,
+  };
+  await createCalEvent(params.positionId, params.volunteerEmail, info).catch(console.error);
+}
+
+// ─── Volunteer Cancellation ──────────────────────────────────────────────────
+
+/**
+ * Volunteer cancels their shift position.
+ * Deletes GCal event (GCal sends its own cancellation email).
+ * Alerts clinic contact if cancellation is within 24h.
+ */
+export async function notifyVolunteerCancellation(params: {
+  positionId: string;
+  volunteerEmail: string;
+  clinicName: string;
+  clinicContactEmail: string;
+  language: string;
+  date: Date;
+  volunteerStart: number;
+  volunteerEnd: number;
+  isWithin24h: boolean;
 }): Promise<void> {
   const {
-    signupId,
+    positionId,
     volunteerEmail,
-    volunteerName,
     clinicName,
-    clinicAddress,
     clinicContactEmail,
-    clinicUrgentAlerts,
     language,
     date,
-    subBlockHour,
-    hoursUntilSlot,
+    volunteerStart,
+    volunteerEnd,
+    isWithin24h,
   } = params;
 
   const lang = langName(language);
-  const isUrgent = hoursUntilSlot < 24;
-
-  // GCal sends its own cancellation email to the volunteer when the event is
-  // deleted with sendUpdates: "all" — no separate GMI email needed.
   const notifications: Promise<void>[] = [
-    deleteCalEvent(signupId).catch(console.error),
+    deleteCalEvent(positionId).catch(console.error),
   ];
 
-  // Only alert the clinic if it's within 24h and they have urgent alerts on
-  if (isUrgent && clinicUrgentAlerts) {
+  // Alert clinic on urgent same-day cancellations
+  if (isWithin24h) {
     const clinicHtml = wrap(
       "Urgent: Interpreter Cancelled Within 24 Hours",
       `<p>A volunteer has cancelled their shift <strong>within 24 hours</strong> of the appointment.</p>
 ${table(
-  detail("Volunteer", volunteerName),
+  detail("Volunteer Email", volunteerEmail),
   detail("Language", lang),
   detail("Date", fmtDate(date)),
-  detail("Time", `${fmt12(subBlockHour)} &ndash; ${fmt12(subBlockHour + 1)}`),
-  detail("Time Until Slot", `${Math.max(0, Math.floor(hoursUntilSlot))}h ${Math.round((hoursUntilSlot % 1) * 60)}m`),
+  detail("Interpreting window", `${minutesTo12(volunteerStart)} &ndash; ${minutesTo12(volunteerEnd)}`),
 )}
-<p style="font-size:13px;color:#ef4444;font-weight:600">This slot may now be understaffed. You may want to contact your coordinator.</p>`,
+<p style="font-size:13px;color:#ef4444;font-weight:600">This position is now open. You may want to contact your coordinator.</p>`,
     );
     notifications.push(
       sendResendEmail(
         clinicContactEmail,
-        `Urgent: Interpreter Cancelled — ${lang} Today at ${fmt12(subBlockHour)}`,
+        `Urgent: Interpreter Cancelled — ${lang} on ${fmtDate(date)}`,
         clinicHtml,
       ).catch(console.error),
     );
@@ -138,135 +164,93 @@ ${table(
   await Promise.all(notifications);
 }
 
-// ─── Clinic-Triggered Slot Notifications (Gmail + Calendar for volunteers) ───
+// ─── Shift Updated/Cancelled (Admin) ────────────────────────────────────────
 
-export interface AffectedSignup {
-  signupId: string;
+export interface AffectedPosition {
+  positionId: string;
   volunteerEmail: string;
   volunteerName: string;
-  subBlockHour: number;
+  language: string;
+  isDriver: boolean;
 }
 
 /**
- * Clinic edits a slot.
- * - Volunteers whose signup hours are outside the new window (cancelled) get a cancellation.
- * - Volunteers still inside the new window get an updated calendar event.
+ * Admin edits a shift in a way that displaces volunteers.
+ * Sends cancellation emails + deletes GCal events for displaced volunteers.
  */
-export async function notifySlotUpdated(params: {
-  cancelledSignups: AffectedSignup[];
-  updatedSignups: AffectedSignup[];
-  clinicName: string;
-  clinicAddress: string;
-  language: string;
-  date: Date;
-  newDate?: Date;
-  notes?: string | null;
+export async function notifyShiftUpdated(params: {
+  shift: {
+    clinic: { name: string; address: string };
+    date: Date;
+    volunteerStart: number;
+    volunteerEnd: number;
+    travelMinutes: number;
+  };
+  cancelledEmails: string[];
 }): Promise<void> {
-  const { cancelledSignups, updatedSignups, clinicName, clinicAddress, language, date, newDate, notes } = params;
-  const lang = langName(language);
-  const displayDate = newDate ?? date;
+  const { shift, cancelledEmails } = params;
 
-  // Notify cancelled volunteers
   await Promise.all(
-    cancelledSignups.map(({ signupId, volunteerEmail, volunteerName, subBlockHour }) => {
+    cancelledEmails.map((email) => {
       const html = wrap(
-        "Shift Removed — Slot Updated",
-        `<p>Hi ${volunteerName},</p>
-<p>The clinic has updated a slot and your <strong>${lang}</strong> shift on <strong>${fmtDate(date)}</strong> at ${fmt12(subBlockHour)} has been removed because it falls outside the new schedule.</p>
+        "Your Shift Position Has Been Removed",
+        `<p>The administrator has updated a shift and your position has been removed.</p>
 ${table(
-  detail("Original Date", fmtDate(date)),
-  detail("Your Time", `${fmt12(subBlockHour)} &ndash; ${fmt12(subBlockHour + 1)}`),
-  detail("Clinic", clinicName),
+  detail("Date", fmtDate(shift.date)),
+  detail("Clinic", shift.clinic.name),
+  detail("Interpreting", `${minutesTo12(shift.volunteerStart)} &ndash; ${minutesTo12(shift.volunteerEnd)}`),
 )}
-<p style="font-size:13px;color:#6b7280">The calendar event has been removed. Check Georgetown Medical Interpreters for updated availability.</p>`,
+<p style="font-size:13px;color:#6b7280">Your calendar event has been removed. Please check the volunteer dashboard for updated availability.</p>`,
       );
-      return Promise.all([
-        sendGmail(volunteerEmail, `Shift Removed: ${clinicName} on ${fmtDate(date)}`, html).catch(console.error),
-        deleteCalEvent(signupId).catch(console.error),
-      ]);
-    }),
-  );
-
-  // Notify updated volunteers
-  await Promise.all(
-    updatedSignups.map(({ signupId, volunteerEmail, volunteerName, subBlockHour }) => {
-      const html = wrap(
-        "Shift Updated",
-        `<p>Hi ${volunteerName},</p>
-<p>Your <strong>${lang}</strong> interpreter shift has been updated by the clinic.</p>
-${table(
-  detail("Date", fmtDate(displayDate)),
-  detail("Your Time", `${fmt12(subBlockHour)} &ndash; ${fmt12(subBlockHour + 1)}`),
-  detail("Clinic", clinicName),
-  detail("Location", clinicAddress),
-  notes ? detail("Notes", notes) : "",
-)}
-<p style="font-size:13px;color:#6b7280">Your Google Calendar event has been updated to reflect these changes.</p>`,
-      );
-      const slot: SlotInfo = {
-        date: displayDate,
-        subBlockHour,
-        clinicName,
-        clinicAddress,
-        language,
-        notes,
-      };
-      return Promise.all([
-        sendGmail(volunteerEmail, `Shift Updated: ${clinicName} on ${fmtDate(displayDate)}`, html).catch(console.error),
-        updateCalEvent(signupId, volunteerEmail, slot).catch(console.error),
-      ]);
+      return sendGmail(email, `Shift Updated — ${shift.clinic.name} on ${fmtDate(shift.date)}`, html).catch(console.error);
     }),
   );
 }
 
 /**
- * Clinic deletes/cancels a slot.
- * All active volunteers get a cancellation email and their calendar event deleted.
+ * Admin cancels a shift entirely.
+ * All filled volunteers get cancellation emails + GCal events deleted.
  */
-export async function notifySlotCancelled(params: {
-  affectedSignups: AffectedSignup[];
-  clinicName: string;
-  language: string;
-  date: Date;
+export async function notifyShiftCancelled(params: {
+  shift: {
+    clinic: { name: string };
+    date: Date;
+    volunteerStart: number;
+    volunteerEnd: number;
+  };
+  volunteerEmails: string[];
 }): Promise<void> {
-  const { affectedSignups, clinicName, language, date } = params;
-  const lang = langName(language);
+  const { shift, volunteerEmails } = params;
 
   await Promise.all(
-    affectedSignups.map(({ signupId, volunteerEmail, volunteerName, subBlockHour }) => {
+    volunteerEmails.map((email) => {
       const html = wrap(
-        "Shift Cancelled by Clinic",
-        `<p>Hi ${volunteerName},</p>
-<p>The following <strong>${lang}</strong> interpreter shift has been cancelled by the clinic:</p>
+        "Shift Cancelled",
+        `<p>The following shift has been cancelled by the administrator:</p>
 ${table(
-  detail("Date", fmtDate(date)),
-  detail("Your Time", `${fmt12(subBlockHour)} &ndash; ${fmt12(subBlockHour + 1)}`),
-  detail("Clinic", clinicName),
+  detail("Date", fmtDate(shift.date)),
+  detail("Clinic", shift.clinic.name),
+  detail("Interpreting", `${minutesTo12(shift.volunteerStart)} &ndash; ${minutesTo12(shift.volunteerEnd)}`),
 )}
-<p style="font-size:13px;color:#6b7280">The calendar event has been removed from your Georgetown calendar.</p>`,
+<p style="font-size:13px;color:#6b7280">Your calendar event has been removed.</p>`,
       );
-      return Promise.all([
-        sendGmail(volunteerEmail, `Shift Cancelled: ${clinicName} on ${fmtDate(date)}`, html).catch(console.error),
-        deleteCalEvent(signupId).catch(console.error),
-      ]);
+      return sendGmail(email, `Shift Cancelled — ${shift.clinic.name} on ${fmtDate(shift.date)}`, html).catch(console.error);
     }),
   );
 }
 
 // ─── No-Show Notification ────────────────────────────────────────────────────
 
-/**
- * Clinic marks a volunteer as no-show. Sends a Gmail notification to the volunteer.
- */
 export async function notifyNoShow(params: {
   volunteerEmail: string;
   volunteerName: string;
   clinicName: string;
   language: string;
   date: Date;
-  subBlockHour: number;
+  volunteerStart: number;
+  volunteerEnd: number;
 }): Promise<void> {
-  const { volunteerEmail, volunteerName, clinicName, language, date, subBlockHour } = params;
+  const { volunteerEmail, volunteerName, clinicName, language, date, volunteerStart, volunteerEnd } = params;
   const lang = langName(language);
 
   const html = wrap(
@@ -275,7 +259,7 @@ export async function notifyNoShow(params: {
 <p>You were marked as a <strong>no-show</strong> for the following shift:</p>
 ${table(
   detail("Date", fmtDate(date)),
-  detail("Time", `${fmt12(subBlockHour)} &ndash; ${fmt12(subBlockHour + 1)}`),
+  detail("Interpreting", `${minutesTo12(volunteerStart)} &ndash; ${minutesTo12(volunteerEnd)}`),
   detail("Clinic", clinicName),
   detail("Language", lang),
 )}
@@ -283,65 +267,80 @@ ${table(
 Repeated no-shows may affect your standing as a volunteer.</p>`,
   );
 
-  await sendGmail(
-    volunteerEmail,
-    `No-Show Recorded: ${clinicName} on ${fmtDate(date)}`,
-    html,
-  ).catch(console.error);
+  await sendGmail(volunteerEmail, `No-Show Recorded: ${clinicName} on ${fmtDate(date)}`, html).catch(console.error);
+}
+
+// ─── Admin removed a volunteer from a position ───────────────────────────────
+
+export async function notifyAdminRemovedFromPosition(params: {
+  positionId: string;
+  volunteerEmail: string;
+  volunteerName: string;
+  clinicName: string;
+  language: string;
+  date: Date;
+  volunteerStart: number;
+  volunteerEnd: number;
+}): Promise<void> {
+  const { positionId, volunteerEmail, volunteerName, clinicName, language, date, volunteerStart, volunteerEnd } = params;
+  const lang = langName(language);
+
+  const html = wrap(
+    "You Have Been Removed From a Shift",
+    `<p>Hi ${volunteerName},</p>
+<p>An administrator has removed you from the following interpreter shift:</p>
+${table(
+  detail("Date", fmtDate(date)),
+  detail("Interpreting", `${minutesTo12(volunteerStart)} &ndash; ${minutesTo12(volunteerEnd)}`),
+  detail("Clinic", clinicName),
+  detail("Language", lang),
+)}
+<p style="font-size:13px;color:#6b7280">If you have questions, please contact your program coordinator.</p>`,
+  );
+
+  await Promise.all([
+    sendGmail(volunteerEmail, `Removed From Shift: ${clinicName} on ${fmtDate(date)}`, html).catch(console.error),
+    deleteCalEvent(positionId).catch(console.error),
+  ]);
 }
 
 // ─── Language Clearance Notifications ───────────────────────────────────────
 
-/**
- * Volunteer is cleared for a language. Sends a Gmail notification.
- */
 export async function notifyLanguageCleared(params: {
   volunteerEmail: string;
   volunteerName: string;
   languageName: string;
 }): Promise<void> {
   const { volunteerEmail, volunteerName, languageName } = params;
-
   const html = wrap(
     `Language Clearance Approved — ${languageName}`,
     `<p>Hi ${volunteerName},</p>
 <p>You have been <strong>cleared</strong> to interpret in <strong>${languageName}</strong>. You can now sign up for ${languageName} interpreter shifts.</p>
-<p><a href="${process.env.NEXTAUTH_URL ?? "https://georgetownmedicalinterpreters.org"}/dashboard/volunteer"
+<p><a href="${process.env.NEXTAUTH_URL ?? "https://georgetownmedicalinterpreters.org"}/dashboard/browse"
    style="display:inline-block;background:#002147;color:#fff;padding:10px 20px;border-radius:6px;text-decoration:none;font-size:14px;font-weight:600">
   Browse Available Shifts
 </a></p>`,
   );
-
   await sendGmail(volunteerEmail, `Clearance Approved: ${languageName} Interpreter`, html).catch(console.error);
 }
 
-/**
- * Volunteer's language clearance is denied or revoked.
- * NOTE: The internal reason is NEVER included in this email.
- */
 export async function notifyLanguageDenied(params: {
   volunteerEmail: string;
   volunteerName: string;
   languageName: string;
 }): Promise<void> {
   const { volunteerEmail, volunteerName, languageName } = params;
-
   const html = wrap(
     `Language Clearance Not Approved — ${languageName}`,
     `<p>Hi ${volunteerName},</p>
 <p>Your clearance request for <strong>${languageName}</strong> has not been approved at this time.</p>
-<p style="font-size:13px;color:#6b7280">If you have questions, please contact your program coordinator.</p>
-<p style="font-size:13px;color:#6b7280">You may resubmit your request at any time through the volunteer portal.</p>`,
+<p style="font-size:13px;color:#6b7280">If you have questions, please contact your program coordinator.</p>`,
   );
-
   await sendGmail(volunteerEmail, `Clearance Not Approved: ${languageName}`, html).catch(console.error);
 }
 
 // ─── Admin User Status Notifications ────────────────────────────────────────
 
-/**
- * Admin approves a pending user. Sends a Gmail welcome notification.
- */
 export async function notifyUserApproved(params: {
   email: string;
   name: string;
@@ -349,7 +348,6 @@ export async function notifyUserApproved(params: {
 }): Promise<void> {
   const { email, name, role } = params;
   const roleLabel = role === "VOLUNTEER" ? "volunteer" : role === "ADMIN" ? "administrator" : role.toLowerCase();
-
   const html = wrap(
     "Your Account Has Been Approved",
     `<p>Hi ${name},</p>
@@ -359,11 +357,8 @@ export async function notifyUserApproved(params: {
   Sign In to Georgetown Medical Interpreters
 </a></p>`,
   );
-
   await sendGmail(email, "Your Georgetown Medical Interpreters Account Has Been Approved", html).catch(console.error);
 }
-
-// ─── Onboarding Notifications ───────────────────────────────────────────────
 
 const ROLE_LABEL_MAP: Record<string, string> = {
   VOLUNTEER: "Volunteer",
@@ -371,9 +366,6 @@ const ROLE_LABEL_MAP: Record<string, string> = {
   ADMIN: "Admin",
 };
 
-/**
- * New user submits onboarding form. Sends a confirmation Gmail to the user.
- */
 export async function sendOnboardingConfirmation(params: {
   email: string;
   name: string;
@@ -381,7 +373,6 @@ export async function sendOnboardingConfirmation(params: {
 }): Promise<void> {
   const { email, name, roles } = params;
   const roleList = roles.map((r) => ROLE_LABEL_MAP[r] ?? r).join(", ");
-
   const html = wrap(
     "We've Received Your Account Request",
     `<p>Hi ${name},</p>
@@ -390,15 +381,11 @@ ${table(
   detail("Roles requested", roleList),
   detail("Email", email),
 )}
-<p style="font-size:13px;color:#6b7280">You'll receive an email at <strong>${email}</strong> once your access has been cleared. No further action is needed.</p>`,
+<p style="font-size:13px;color:#6b7280">You'll receive an email once your access has been cleared. No further action is needed.</p>`,
   );
-
   await sendGmail(email, "GMI Account Request Received", html).catch(console.error);
 }
 
-/**
- * Admin approves one or more roles for a user. Sends a single combined Gmail.
- */
 export async function notifyRolesApproved(params: {
   email: string;
   name: string;
@@ -407,26 +394,19 @@ export async function notifyRolesApproved(params: {
   const { email, name, approvedRoles } = params;
   const roleList = approvedRoles.map((r) => ROLE_LABEL_MAP[r] ?? r).join(", ");
   const plural = approvedRoles.length > 1;
-
   const html = wrap(
     `Your ${plural ? "Roles Have" : "Role Has"} Been Approved`,
     `<p>Hi ${name},</p>
-<p>Your Georgetown Medical Interpreters ${plural ? "roles have" : "role has"} been <strong>approved</strong>. You can now sign in to access the platform.</p>
-${table(
-  detail(plural ? "Approved roles" : "Approved role", roleList),
-)}
+<p>Your Georgetown Medical Interpreters ${plural ? "roles have" : "role has"} been <strong>approved</strong>.</p>
+${table(detail(plural ? "Approved roles" : "Approved role", roleList))}
 <p><a href="${process.env.NEXTAUTH_URL ?? "https://georgetownmedicalinterpreters.org"}/login"
    style="display:inline-block;background:#002147;color:#fff;padding:10px 20px;border-radius:6px;text-decoration:none;font-size:14px;font-weight:600">
   Sign In to Georgetown Medical Interpreters
 </a></p>`,
   );
-
   await sendGmail(email, "GMI Account Approved — You're All Set", html).catch(console.error);
 }
 
-/**
- * Admin rejects all pending roles for a user.
- */
 export async function notifyRolesRejected(params: {
   email: string;
   name: string;
@@ -436,39 +416,32 @@ export async function notifyRolesRejected(params: {
   const roleList = rejectedRoles.map((r) => ROLE_LABEL_MAP[r] ?? r).join(", ");
   const plural = rejectedRoles.length > 1;
   const siteUrl = process.env.NEXTAUTH_URL ?? "https://georgetownmedicalinterpreters.org";
-
   const html = wrap(
-    `Your Account Request Was Not Approved`,
+    "Your Account Request Was Not Approved",
     `<p>Hi ${name},</p>
 <p>Your request for the following ${plural ? "roles has" : "role has"} not been approved at this time:</p>
-${table(
-  detail(plural ? "Requested roles" : "Requested role", roleList),
-)}
-<p style="font-size:13px;color:#6b7280">If you believe this is an error or have questions, you can contact us below.</p>
+${table(detail(plural ? "Requested roles" : "Requested role", roleList))}
 <p><a href="${siteUrl}/rejected"
    style="display:inline-block;background:#002147;color:#fff;padding:10px 20px;border-radius:6px;text-decoration:none;font-size:14px;font-weight:600">
   Contact Us
 </a></p>`,
   );
-
   await sendGmail(email, "GMI Account Request — Not Approved", html).catch(console.error);
 }
 
-/**
- * Admin suspends a user. Sends a Gmail notification.
- */
 export async function notifyUserSuspended(params: {
   email: string;
   name: string;
 }): Promise<void> {
   const { email, name } = params;
-
   const html = wrap(
     "Account Suspended",
     `<p>Hi ${name},</p>
 <p>Your Georgetown Medical Interpreters account has been <strong>suspended</strong>. You will no longer be able to sign in.</p>
 <p style="font-size:13px;color:#6b7280">If you believe this is an error, please contact your program coordinator.</p>`,
   );
-
   await sendGmail(email, "Your Georgetown Medical Interpreters Account Has Been Suspended", html).catch(console.error);
 }
+
+// keep shiftTimeBlock exported for use in email templates if needed
+export { shiftTimeBlock };

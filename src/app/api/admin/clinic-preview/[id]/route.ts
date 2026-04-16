@@ -23,21 +23,21 @@ export async function GET(
   const clinic = await prisma.clinic.findUnique({ where: { id }, select: { name: true } });
   if (!clinic) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-  const slots = await prisma.slot.findMany({
+  const shifts = await prisma.shift.findMany({
     where: { clinicId: id },
     orderBy: { date: "asc" },
     include: {
-      signups: {
-        where: { status: { in: ["ACTIVE", "NO_SHOW", "COMPLETED"] } },
+      positions: {
+        where: { status: { in: ["FILLED", "NO_SHOW", "COMPLETED"] } },
+        orderBy: { positionNumber: "asc" },
         include: {
           volunteer: {
             include: { user: { select: { name: true, email: true } } },
           },
         },
-        orderBy: { subBlockHour: "asc" },
       },
     },
   });
 
-  return NextResponse.json({ clinicName: clinic.name, slots });
+  return NextResponse.json({ clinicName: clinic.name, shifts });
 }

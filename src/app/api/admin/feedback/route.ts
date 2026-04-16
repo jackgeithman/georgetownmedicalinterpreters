@@ -18,9 +18,9 @@ export async function GET() {
 
   const feedback = await prisma.feedback.findMany({
     include: {
-      signup: {
+      position: {
         include: {
-          slot: {
+          shift: {
             include: {
               clinic: { select: { name: true } },
             },

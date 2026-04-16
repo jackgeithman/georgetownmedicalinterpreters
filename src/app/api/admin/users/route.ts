@@ -38,6 +38,7 @@ export async function GET() {
           isCleared: true,
           clearedAt: true,
           clearedById: true,
+          driverCleared: true,
           clearanceLogs: {
             orderBy: { createdAt: "desc" },
             take: 1,
@@ -72,7 +73,7 @@ export async function PATCH(req: NextRequest) {
 
   const target = await prisma.user.findUnique({
     where: { id: userId },
-    include: { volunteer: { include: { signups: { include: { slot: true } } } } },
+    include: { volunteer: { include: { positions: { include: { shift: true } } } } },
   });
   if (!target) return NextResponse.json({ error: "User not found" }, { status: 404 });
 
@@ -396,11 +397,11 @@ export async function PATCH(req: NextRequest) {
       const now = new Date();
       const vp = await prisma.volunteerProfile.findUnique({ where: { userId: target.id } });
       if (vp) {
-        const upcomingCount = await prisma.subBlockSignup.count({
+        const upcomingCount = await prisma.shiftPosition.count({
           where: {
             volunteerId: vp.id,
-            status: "ACTIVE",
-            slot: { date: { gte: now }, status: "ACTIVE" },
+            status: "FILLED",
+            shift: { date: { gte: now }, status: "ACTIVE" },
           },
         });
         if (upcomingCount > 0) {
@@ -414,11 +415,11 @@ export async function PATCH(req: NextRequest) {
       const now = new Date();
       const vp = await prisma.volunteerProfile.findUnique({ where: { userId: target.id } });
       if (vp) {
-        await prisma.subBlockSignup.updateMany({
+        await prisma.shiftPosition.updateMany({
           where: {
             volunteerId: vp.id,
-            status: "ACTIVE",
-            slot: { date: { gte: now }, status: "ACTIVE" },
+            status: "FILLED",
+            shift: { date: { gte: now }, status: "ACTIVE" },
           },
           data: { status: "CANCELLED", cancelledAt: now },
         });
@@ -523,6 +524,24 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ ok: true });
   }
 
+  // Handle driver clearance toggle
+  if (body.setDriverCleared !== undefined) {
+    if (!isAdmin) return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+    const vp = await prisma.volunteerProfile.findUnique({ where: { userId: target.id } });
+    if (!vp) return NextResponse.json({ error: "No volunteer profile" }, { status: 400 });
+    await prisma.volunteerProfile.update({ where: { id: vp.id }, data: { driverCleared: !!body.setDriverCleared } });
+    await logActivity({
+      actorId: admin.id,
+      actorEmail: admin.email ?? undefined,
+      actorName: admin.name ?? undefined,
+      action: "USER_STATUS_CHANGED",
+      targetType: "User",
+      targetId: userId,
+      detail: `${body.setDriverCleared ? "Granted" : "Revoked"} driver clearance for ${target.email}`,
+    });
+    return NextResponse.json({ ok: true });
+  }
+
   return NextResponse.json({ error: "No valid operation specified" }, { status: 400 });
 }
 
@@ -542,7 +561,7 @@ export async function DELETE(req: NextRequest) {
 
   const target = await prisma.user.findUnique({
     where: { id: userId },
-    include: { volunteer: { include: { signups: true, clearanceLogs: true, notifPrefs: true } } },
+    include: { volunteer: { include: { positions: true, clearanceLogs: true, notifPrefs: true } } },
   });
   if (!target) return NextResponse.json({ error: "User not found" }, { status: 404 });
 
@@ -557,13 +576,13 @@ export async function DELETE(req: NextRequest) {
 
     if (target.volunteer) {
       const vpId = target.volunteer.id;
-      const signupIds = target.volunteer.signups.map((s) => s.id);
+      const positionIds = target.volunteer.positions.map((p) => p.id);
 
-      // Delete feedback on this volunteer's signups
-      if (signupIds.length > 0) {
-        await tx.feedback.deleteMany({ where: { signupId: { in: signupIds } } });
+      // Delete feedback on this volunteer's positions
+      if (positionIds.length > 0) {
+        await tx.feedback.deleteMany({ where: { positionId: { in: positionIds } } });
       }
-      await tx.subBlockSignup.deleteMany({ where: { volunteerId: vpId } });
+      await tx.shiftPosition.deleteMany({ where: { volunteerId: vpId } });
       await tx.clearanceLog.deleteMany({ where: { volunteerId: vpId } });
       if (target.volunteer.notifPrefs) {
         await tx.volunteerNotifPrefs.delete({ where: { volunteerId: vpId } });

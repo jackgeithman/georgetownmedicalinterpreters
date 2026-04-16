@@ -17,7 +17,7 @@ export async function GET() {
   const clinics = await prisma.clinic.findMany({
     orderBy: { createdAt: "desc" },
     include: {
-      _count: { select: { staff: true, slots: true } },
+      _count: { select: { staff: true, shifts: true } },
     },
   });
 
@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
   if (!admin) return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
 
   const body = await req.json();
-  const { name, address, contactName, contactEmail } = body;
+  const { name, address, contactName, contactEmail, travelMinutes } = body;
 
   if (!name || !contactEmail) {
     return NextResponse.json({ error: "Name and contact email required" }, { status: 400 });
@@ -42,7 +42,14 @@ export async function POST(req: NextRequest) {
   const plainPin = generatePin();
 
   const clinic = await prisma.clinic.create({
-    data: { name, address: address ?? "", contactName: contactName ?? "", contactEmail, loginPin: plainPin },
+    data: {
+      name,
+      address: address ?? "",
+      contactName: contactName ?? "",
+      contactEmail,
+      loginPin: plainPin,
+      travelMinutes: travelMinutes != null ? Number(travelMinutes) : 30,
+    },
   });
 
   return NextResponse.json({ ...clinic, plainPin });

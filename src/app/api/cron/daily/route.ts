@@ -3,12 +3,8 @@
  * Handles:
  *  1. 24-hour shift reminders for volunteers
  *  2. Clinic daily summary emails
- *  3. Clinic unfilled-slot alerts (slots within 24h still have open sub-blocks)
+ *  3. Clinic unfilled-shift alerts (shifts within 24h still have open positions)
  *  4. Admin pending-volunteer alerts (waiting 24h+ for approval)
- *
- * Transactional emails (signup receipt, cancel receipt, slot edited/cancelled,
- * admin-removed, volunteer cancel alert, unfilled slot alert) are sent immediately
- * from their respective API routes — no queue needed.
  */
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
@@ -24,6 +20,10 @@ function langLabel(code: string) {
   return map[code] ?? code;
 }
 
+function minutesToHour(minutes: number) {
+  return Math.floor(minutes / 60);
+}
+
 export async function GET(req: Request) {
   const secret = process.env.CRON_SECRET;
   if (secret) {
@@ -37,8 +37,7 @@ export async function GET(req: Request) {
   let sent = 0;
 
   // ── 1. 24-hour reminders ───────────────────────────────────────────────────
-  // Find all active signups whose sub-block starts between now+22h and now+26h
-  // (wide window to account for Vercel's ±59 min scheduling variance on Hobby)
+  // Find all FILLED positions whose shift starts between now+22h and now+26h
   const reminderLow = new Date(now.getTime() + 22 * 3_600_000);
   const reminderHigh = new Date(now.getTime() + 26 * 3_600_000);
 
@@ -47,32 +46,34 @@ export async function GET(req: Request) {
   const dayEnd = new Date(reminderHigh);
   dayEnd.setHours(23, 59, 59, 999);
 
-  const upcomingSignups = await prisma.subBlockSignup.findMany({
+  const upcomingPositions = await prisma.shiftPosition.findMany({
     where: {
-      status: "ACTIVE",
-      slot: { status: "ACTIVE", date: { gte: dayStart, lte: dayEnd } },
+      status: "FILLED",
+      shift: { status: "ACTIVE", date: { gte: dayStart, lte: dayEnd } },
     },
     include: {
-      slot: { include: { clinic: true } },
+      shift: { include: { clinic: true } },
       volunteer: { include: { user: true, notifPrefs: true } },
     },
   });
 
-  for (const signup of upcomingSignups) {
-    const slotStart = new Date(signup.slot.date);
-    slotStart.setHours(signup.subBlockHour, 0, 0, 0);
-    if (slotStart < reminderLow || slotStart > reminderHigh) continue;
+  for (const position of upcomingPositions) {
+    // Compute exact shift start datetime and check window
+    const shiftDate = new Date(position.shift.date);
+    shiftDate.setHours(0, 0, 0, 0);
+    const shiftStart = new Date(shiftDate.getTime() + position.shift.volunteerStart * 60_000);
+    if (shiftStart < reminderLow || shiftStart > reminderHigh) continue;
 
-    if (!signup.volunteer.notifPrefs?.reminder24h) continue;
-    const email = signup.volunteer.user.email;
+    if (!position.volunteer?.notifPrefs?.reminder24h) continue;
+    const email = position.volunteer.user.email;
     if (!email) continue;
 
-    // Deduplicate: don't send twice if cron ever fires twice in a day
+    // Deduplicate: don't send twice if cron fires twice in a day
     const already = await prisma.notifLog.findFirst({
       where: {
         type: "REMINDER_24H",
         recipientEmail: email,
-        signupId: signup.id,
+        positionId: position.id,
         sentAt: { gte: new Date(now.getTime() - 20 * 3_600_000) },
       },
     });
@@ -81,16 +82,16 @@ export async function GET(req: Request) {
     try {
       await sendReminder({
         to: email,
-        volunteerName: signup.volunteer.user.name ?? "Volunteer",
-        clinicName: signup.slot.clinic.name,
-        clinicAddress: signup.slot.clinic.address,
-        date: signup.slot.date,
-        subBlockHour: signup.subBlockHour,
-        language: langLabel(signup.slot.language),
+        volunteerName: position.volunteer.user.name ?? "Volunteer",
+        clinicName: position.shift.clinic.name,
+        clinicAddress: position.shift.clinic.address,
+        date: position.shift.date,
+        subBlockHour: minutesToHour(position.shift.volunteerStart),
+        language: langLabel(position.languageCode ?? ""),
         hoursUntil: 24,
       });
       await prisma.notifLog.create({
-        data: { type: "REMINDER_24H", recipientEmail: email, signupId: signup.id },
+        data: { type: "REMINDER_24H", recipientEmail: email, positionId: position.id },
       });
       sent++;
     } catch (err) {
@@ -102,11 +103,11 @@ export async function GET(req: Request) {
   const clinicsForSummary = await prisma.clinic.findMany({
     where: { notifPrefs: { dailySummary: true } },
     include: {
-      slots: {
+      shifts: {
         where: { status: "ACTIVE", date: { gte: now } },
-        include: { signups: { where: { status: "ACTIVE" } } },
+        include: { positions: true },
         orderBy: { date: "asc" },
-        take: 20, // cap at 20 upcoming slots in the email
+        take: 20,
       },
     },
   });
@@ -114,13 +115,13 @@ export async function GET(req: Request) {
   for (const clinic of clinicsForSummary) {
     if (!clinic.contactEmail) continue;
 
-    const slotSummaries = clinic.slots.map((s) => ({
+    const slotSummaries = clinic.shifts.map((s) => ({
       date: s.date,
-      startTime: s.startTime,
-      endTime: s.endTime,
-      language: langLabel(s.language),
-      interpreterCount: s.interpreterCount,
-      signedUp: new Set(s.signups.map((su) => su.subBlockHour)).size,
+      startTime: minutesToHour(s.volunteerStart),
+      endTime: minutesToHour(s.volunteerEnd),
+      language: s.languagesNeeded.map(langLabel).join(", "),
+      interpreterCount: s.positions.length,
+      signedUp: s.positions.filter((p) => p.status === "FILLED").length,
       notes: s.notes,
     }));
 
@@ -136,54 +137,53 @@ export async function GET(req: Request) {
     }
   }
 
-  // ── 3. Clinic unfilled-slot alerts (slots within 24h) ─────────────────────
+  // ── 3. Clinic unfilled-shift alerts (shifts within 24h) ───────────────────
   const in24h = new Date(now.getTime() + 24 * 3_600_000);
 
   const clinicsForUnfilled = await prisma.clinic.findMany({
     where: { notifPrefs: { unfilledAlert24h: true } },
     include: {
-      slots: {
+      shifts: {
         where: { status: "ACTIVE", date: { gte: now, lte: in24h } },
-        include: { signups: { where: { status: "ACTIVE" } } },
+        include: { positions: true },
       },
     },
   });
 
   for (const clinic of clinicsForUnfilled) {
-    for (const slot of clinic.slots) {
-      const unfilledHours: { hour: number; filled: number; needed: number }[] = [];
-      for (let h = slot.startTime; h < slot.endTime; h++) {
-        const filled = slot.signups.filter((s) => s.subBlockHour === h).length;
-        if (filled < slot.interpreterCount) {
-          unfilledHours.push({ hour: h, filled, needed: slot.interpreterCount });
-        }
-      }
-      if (unfilledHours.length === 0) continue;
+    for (const shift of clinic.shifts) {
+      const openPositions = shift.positions.filter(
+        (p) => p.status === "OPEN" || p.status === "LOCKED",
+      );
+      if (openPositions.length === 0) continue;
 
-      // Deduplicate: max once per slot per day
       const alreadySent = await prisma.notifLog.findFirst({
         where: {
           type: "CLINIC_UNFILLED_24H",
-          slotId: slot.id,
+          shiftId: shift.id,
           sentAt: { gte: new Date(now.getTime() - 20 * 3_600_000) },
         },
       });
       if (alreadySent) continue;
 
+      const filledCount = shift.positions.filter((p) => p.status === "FILLED").length;
+      const totalCount = shift.positions.length;
+      const startHour = minutesToHour(shift.volunteerStart);
+
       try {
         await sendClinicUnfilledAlert({
           to: clinic.contactEmail,
           clinicName: clinic.name,
-          date: slot.date,
-          startTime: slot.startTime,
-          endTime: slot.endTime,
-          unfilledHours,
+          date: shift.date,
+          startTime: startHour,
+          endTime: minutesToHour(shift.volunteerEnd),
+          unfilledHours: [{ hour: startHour, filled: filledCount, needed: totalCount }],
         });
         await prisma.notifLog.create({
           data: {
             type: "CLINIC_UNFILLED_24H",
             recipientEmail: clinic.contactEmail,
-            slotId: slot.id,
+            shiftId: shift.id,
           },
         });
         sent++;

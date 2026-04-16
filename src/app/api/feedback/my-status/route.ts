@@ -1,15 +1,11 @@
 /**
  * GET /api/feedback/my-status
  *
- * Returns which feedback has already been submitted by the current user, so
- * the frontend can show a pre-hydrated "pending feedback" list without doing
- * N individual /api/feedback?signupId=... calls.
- *
- * Volunteer / Admin response: { givenSlotIds: string[] }
- *   – slotIds where the volunteer already left VOLUNTEER-authored feedback
+ * Volunteer / Admin response: { givenShiftIds: string[] }
+ *   – shiftIds where the volunteer already left VOLUNTEER-authored feedback
  *
  * Clinic response: { givenKeys: string[] }
- *   – "${slotId}-${volunteerId}" keys where the clinic already rated that volunteer
+ *   – "${shiftId}-${volunteerId}" keys where the clinic already rated that volunteer
  */
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
@@ -25,47 +21,44 @@ export async function GET() {
     session.user.role === "CLINIC";
 
   if (isClinic) {
-    // Find this clinic's id from the session
     const clinicId = (session.user as { clinicId?: string }).clinicId;
     if (!clinicId) return NextResponse.json({ givenKeys: [] });
 
-    // All CLINIC-authored feedback for slots belonging to this clinic
     const feedback = await prisma.feedback.findMany({
       where: {
         authorRole: "CLINIC",
-        signup: { slot: { clinicId } },
+        position: { shift: { clinicId } },
       },
       include: {
-        signup: { select: { slotId: true, volunteerId: true } },
+        position: { select: { shiftId: true, volunteerId: true } },
       },
     });
 
     const givenKeys = feedback.map(
-      (f) => `${f.signup.slotId}-${f.signup.volunteerId}`
+      (f) => `${f.position.shiftId}-${f.position.volunteerId}`,
     );
 
     return NextResponse.json({ givenKeys });
   }
 
-  // Volunteer / Admin path — find their VolunteerProfile
   const email = session.user.email;
-  if (!email) return NextResponse.json({ givenSlotIds: [] });
+  if (!email) return NextResponse.json({ givenShiftIds: [] });
 
   const user = await prisma.user.findUnique({
     where: { email },
     include: { volunteer: true },
   });
-  if (!user?.volunteer) return NextResponse.json({ givenSlotIds: [] });
+  if (!user?.volunteer) return NextResponse.json({ givenShiftIds: [] });
 
   const feedback = await prisma.feedback.findMany({
     where: {
       authorRole: "VOLUNTEER",
-      signup: { volunteerId: user.volunteer.id },
+      position: { volunteerId: user.volunteer.id },
     },
-    include: { signup: { select: { slotId: true } } },
+    include: { position: { select: { shiftId: true } } },
   });
 
-  const givenSlotIds = [...new Set(feedback.map((f) => f.signup.slotId))];
+  const givenShiftIds = [...new Set(feedback.map((f) => f.position.shiftId))];
 
-  return NextResponse.json({ givenSlotIds });
+  return NextResponse.json({ givenShiftIds });
 }
