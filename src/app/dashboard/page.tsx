@@ -11,7 +11,7 @@ export default function DashboardPage() {
   // Defer redirect to allow session to hydrate on client-side navigation.
   useEffect(() => {
     if (status !== "unauthenticated") return;
-    const t = setTimeout(() => router.push("/login"), 500);
+    const t = setTimeout(() => router.push("/login"), 1500);
     return () => clearTimeout(t);
   }, [status, router]);
 

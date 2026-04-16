@@ -30,7 +30,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           redirected.current = true;
           router.push("/login");
         }
-      }, 500);
+      }, 1500);
       return () => clearTimeout(t);
     }
 
