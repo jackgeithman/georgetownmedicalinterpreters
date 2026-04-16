@@ -23,14 +23,16 @@ enum UserStatus {
   PENDING_APPROVAL
 }
 
-enum SlotStatus {
+enum ShiftStatus {
   ACTIVE
   CANCELLED
   COMPLETED
 }
 
-enum SignupStatus {
-  ACTIVE
+enum PositionStatus {
+  LOCKED     // waiting for driver to fill seat 1
+  OPEN       // available for signup
+  FILLED     // volunteer assigned
   CANCELLED
   NO_SHOW
   COMPLETED
@@ -85,6 +87,7 @@ model User {
   clearancesGiven   ClearanceLog[]      @relation("ClearancesGiven")
   uploadedMaterials TrainingMaterial[]  @relation("UploadedMaterials")
   suggestions       Suggestion[]        @relation("Suggestions")
+  postedShifts      Shift[]             @relation("PostedShifts")
   createdAt         DateTime            @default(now())
 }
 
@@ -123,8 +126,9 @@ model Clinic {
   loginToken               String            @unique @default(uuid())
   loginPin                 String            @default("000000")
   urgentCancellationAlerts Boolean           @default(true)
+  travelMinutes            Int               @default(30)
   staff                    User[]
-  slots                    Slot[]
+  shifts                   Shift[]
   notifPrefs               ClinicNotifPrefs?
   createdAt                DateTime          @default(now())
 }
@@ -136,13 +140,15 @@ model VolunteerProfile {
   languages              String[]
   backgroundInfo         String?
   hoursVolunteered       Int                  @default(0)
+  drivingHours           Int                  @default(0)
+  driverCleared          Boolean              @default(false)
   cancellationsWithin24h Int                  @default(0)
   cancellationsWithin2h  Int                  @default(0)
   noShows                Int                  @default(0)
   isCleared              Boolean              @default(false)
   clearedById            String?
   clearedAt              DateTime?
-  signups                SubBlockSignup[]
+  positions              ShiftPosition[]
   notifPrefs             VolunteerNotifPrefs?
   clearanceLogs          ClearanceLog[]
   createdAt              DateTime             @default(now())
@@ -161,34 +167,39 @@ model ClearanceLog {
   notifiedAt   DateTime?        // set when volunteer dismisses the clearance ribbon
 }
 
-model Slot {
-  id                String           @id @default(uuid())
-  clinicId          String
-  clinic            Clinic           @relation(fields: [clinicId], references: [id])
-  language          String
-  date              DateTime
-  startTime         Int
-  endTime           Int
-  interpreterCount  Int
-  isRecurring       Boolean          @default(false)
-  recurrenceGroupId String?
-  notes             String?
-  status            SlotStatus       @default(ACTIVE)
-  signups           SubBlockSignup[]
-  createdAt         DateTime         @default(now())
+model Shift {
+  id              String          @id @default(uuid())
+  clinicId        String
+  clinic          Clinic          @relation(fields: [clinicId], references: [id])
+  date            DateTime
+  volunteerStart  Int             // XX1: minutes from midnight (e.g. 540 = 9:00 AM)
+  volunteerEnd    Int             // XX2: minutes from midnight
+  travelMinutes   Int             // t: copied from clinic at creation, can be overridden
+  languagesNeeded String[]        // e.g. ["ES", "ZH"] — total language needs for this shift
+  notes           String?
+  status          ShiftStatus     @default(ACTIVE)
+  postedById      String
+  postedBy        User            @relation("PostedShifts", fields: [postedById], references: [id])
+  positions       ShiftPosition[]
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
 }
 
-model SubBlockSignup {
-  id          String           @id @default(uuid())
-  slotId      String
-  slot        Slot             @relation(fields: [slotId], references: [id])
-  volunteerId String
-  volunteer   VolunteerProfile @relation(fields: [volunteerId], references: [id])
-  subBlockHour Int
-  status      SignupStatus     @default(ACTIVE)
-  cancelledAt DateTime?
-  feedback    Feedback[]
-  createdAt   DateTime         @default(now())
+model ShiftPosition {
+  id             String           @id @default(uuid())
+  shiftId        String
+  shift          Shift            @relation(fields: [shiftId], references: [id])
+  positionNumber Int              // 1 = driver seat, 2+ = interpreter seats
+  isDriver       Boolean          @default(false)
+  languageCode   String?          // null until assigned; set when driver fills seat 1
+  volunteerId    String?
+  volunteer      VolunteerProfile? @relation(fields: [volunteerId], references: [id])
+  status         PositionStatus   @default(OPEN)
+  signedUpAt     DateTime?
+  cancelledAt    DateTime?
+  feedback       Feedback[]
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
 }
 
 model EmailRule {
@@ -201,8 +212,8 @@ model EmailRule {
 
 model Feedback {
   id         String         @id @default(uuid())
-  signupId   String
-  signup     SubBlockSignup @relation(fields: [signupId], references: [id])
+  positionId String
+  position   ShiftPosition  @relation(fields: [positionId], references: [id])
   authorRole FeedbackAuthor
   rating     Int?           // 1-5 stars
   note       String
@@ -236,8 +247,8 @@ model NotifLog {
   id             String    @id @default(uuid())
   type           NotifType
   recipientEmail String
-  signupId       String?
-  slotId         String?
+  positionId     String?
+  shiftId        String?
   sentAt         DateTime  @default(now())
 }
 

@@ -10,7 +10,8 @@ type Clinic = {
   contactEmail: string;
   loginToken: string;
   loginPin: string;
-  _count?: { staff: number; slots: number };
+  travelMinutes: number;
+  _count?: { staff: number; shifts: number };
 };
 
 function MapsLinks({ address }: { address: string }) {
@@ -45,7 +46,8 @@ export default function ClinicsPage() {
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [showClinicForm, setShowClinicForm] = useState(false);
-  const [clinicForm, setClinicForm] = useState({ name: "", address: "", contactName: "", contactEmail: "" });
+  const [clinicForm, setClinicForm] = useState({ name: "", address: "", contactName: "", contactEmail: "", travelMinutes: 30 });
+  const [travelEdit, setTravelEdit] = useState<{ clinicId: string; value: number } | null>(null);
   const [clinicFormError, setClinicFormError] = useState("");
   const [pinReveal, setPinReveal] = useState<{ clinicName: string; pin: string } | null>(null);
   const [pinVisible, setPinVisible] = useState<Set<string>>(new Set());
@@ -84,7 +86,7 @@ export default function ClinicsPage() {
     if (res.ok) {
       const data = await res.json();
       await fetchClinics();
-      setClinicForm({ name: "", address: "", contactName: "", contactEmail: "" });
+      setClinicForm({ name: "", address: "", contactName: "", contactEmail: "", travelMinutes: 30 });
       setClinicFormError("");
       setShowClinicForm(false);
       setPinReveal({ clinicName: (data as { name: string; plainPin: string }).name, pin: (data as { name: string; plainPin: string }).plainPin });
@@ -120,12 +122,29 @@ export default function ClinicsPage() {
     setRegenConfirm({ clinicId, clinicName });
   };
 
+  const saveTravelMinutes = async () => {
+    if (!travelEdit) return;
+    setActionLoading(`travel-${travelEdit.clinicId}`);
+    await fetch(`/api/admin/clinics/${travelEdit.clinicId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ travelMinutes: travelEdit.value }),
+    });
+    setTravelEdit(null);
+    await fetchClinics();
+    setActionLoading(null);
+  };
+
   const confirmRegenPin = async () => {
     if (!regenConfirm) return;
     const { clinicId, clinicName } = regenConfirm;
     setRegenConfirm(null);
     setActionLoading(`pin-${clinicId}`);
-    const res = await fetch(`/api/admin/clinics/${clinicId}`, { method: "PATCH" });
+    const res = await fetch(`/api/admin/clinics/${clinicId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ regenPin: true }),
+    });
     if (res.ok) {
       const data = await res.json();
       await fetchClinics();
@@ -162,6 +181,15 @@ export default function ClinicsPage() {
             <input placeholder="Address" value={clinicForm.address} onChange={(e) => setClinicForm({ ...clinicForm, address: e.target.value })} style={{ padding: "9px 12px", fontSize: "0.875rem", border: "1.5px solid var(--card-border)", borderRadius: "9px", background: "var(--card-bg)", color: "var(--gray-900)", outline: "none", fontFamily: "'DM Sans', sans-serif" }} />
             <input placeholder="Contact Name" value={clinicForm.contactName} onChange={(e) => setClinicForm({ ...clinicForm, contactName: e.target.value })} style={{ padding: "9px 12px", fontSize: "0.875rem", border: "1.5px solid var(--card-border)", borderRadius: "9px", background: "var(--card-bg)", color: "var(--gray-900)", outline: "none", fontFamily: "'DM Sans', sans-serif" }} />
             <input placeholder="Contact Email" value={clinicForm.contactEmail} onChange={(e) => setClinicForm({ ...clinicForm, contactEmail: e.target.value })} style={{ padding: "9px 12px", fontSize: "0.875rem", border: "1.5px solid var(--card-border)", borderRadius: "9px", background: "var(--card-bg)", color: "var(--gray-900)", outline: "none", fontFamily: "'DM Sans', sans-serif" }} />
+            <div style={{ gridColumn: "1 / -1", display: "flex", alignItems: "center", gap: "10px" }}>
+              <label style={{ fontSize: "0.82rem", color: "#374151", fontWeight: 500 }}>Travel time (one-way, minutes):</label>
+              <input
+                type="number" min={0} max={240}
+                value={clinicForm.travelMinutes}
+                onChange={(e) => setClinicForm({ ...clinicForm, travelMinutes: Number(e.target.value) })}
+                style={{ width: "80px", padding: "9px 12px", fontSize: "0.875rem", border: "1.5px solid var(--card-border)", borderRadius: "9px", background: "var(--card-bg)", color: "var(--gray-900)", outline: "none", fontFamily: "'DM Sans', sans-serif" }}
+              />
+            </div>
           </div>
           {clinicFormError && (
             <p style={{ marginTop: "12px", fontSize: "0.875rem", color: "#DC2626", background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: "8px", padding: "8px 12px" }}>{clinicFormError}</p>
@@ -192,6 +220,25 @@ export default function ClinicsPage() {
                     {clinic.address && <MapsLinks address={clinic.address} />}
                   </p>
                   <p style={{ fontSize: "0.75rem", color: "var(--gray-400)", marginTop: "4px" }}>{clinic.contactName} · {clinic.contactEmail}</p>
+                  <div style={{ marginTop: "6px", display: "flex", alignItems: "center", gap: "8px" }}>
+                    <span style={{ fontSize: "0.75rem", color: "#111827" }}>Travel time: <strong>{travelEdit?.clinicId === clinic.id ? "" : `${clinic.travelMinutes} min`}</strong></span>
+                    {travelEdit?.clinicId === clinic.id ? (
+                      <>
+                        <input
+                          type="number" min={0} max={240}
+                          value={travelEdit.value}
+                          onChange={(e) => setTravelEdit({ ...travelEdit, value: Number(e.target.value) })}
+                          autoFocus
+                          style={{ width: "70px", padding: "4px 8px", fontSize: "0.82rem", border: "1.5px solid var(--card-border)", borderRadius: "6px", background: "var(--card-bg)", color: "var(--gray-900)", outline: "none", fontFamily: "'DM Sans', sans-serif" }}
+                        />
+                        <span style={{ fontSize: "0.75rem", color: "#374151" }}>min</span>
+                        <button disabled={actionLoading === `travel-${clinic.id}`} onClick={() => void saveTravelMinutes()} style={{ fontSize: "0.72rem", padding: "3px 10px", background: "var(--blue)", color: "#fff", border: "none", borderRadius: "6px", cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>Save</button>
+                        <button onClick={() => setTravelEdit(null)} style={{ fontSize: "0.72rem", padding: "3px 8px", background: "none", border: "1px solid var(--card-border)", color: "#374151", borderRadius: "6px", cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>Cancel</button>
+                      </>
+                    ) : (
+                      <button onClick={() => setTravelEdit({ clinicId: clinic.id, value: clinic.travelMinutes })} style={{ fontSize: "0.72rem", padding: "2px 8px", background: "none", border: "1px solid var(--card-border)", color: "#374151", borderRadius: "6px", cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>Edit</button>
+                    )}
+                  </div>
                   <div style={{ marginTop: "12px", display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: "6px", background: "rgba(0,0,0,.04)", border: "1.5px solid var(--card-border)", borderRadius: "8px", padding: "4px 10px" }}>
                       <span style={{ fontSize: "0.72rem", color: "var(--gray-400)" }}>PIN</span>
@@ -237,7 +284,7 @@ export default function ClinicsPage() {
                   </div>
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                  <span style={{ fontSize: "0.75rem", color: "var(--gray-400)" }}>{clinic._count?.slots || 0} slots</span>
+                  <span style={{ fontSize: "0.75rem", color: "var(--gray-400)" }}>{clinic._count?.shifts || 0} shifts</span>
                   <button
                     disabled={actionLoading === `delete-clinic-${clinic.id}`}
                     onClick={() => void deleteClinic(clinic.id, clinic.name)}

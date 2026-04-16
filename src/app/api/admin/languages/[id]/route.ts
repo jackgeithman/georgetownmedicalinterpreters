@@ -31,73 +31,75 @@ export async function PATCH(
   const lang = await prisma.languageConfig.findUnique({ where: { id } });
   if (!lang) return NextResponse.json({ error: "Language not found" }, { status: 404 });
 
-  // If deactivating, check for upcoming clinic slots
+  // If deactivating, check for upcoming shifts that need this language
   if (!isActive) {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const allSlots = await prisma.slot.findMany({
+    const upcomingShifts = await prisma.shift.findMany({
       where: {
-        language: lang.code,
+        status: "ACTIVE",
         date: { gte: today },
+        languagesNeeded: { has: lang.code },
       },
       include: {
         clinic: { select: { id: true, name: true, contactEmail: true } },
-        signups: { include: { volunteer: { include: { user: { select: { email: true, name: true } } } } } },
+        positions: {
+          where: { status: "FILLED" },
+          include: { volunteer: { include: { user: { select: { email: true, name: true } } } } },
+        },
       },
     });
 
-    // Separate filled and unfilled slots
-    const filledSlots = allSlots.filter((s) => s.signups.length >= s.interpreterCount);
-    const unfilledSlots = allSlots.filter((s) => s.signups.length < s.interpreterCount);
-
-    if (allSlots.length > 0 && !force) {
+    if (upcomingShifts.length > 0 && !force) {
       return NextResponse.json({
-        conflicts: allSlots.map((s) => {
-          const isFilled = s.signups.length >= s.interpreterCount;
-          return {
-            id: s.id,
-            clinicName: s.clinic.name,
-            clinicEmail: s.clinic.contactEmail,
-            date: s.date,
-            language: lang.name,
-            isFilled,
-            assignedVolunteers: s.signups.map((su) => ({ name: su.volunteer.user.name || "Unknown", email: su.volunteer.user.email })),
-            interpreterCount: s.interpreterCount,
-            signupCount: s.signups.length,
-          };
-        }),
+        conflicts: upcomingShifts.map((s) => ({
+          id: s.id,
+          clinicName: s.clinic.name,
+          clinicEmail: s.clinic.contactEmail,
+          date: s.date,
+          language: lang.name,
+          isFilled: s.positions.length > 0,
+          assignedVolunteers: s.positions.map((p) => ({
+            name: p.volunteer?.user.name || "Unknown",
+            email: p.volunteer?.user.email,
+          })),
+        })),
       }, { status: 409 });
     }
 
-    if (unfilledSlots.length > 0 && force) {
-      // Only delete unfilled slots
-      const unfilledSlotIds = unfilledSlots.map((s) => s.id);
-      const signups = await prisma.subBlockSignup.findMany({
-        where: { slotId: { in: unfilledSlotIds } },
-        select: { id: true },
+    if (upcomingShifts.length > 0 && force) {
+      // Cancel shifts that need this language and notify clinics
+      const shiftIds = upcomingShifts.map((s) => s.id);
+
+      // Delete feedback for affected positions
+      const positionIds = upcomingShifts.flatMap((s) => s.positions.map((p) => p.id));
+      if (positionIds.length > 0) {
+        await prisma.feedback.deleteMany({ where: { positionId: { in: positionIds } } });
+      }
+
+      // Cancel positions then shifts
+      await prisma.shiftPosition.updateMany({
+        where: { shiftId: { in: shiftIds } },
+        data: { status: "CANCELLED" },
       });
-      const signupIds = signups.map((s) => s.id);
+      await prisma.shift.updateMany({
+        where: { id: { in: shiftIds } },
+        data: { status: "CANCELLED" },
+      });
 
-      // Delete feedback for cancelled signups
-      await prisma.feedback.deleteMany({ where: { signupId: { in: signupIds } } });
-      // Delete signups for cancelled slots
-      await prisma.subBlockSignup.deleteMany({ where: { slotId: { in: unfilledSlotIds } } });
-      // Delete the slots
-      await prisma.slot.deleteMany({ where: { id: { in: unfilledSlotIds } } });
-
-      // Send emails to clinics about cancelled unfilled slots
-      const clinicsToNotify = new Map<string, { name: string; email: string; slots: typeof unfilledSlots }>();
-      for (const slot of unfilledSlots) {
-        const key = slot.clinic.id;
+      // Notify clinics
+      const clinicsToNotify = new Map<string, { name: string; email: string; shifts: typeof upcomingShifts }>();
+      for (const shift of upcomingShifts) {
+        const key = shift.clinic.id;
         if (!clinicsToNotify.has(key)) {
-          clinicsToNotify.set(key, { name: slot.clinic.name, email: slot.clinic.contactEmail, slots: [] });
+          clinicsToNotify.set(key, { name: shift.clinic.name, email: shift.clinic.contactEmail, shifts: [] });
         }
-        clinicsToNotify.get(key)!.slots.push(slot);
+        clinicsToNotify.get(key)!.shifts.push(shift);
       }
 
       for (const [, clinicInfo] of clinicsToNotify) {
         if (clinicInfo.email) {
-          const slotList = clinicInfo.slots
+          const shiftList = clinicInfo.shifts
             .map((s) => {
               const dateStr = s.date instanceof Date
                 ? s.date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
@@ -110,20 +112,19 @@ export async function PATCH(
 <div style="border-bottom:3px solid #002147;padding-bottom:12px;margin-bottom:24px">
   <h2 style="color:#002147;margin:0;font-size:20px">Georgetown Medical Interpreters</h2>
 </div>
-<h3 style="color:#002147;margin-top:0">Interpreter Slots Cancelled</h3>
-<p style="font-size:0.9rem;color:#666">The following interpreter slots have been cancelled because the language is currently not supported:</p>
-<p style="font-size:0.9rem;color:#333"><strong>${slotList}</strong></p>
-<p style="font-size:0.9rem;color:#666">Please contact Georgetown Medical Interpreters if you have any questions.</p>
+<h3 style="color:#002147;margin-top:0">Interpreter Shifts Cancelled</h3>
+<p style="font-size:0.9rem">The following interpreter shifts have been cancelled because the language is currently not supported:</p>
+<p style="font-size:0.9rem"><strong>${shiftList}</strong></p>
+<p style="font-size:0.9rem">Please contact Georgetown Medical Interpreters if you have any questions.</p>
 <div style="margin-top:32px;padding-top:16px;border-top:1px solid #e5e7eb;font-size:11px;color:#9ca3af">
   Georgetown Medical Interpreters &middot; georgetownmedicalinterpreters.org
 </div>
 </body></html>`;
 
-          await sendGmail(clinicInfo.email, `Interpreter Slots Cancelled: ${lang.name} Language No Longer Supported`, html).catch(console.error);
+          await sendGmail(clinicInfo.email, `Interpreter Shifts Cancelled: ${lang.name} Language No Longer Supported`, html).catch(console.error);
         }
       }
 
-      // Log activity
       await logActivity({
         actorId: admin.id,
         actorEmail: admin.email ?? undefined,
@@ -131,7 +132,7 @@ export async function PATCH(
         action: "LANGUAGE_DEACTIVATED",
         targetType: "Language",
         targetId: id,
-        detail: `Deactivated ${lang.name} (${lang.code}), cancelled ${unfilledSlots.length} unfilled slots`,
+        detail: `Deactivated ${lang.name} (${lang.code}), cancelled ${upcomingShifts.length} upcoming shifts`,
       });
     }
   }
@@ -161,11 +162,11 @@ export async function DELETE(
   const lang = await prisma.languageConfig.findUnique({ where: { id } });
   if (!lang) return NextResponse.json({ error: "Language not found" }, { status: 404 });
 
-  // Block delete if any slots (past or future) reference this language
-  const slotCount = await prisma.slot.count({ where: { language: lang.code } });
-  if (slotCount > 0) {
+  // Block delete if any shifts (past or future) reference this language
+  const shiftCount = await prisma.shift.count({ where: { languagesNeeded: { has: lang.code } } });
+  if (shiftCount > 0) {
     return NextResponse.json(
-      { error: `Cannot delete — ${slotCount} slot${slotCount !== 1 ? "s" : ""} reference this language. Deactivate it instead.` },
+      { error: `Cannot delete — ${shiftCount} shift${shiftCount !== 1 ? "s" : ""} reference this language. Deactivate it instead.` },
       { status: 409 }
     );
   }

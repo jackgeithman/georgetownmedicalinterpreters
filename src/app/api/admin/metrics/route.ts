@@ -19,39 +19,36 @@ export async function GET() {
   const now = new Date();
   const oneMonthAgo = new Date(now.getTime() - 30 * 24 * 3_600_000);
 
-  const [languages, volunteerProfiles, slots, volunteerCount, activeVolunteerCount, upcomingSlots, feedbackRecords] = await Promise.all([
+  const [languages, volunteerProfiles, shifts, volunteerCount, activeVolunteerCount, upcomingShifts, feedbackRecords] = await Promise.all([
     prisma.languageConfig.findMany({ orderBy: { name: "asc" } }),
     prisma.volunteerProfile.findMany({
-      select: { languages: true, hoursVolunteered: true },
+      select: { languages: true, hoursVolunteered: true, drivingHours: true },
     }),
-    prisma.slot.findMany({
+    prisma.shift.findMany({
       where: { status: { not: "CANCELLED" } },
       select: {
         clinicId: true,
         clinic: { select: { name: true } },
-        startTime: true,
-        endTime: true,
+        volunteerStart: true,
+        volunteerEnd: true,
         status: true,
       },
     }),
     prisma.user.count({ where: { role: "VOLUNTEER", status: "ACTIVE" } }),
-    // Active volunteers = signed up for at least one slot in the last month
+    // Active volunteers = filled at least one position in the last month
     prisma.volunteerProfile.count({
       where: {
-        signups: {
+        positions: {
           some: { createdAt: { gte: oneMonthAgo } },
         },
       },
     }),
-    // Upcoming slots (ACTIVE, future date) with signup counts
-    prisma.slot.findMany({
+    // Upcoming shifts (ACTIVE, future) with position fill status
+    prisma.shift.findMany({
       where: { status: "ACTIVE", date: { gte: now } },
       select: {
         id: true,
-        interpreterCount: true,
-        startTime: true,
-        endTime: true,
-        signups: { where: { status: "ACTIVE" }, select: { subBlockHour: true } },
+        positions: { select: { status: true } },
       },
     }),
     prisma.feedback.findMany({ select: { authorRole: true, rating: true } }),
@@ -68,35 +65,30 @@ export async function GET() {
     return { code: lang.code, name: lang.name, hours };
   });
 
-  // Hours by clinic — sum (endTime - startTime) per slot for non-cancelled slots
+  // Hours by clinic — sum (volunteerEnd - volunteerStart) / 60 per shift (in hours)
   const clinicHoursMap = new Map<string, { clinicName: string; hours: number }>();
-  for (const slot of slots) {
-    const hours = slot.endTime - slot.startTime;
-    const existing = clinicHoursMap.get(slot.clinicId);
+  for (const shift of shifts) {
+    const hours = (shift.volunteerEnd - shift.volunteerStart) / 60;
+    const existing = clinicHoursMap.get(shift.clinicId);
     if (existing) {
       existing.hours += hours;
     } else {
-      clinicHoursMap.set(slot.clinicId, { clinicName: slot.clinic.name, hours });
+      clinicHoursMap.set(shift.clinicId, { clinicName: shift.clinic.name, hours });
     }
   }
-
   const hoursByClinic = Array.from(clinicHoursMap.entries()).map(([clinicId, data]) => ({
     clinicId,
     clinicName: data.clinicName,
-    hours: data.hours,
+    hours: Math.round(data.hours * 10) / 10,
   }));
 
-  // Upcoming filled/unfilled slot-hours
-  let filledSlotHours = 0;
-  let unfilledSlotHours = 0;
-  for (const slot of upcomingSlots) {
-    for (let h = slot.startTime; h < slot.endTime; h++) {
-      const filled = slot.signups.filter((s) => s.subBlockHour === h).length;
-      if (filled >= slot.interpreterCount) {
-        filledSlotHours++;
-      } else {
-        unfilledSlotHours++;
-      }
+  // Upcoming filled/unfilled positions
+  let filledPositions = 0;
+  let unfilledPositions = 0;
+  for (const shift of upcomingShifts) {
+    for (const pos of shift.positions) {
+      if (pos.status === "FILLED") filledPositions++;
+      else if (pos.status === "OPEN" || pos.status === "LOCKED") unfilledPositions++;
     }
   }
 
@@ -123,8 +115,8 @@ export async function GET() {
     hoursByClinic,
     volunteerCount,
     activeVolunteerCount,
-    filledSlotHours,
-    unfilledSlotHours,
+    filledPositions,
+    unfilledPositions,
     feedbackCount,
     avgVolunteerRating,
     avgClinicRating,

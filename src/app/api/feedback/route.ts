@@ -11,11 +11,11 @@ export async function GET(req: NextRequest) {
   const session = await getSession();
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
 
-  const signupId = req.nextUrl.searchParams.get("signupId");
-  if (!signupId) return NextResponse.json({ error: "signupId required" }, { status: 400 });
+  const positionId = req.nextUrl.searchParams.get("positionId");
+  if (!positionId) return NextResponse.json({ error: "positionId required" }, { status: 400 });
 
   const feedback = await prisma.feedback.findMany({
-    where: { signupId },
+    where: { positionId },
     orderBy: { createdAt: "asc" },
   });
 
@@ -37,24 +37,21 @@ export async function POST(req: NextRequest) {
   const authorRole = isClinic ? "CLINIC" : "VOLUNTEER";
 
   const body = await req.json();
-  const { signupId, rating, note } = body;
+  const { positionId, rating, note } = body;
 
-  if (!signupId) return NextResponse.json({ error: "signupId required" }, { status: 400 });
+  if (!positionId) return NextResponse.json({ error: "positionId required" }, { status: 400 });
   if (rating == null || rating < 1 || rating > 5) return NextResponse.json({ error: "rating must be 1-5" }, { status: 400 });
 
-  const signup = await prisma.subBlockSignup.findUnique({ where: { id: signupId } });
-  if (!signup) return NextResponse.json({ error: "Signup not found" }, { status: 404 });
+  const position = await prisma.shiftPosition.findUnique({
+    where: { id: positionId },
+  });
+  if (!position) return NextResponse.json({ error: "Position not found" }, { status: 404 });
 
-  // One rating per volunteer per slot (not per sub-block).
-  // Check if any feedback with this authorRole already exists for ANY sub-block
-  // that belongs to the same slot AND the same volunteer.
+  // One rating per volunteer per shift per authorRole
   const existing = await prisma.feedback.findFirst({
     where: {
       authorRole,
-      signup: {
-        slotId: signup.slotId,
-        volunteerId: signup.volunteerId,
-      },
+      position: { shiftId: position.shiftId, volunteerId: position.volunteerId },
     },
   });
   if (existing) {
@@ -63,7 +60,7 @@ export async function POST(req: NextRequest) {
 
   const feedback = await prisma.feedback.create({
     data: {
-      signupId,
+      positionId,
       authorRole,
       rating: Number(rating),
       note: note.trim(),

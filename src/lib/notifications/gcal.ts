@@ -10,50 +10,72 @@ function getAuth() {
   return client;
 }
 
-/**
- * Derives a Google Calendar-safe event ID from a signup UUID.
- * GCal IDs must use lowercase [a-v0-9]. UUID hex chars [0-9a-f] are a valid subset.
- */
-function calEventId(signupId: string): string {
-  return signupId.replace(/-/g, "");
+/** GCal event IDs must use lowercase [a-v0-9]. UUID hex chars [0-9a-f] are valid. */
+function calEventId(positionId: string): string {
+  return positionId.replace(/-/g, "");
 }
 
-export interface SlotInfo {
-  date: Date;
-  subBlockHour: number;
-  clinicName: string;
-  clinicAddress: string;
-  language: string;
-  notes?: string | null;
+function gmiCalendarId(): string {
+  return process.env.GOOGLE_GCAL_CALENDAR_ID ?? "primary";
+}
+
+/** Convert minutes-from-midnight to "HH:MM:00" */
+function minutesToTimeStr(minutes: number): string {
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:00`;
+}
+
+/** Convert minutes-from-midnight to "9:00 AM" or "1:30 PM" */
+function minutesTo12(minutes: number): string {
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  const period = h < 12 ? "AM" : "PM";
+  const h12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
+  return m === 0 ? `${h12}:00 ${period}` : `${h12}:${String(m).padStart(2, "0")} ${period}`;
 }
 
 import { langName } from "@/lib/languages";
 
-function fmt12(h: number): string {
-  const period = h < 12 ? "AM" : "PM";
-  const h12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
-  return `${h12}:00 ${period}`;
+export interface ShiftPositionInfo {
+  date: Date;
+  volunteerStart: number;   // XX1, minutes from midnight
+  volunteerEnd: number;     // XX2, minutes from midnight
+  travelMinutes: number;    // t
+  clinicName: string;
+  clinicAddress: string;
+  language: string;
+  isDriver: boolean;
+  notes?: string | null;
 }
 
-function buildEventBody(volunteerEmail: string, slot: SlotInfo, titlePrefix = "") {
-  const lang = langName(slot.language);
+function buildEventBody(volunteerEmail: string, info: ShiftPositionInfo, titlePrefix = "") {
+  const lang = langName(info.language);
   const senderEmail = process.env.GOOGLE_GMAIL_SENDER_EMAIL!;
+  const dateStr = info.date.toISOString().slice(0, 10); // "YYYY-MM-DD"
 
-  // Slot dates are stored at noon UTC. Build a local datetime string (no UTC
-  // conversion) and pass timeZone explicitly so Google Calendar interprets the
-  // hour as Eastern time regardless of where the server runs.
-  const dateStr = slot.date.toISOString().slice(0, 10); // "YYYY-MM-DD"
-  const pad = (n: number) => String(n).padStart(2, "0");
-  const startStr = `${dateStr}T${pad(slot.subBlockHour)}:00:00`;
-  const endStr = `${dateStr}T${pad(slot.subBlockHour + 1)}:00:00`;
+  // Full time commitment: key retrieval → key return
+  const keyRetrieval = info.volunteerStart - info.travelMinutes - 30;
+  const keyReturn = info.volunteerEnd + info.travelMinutes + 15;
 
-  // Rich description so all shift details are visible in the GCal invite email
+  const startStr = `${dateStr}T${minutesToTimeStr(keyRetrieval)}`;
+  const endStr   = `${dateStr}T${minutesToTimeStr(keyReturn)}`;
+
   const lines = [
+    `Role: ${info.isDriver ? "Driver + Interpreter" : "Interpreter"}`,
     `Language: ${lang}`,
-    `Time: ${fmt12(slot.subBlockHour)} – ${fmt12(slot.subBlockHour + 1)}`,
-    `Clinic: ${slot.clinicName}`,
-    `Address: ${slot.clinicAddress}`,
-    ...(slot.notes ? [`Notes: ${slot.notes}`] : []),
+    "",
+    "── Full Time Commitment ──────────────────",
+    `Key retrieval:       ${minutesTo12(keyRetrieval)}`,
+    `Depart Georgetown:   ${minutesTo12(info.volunteerStart - info.travelMinutes)}`,
+    `Interpreting starts: ${minutesTo12(info.volunteerStart)}`,
+    `Interpreting ends:   ${minutesTo12(info.volunteerEnd)}`,
+    `Return + park:       ${minutesTo12(info.volunteerEnd + info.travelMinutes)}`,
+    `Return key by:       ${minutesTo12(keyReturn)}`,
+    "",
+    `Clinic: ${info.clinicName}`,
+    `Address: ${info.clinicAddress}`,
+    ...(info.notes ? [`Notes: ${info.notes}`] : []),
     "",
     "Georgetown Medical Interpreters",
     "georgetownmedicalinterpreters.org",
@@ -61,12 +83,13 @@ function buildEventBody(volunteerEmail: string, slot: SlotInfo, titlePrefix = ""
     "If you need to cancel, please do so as early as possible via the volunteer dashboard.",
   ];
 
+  const driverLabel = info.isDriver ? " (Driver + Interpreter)" : "";
   return {
-    summary: `${titlePrefix}Medical Interpreter — ${lang} at ${slot.clinicName}`,
-    location: slot.clinicAddress,
+    summary: `${titlePrefix}GMI — ${lang}${driverLabel} at ${info.clinicName}`,
+    location: info.clinicAddress,
     description: lines.join("\n"),
     start: { dateTime: startStr, timeZone: "America/New_York" },
-    end: { dateTime: endStr, timeZone: "America/New_York" },
+    end:   { dateTime: endStr,   timeZone: "America/New_York" },
     attendees: [
       { email: senderEmail, organizer: true },
       { email: volunteerEmail },
@@ -81,73 +104,45 @@ function buildEventBody(volunteerEmail: string, slot: SlotInfo, titlePrefix = ""
   };
 }
 
-/**
- * Returns the GMI Google Calendar ID to use.
- * Set GOOGLE_GCAL_CALENDAR_ID to a specific calendar's ID (found in Google Calendar settings).
- * Falls back to "primary" only if the env var is unset.
- */
-function gmiCalendarId(): string {
-  return process.env.GOOGLE_GCAL_CALENDAR_ID ?? "primary";
-}
-
-/**
- * Creates a Google Calendar event for a volunteer signup.
- * sendUpdates: "all" causes GCal to email the volunteer the full invite —
- * this serves as their signup confirmation. The event also appears on their
- * personal calendar once accepted.
- */
 export async function createCalEvent(
-  signupId: string,
+  positionId: string,
   volunteerEmail: string,
-  slot: SlotInfo,
+  info: ShiftPositionInfo,
 ): Promise<void> {
   if (!process.env.GOOGLE_GMAIL_REFRESH_TOKEN || !process.env.GOOGLE_GMAIL_SENDER_EMAIL) return;
   const cal = google.calendar({ version: "v3", auth: getAuth() });
   await cal.events.insert({
     calendarId: gmiCalendarId(),
     sendUpdates: "all",
-    requestBody: { id: calEventId(signupId), ...buildEventBody(volunteerEmail, slot) },
+    requestBody: { id: calEventId(positionId), ...buildEventBody(volunteerEmail, info) },
   });
 }
 
-/**
- * Updates an existing GMI calendar event (e.g. when a clinic edits a slot).
- * Sends update emails to all attendees.
- */
 export async function updateCalEvent(
-  signupId: string,
+  positionId: string,
   volunteerEmail: string,
-  slot: SlotInfo,
+  info: ShiftPositionInfo,
 ): Promise<void> {
   if (!process.env.GOOGLE_GMAIL_REFRESH_TOKEN || !process.env.GOOGLE_GMAIL_SENDER_EMAIL) return;
   const cal = google.calendar({ version: "v3", auth: getAuth() });
   await cal.events.update({
     calendarId: gmiCalendarId(),
-    eventId: calEventId(signupId),
+    eventId: calEventId(positionId),
     sendUpdates: "all",
-    requestBody: {
-      id: calEventId(signupId),
-      ...buildEventBody(volunteerEmail, slot, "[Updated] "),
-    },
+    requestBody: { id: calEventId(positionId), ...buildEventBody(volunteerEmail, info, "[Updated] ") },
   });
 }
 
-/**
- * Deletes a GMI calendar event (cancellation).
- * sendUpdates: "all" causes GCal to email the volunteer a cancellation notice —
- * this serves as their cancellation receipt.
- * Silently ignores 404 if the event was never created.
- */
-export async function deleteCalEvent(signupId: string): Promise<void> {
+export async function deleteCalEvent(positionId: string): Promise<void> {
   if (!process.env.GOOGLE_GMAIL_REFRESH_TOKEN) return;
   const cal = google.calendar({ version: "v3", auth: getAuth() });
   try {
     await cal.events.delete({
       calendarId: gmiCalendarId(),
-      eventId: calEventId(signupId),
+      eventId: calEventId(positionId),
       sendUpdates: "all",
     });
   } catch {
-    // 404 means event was never created (e.g. Calendar API was not configured at signup time)
+    // 404 = event was never created
   }
 }

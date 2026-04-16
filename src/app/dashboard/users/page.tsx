@@ -13,6 +13,7 @@ type VolunteerStats = {
   noShows: number;
   isCleared: boolean;
   clearedAt: string | null;
+  driverCleared: boolean;
 };
 
 type User = {
@@ -249,6 +250,17 @@ export default function UsersPage() {
     });
     if (res.ok) await fetchData();
     setRoleActionLoading(null);
+  };
+
+  const toggleDriverCleared = async (userId: string, current: boolean) => {
+    setActionLoading(`driver-${userId}`);
+    await fetch("/api/admin/users", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId, setDriverCleared: !current }),
+    });
+    await fetchData();
+    setActionLoading(null);
   };
 
   const saveCounters = async (userId: string) => {
@@ -567,6 +579,20 @@ export default function UsersPage() {
                               {user.volunteer.cancellationsWithin2h > 0 && `2h ${user.volunteer.cancellationsWithin2h}`}
                             </span>
                           )}
+                          <div style={{ marginTop: "4px", display: "flex", alignItems: "center", gap: "4px" }}>
+                            {user.volunteer.driverCleared ? (
+                              <span style={{ fontSize: "0.68rem", background: "#DCFCE7", color: "#15803D", padding: "1px 6px", borderRadius: "4px", fontWeight: 600 }}>🚗 Driver</span>
+                            ) : (
+                              <span style={{ fontSize: "0.68rem", color: "var(--gray-400)" }}>No driver</span>
+                            )}
+                            {canAdminModify && (
+                              <button
+                                disabled={actionLoading === `driver-${user.id}`}
+                                onClick={() => void toggleDriverCleared(user.id, user.volunteer!.driverCleared)}
+                                style={{ fontSize: "0.62rem", padding: "1px 5px", background: "none", border: "1px solid var(--card-border)", color: "#374151", borderRadius: "4px", cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}
+                              >{user.volunteer.driverCleared ? "Revoke" : "Grant"}</button>
+                            )}
+                          </div>
                           {canAdminModify && (
                             <button
                               onClick={() => {
@@ -578,7 +604,7 @@ export default function UsersPage() {
                                 });
                               }}
                               style={{ fontSize: "0.68rem", color: "var(--gray-400)", background: "none", border: "none", padding: 0, cursor: "pointer", textAlign: "left", fontFamily: "'DM Sans', sans-serif", marginTop: "2px" }}
-                            >Edit</button>
+                            >Edit counters</button>
                           )}
                         </div>
                       )
