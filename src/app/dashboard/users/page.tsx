@@ -581,7 +581,7 @@ export default function UsersPage() {
                           )}
                           <div style={{ marginTop: "4px", display: "flex", alignItems: "center", gap: "4px" }}>
                             {user.volunteer.driverCleared ? (
-                              <span style={{ fontSize: "0.68rem", background: "#DCFCE7", color: "#15803D", padding: "1px 6px", borderRadius: "4px", fontWeight: 600 }}>🚗 Driver</span>
+                              <span style={{ fontSize: "0.68rem", background: "#DCFCE7", color: "#15803D", padding: "1px 6px", borderRadius: "4px", fontWeight: 600 }}>Driver</span>
                             ) : (
                               <span style={{ fontSize: "0.68rem", color: "var(--gray-400)" }}>No driver</span>
                             )}

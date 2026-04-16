@@ -137,6 +137,18 @@ export default function BrowsePage() {
   const [cancelTarget, setCancelTarget] = useState<AdminShift | null>(null);
   const [cancelInput, setCancelInput] = useState("");
 
+  // Admin: assign volunteer modal
+  const [assignModal, setAssignModal] = useState<{
+    position: Position & { isDriver: boolean };
+    shift: AdminShift;
+  } | null>(null);
+  const [assignSearch, setAssignSearch] = useState("");
+  const [assignSelected, setAssignSelected] = useState<{ id: string; name: string | null; email: string } | null>(null);
+  const [assignLangChoice, setAssignLangChoice] = useState("");
+  const [assignLoading, setAssignLoading] = useState(false);
+  const [assignError, setAssignError] = useState("");
+  const [users, setUsers] = useState<{ id: string; name: string | null; email: string; role: string; status: string; volunteer?: { languages: string[]; driverCleared: boolean } | null }[]>([]);
+
   // Driver sign-up language picker
   const [driverLangPicker, setDriverLangPicker] = useState<{
     positionId: string; shiftId: string; availableLangs: string[];
@@ -149,10 +161,11 @@ export default function BrowsePage() {
 
   const fetchData = useCallback(async () => {
     if (isAdmin) {
-      const [shiftsRes, clinicsRes, langsRes] = await Promise.all([
+      const [shiftsRes, clinicsRes, langsRes, usersRes] = await Promise.all([
         fetch("/api/admin/shifts"),
         fetch("/api/admin/clinics"),
         fetch("/api/admin/languages"),
+        fetch("/api/admin/users"),
       ]);
       if (shiftsRes.ok) setAdminShifts(await shiftsRes.json());
       if (clinicsRes.ok) {
@@ -160,6 +173,7 @@ export default function BrowsePage() {
         setClinics(Array.isArray(data) ? data : data.clinics ?? []);
       }
       if (langsRes.ok) setLanguages(await langsRes.json());
+      if (usersRes.ok) setUsers(await usersRes.json());
     } else {
       const shiftsRes = await fetch("/api/volunteer/shifts");
       if (shiftsRes.ok) setBrowseShifts(await shiftsRes.json());
@@ -204,10 +218,12 @@ export default function BrowsePage() {
     setCreateModal(true);
   };
 
-  const toggleFormLang = (code: string) => {
-    setFormLangs((prev) =>
-      prev.includes(code) ? prev.filter((l) => l !== code) : [...prev, code]
-    );
+  const addFormLang = (code: string) => {
+    setFormLangs((prev) => [...prev, code]);
+  };
+
+  const removeFormLang = (index: number) => {
+    setFormLangs((prev) => prev.filter((_, i) => i !== index));
   };
 
   const handleFormSubmit = async () => {
@@ -267,6 +283,50 @@ export default function BrowsePage() {
       await fetchData();
     }
     setActionLoading(null);
+  };
+
+  const openAssignModal = (pos: Position, shift: AdminShift) => {
+    setAssignModal({ position: pos as Position & { isDriver: boolean }, shift });
+    setAssignSearch("");
+    setAssignSelected(null);
+    setAssignLangChoice("");
+    setAssignError("");
+  };
+
+  const removeAdminPosition = async (positionId: string) => {
+    setActionLoading(`remove-${positionId}`);
+    const res = await fetch(`/api/admin/positions/${positionId}`, { method: "DELETE" });
+    if (res.ok) await fetchData();
+    else {
+      const err = await res.json().catch(() => ({}));
+      alert((err as { error?: string }).error ?? "Could not remove volunteer.");
+    }
+    setActionLoading(null);
+  };
+
+  const confirmAssign = async () => {
+    if (!assignModal || !assignSelected) return;
+    const { position, shift } = assignModal;
+    if (position.isDriver && !assignLangChoice) return;
+    setAssignLoading(true);
+    setAssignError("");
+    const res = await fetch(`/api/admin/positions/${position.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        userId: assignSelected.id,
+        languageCode: position.isDriver ? assignLangChoice : position.languageCode,
+      }),
+    });
+    if (res.ok) {
+      setAssignModal(null);
+      await fetchData();
+    } else {
+      const err = await res.json().catch(() => ({}));
+      setAssignError((err as { error?: string }).error ?? "Could not assign volunteer.");
+    }
+    setAssignLoading(false);
+    void shift; // suppress unused warning
   };
 
   // ── Volunteer: Sign Up ────────────────────────────────────────────────────
@@ -382,13 +442,17 @@ export default function BrowsePage() {
                   <span style={{ fontSize: "0.95rem", fontWeight: 600, color: "var(--gray-900)" }}>{fmtDate(shift.date)}</span>
                 </div>
                 <div style={{ display: "flex", flexDirection: "column", gap: "3px" }}>
-                  <span style={{ fontSize: "0.68rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.09em", color: "var(--gray-400)" }}>Interpreting Window</span>
-                  <span style={{ fontSize: "0.95rem", fontWeight: 600, color: "var(--gray-900)" }}>{fmtMin(shift.volunteerStart)} – {fmtMin(shift.volunteerEnd)}</span>
+                  <span style={{ fontSize: "0.68rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.09em", color: "#111827" }}>Full Commitment</span>
+                  <span style={{ fontSize: "0.95rem", fontWeight: 600, color: "#111827" }}>
+                    {fmtMin(shift.volunteerStart - shift.travelMinutes - 30)} – {fmtMin(shift.volunteerEnd + shift.travelMinutes + 15)}
+                    <span style={{ fontSize: "0.78rem", fontWeight: 400, marginLeft: "5px" }}>({Math.round((shift.volunteerEnd + shift.travelMinutes + 15 - (shift.volunteerStart - shift.travelMinutes - 30)) / 60 * 10) / 10} hrs)</span>
+                  </span>
                 </div>
                 <div style={{ display: "flex", flexDirection: "column", gap: "3px" }}>
-                  <span style={{ fontSize: "0.68rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.09em", color: "var(--gray-400)" }}>Full Commitment</span>
-                  <span style={{ fontSize: "0.95rem", fontWeight: 600, color: "var(--gray-900)" }}>
-                    {fmtMin(shift.volunteerStart - shift.travelMinutes - 30)} – {fmtMin(shift.volunteerEnd + shift.travelMinutes + 15)}
+                  <span style={{ fontSize: "0.68rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.09em", color: "#111827" }}>Interpreting Window</span>
+                  <span style={{ fontSize: "0.95rem", fontWeight: 600, color: "#111827" }}>
+                    {fmtMin(shift.volunteerStart)} – {fmtMin(shift.volunteerEnd)}
+                    <span style={{ fontSize: "0.78rem", fontWeight: 400, marginLeft: "5px" }}>({Math.round((shift.volunteerEnd - shift.volunteerStart) / 60 * 10) / 10} hrs)</span>
                   </span>
                 </div>
                 {shift.clinic.address && (
@@ -407,8 +471,28 @@ export default function BrowsePage() {
                 <span style={{ background: "var(--gray-200)", color: "var(--gray-600)", fontSize: "0.7rem", fontWeight: 600, padding: "4px 10px", borderRadius: "99px", textTransform: "uppercase" }}>Past</span>
               ) : (
                 <>
-                  <div style={{ background: openCount > 0 ? "var(--green-light)" : "#F0FDF4", color: openCount > 0 ? "var(--green)" : "#15803D", fontSize: "0.85rem", fontWeight: 700, padding: "6px 14px", borderRadius: "10px", whiteSpace: "nowrap", textAlign: "center" }}>
-                    {filledCount}/{shift.positions.length} filled
+                  <div style={{ display: "flex", flexDirection: "column", gap: "4px", alignItems: "flex-end" }}>
+                    {(() => {
+                      // Group positions by language to show per-language fill status
+                      const langCounts: Record<string, { filled: number; total: number }> = {};
+                      for (const lang of shift.languagesNeeded) {
+                        langCounts[lang] = langCounts[lang] ?? { filled: 0, total: 0 };
+                        langCounts[lang].total++;
+                      }
+                      for (const pos of shift.positions) {
+                        if (pos.languageCode && pos.status === "FILLED") {
+                          if (langCounts[pos.languageCode]) langCounts[pos.languageCode].filled++;
+                        }
+                      }
+                      return Object.entries(langCounts).map(([lang, { filled, total }]) => {
+                        const allFilled = filled >= total;
+                        return (
+                          <span key={lang} style={{ fontSize: "0.72rem", fontWeight: 600, padding: "2px 8px", borderRadius: "99px", background: allFilled ? "#DCFCE7" : "#EFF6FF", color: allFilled ? "#15803D" : "#1D4ED8", whiteSpace: "nowrap" }}>
+                            {langName(lang)}: {filled}/{total}
+                          </span>
+                        );
+                      });
+                    })()}
                   </div>
                   <div style={{ display: "flex", gap: "6px" }}>
                     <button
@@ -447,11 +531,31 @@ export default function BrowsePage() {
                   )}
                 </div>
                 <span style={{ fontSize: "0.72rem", fontWeight: 600, padding: "2px 8px", borderRadius: "99px", background: st.bg, color: st.color }}>{st.label}</span>
-                {pos.volunteer && (
-                  <span style={{ fontSize: "0.82rem", color: "#111827", flex: 1 }}>
-                    {pos.volunteer.user.name ?? pos.volunteer.user.email}
-                    <span style={{ marginLeft: "6px", color: "#6B7280", fontSize: "0.75rem" }}>{pos.volunteer.user.email}</span>
-                  </span>
+                <div style={{ flex: 1 }}>
+                  {pos.volunteer && (
+                    <span style={{ fontSize: "0.82rem", color: "#111827" }}>
+                      {pos.volunteer.user.name ?? pos.volunteer.user.email}
+                      <span style={{ marginLeft: "6px", color: "#6B7280", fontSize: "0.75rem" }}>{pos.volunteer.user.email}</span>
+                    </span>
+                  )}
+                </div>
+                {!isPast && (
+                  <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+                    {pos.status === "FILLED" ? (
+                      <button
+                        onClick={() => void removeAdminPosition(pos.id)}
+                        disabled={actionLoading === `remove-${pos.id}`}
+                        style={{ fontSize: "0.72rem", padding: "2px 8px", background: "#FEF2F2", color: "#DC2626", border: "1px solid #FECACA", borderRadius: "5px", cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}
+                      >Remove</button>
+                    ) : pos.status === "OPEN" ? (
+                      <>
+                        <button
+                          onClick={() => openAssignModal(pos, shift)}
+                          style={{ fontSize: "0.72rem", padding: "2px 8px", background: "#EEF2FF", color: "#4338CA", border: "1px solid #C7D2FE", borderRadius: "5px", cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}
+                        >Assign</button>
+                      </>
+                    ) : null}
+                  </div>
                 )}
               </div>
             );
@@ -588,20 +692,30 @@ export default function BrowsePage() {
                 </div>
                 {/* Languages */}
                 <div>
-                  <label style={{ fontSize: "0.78rem", fontWeight: 600, color: "#374151", display: "block", marginBottom: "8px" }}>Languages Needed (one seat per language)</label>
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
+                  <label style={{ fontSize: "0.78rem", fontWeight: 600, color: "#374151", display: "block", marginBottom: "8px" }}>Languages Needed <span style={{ fontWeight: 400, color: "#6B7280" }}>(click to add; one seat per click)</span></label>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", marginBottom: "8px" }}>
                     {activeLangs.map((l) => (
                       <button
                         key={l.code}
                         type="button"
-                        onClick={() => toggleFormLang(l.code)}
-                        style={{ padding: "6px 14px", borderRadius: "99px", fontSize: "0.82rem", fontWeight: 500, cursor: "pointer", fontFamily: "'DM Sans', sans-serif", border: formLangs.includes(l.code) ? "1.5px solid var(--blue)" : "1.5px solid var(--card-border)", background: formLangs.includes(l.code) ? "var(--blue)" : "var(--card-bg)", color: formLangs.includes(l.code) ? "#fff" : "#111827" }}
-                      >{l.name}</button>
+                        onClick={() => addFormLang(l.code)}
+                        style={{ padding: "6px 14px", borderRadius: "99px", fontSize: "0.82rem", fontWeight: 500, cursor: "pointer", fontFamily: "'DM Sans', sans-serif", border: "1.5px solid var(--card-border)", background: "var(--card-bg)", color: "#111827" }}
+                      >+ {l.name}</button>
                     ))}
                   </div>
                   {formLangs.length > 0 && (
-                    <p style={{ fontSize: "0.75rem", color: "#6B7280", marginTop: "6px" }}>
-                      {formLangs.length} seat{formLangs.length !== 1 ? "s" : ""}: 1 driver + {formLangs.length - 1} interpreter{formLangs.length !== 2 ? "s" : ""}
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", padding: "8px 10px", background: "#F9FAFB", borderRadius: "8px", border: "1px solid var(--card-border)" }}>
+                      {formLangs.map((code, i) => (
+                        <span key={i} style={{ display: "flex", alignItems: "center", gap: "4px", padding: "3px 10px", borderRadius: "99px", background: i === 0 ? "#FEF3C7" : "#EFF6FF", color: i === 0 ? "#92400E" : "#1D4ED8", fontSize: "0.78rem", fontWeight: 600 }}>
+                          {i === 0 ? "Driver: " : `Seat ${i + 1}: `}{langName(code)}
+                          <button onClick={() => removeFormLang(i)} style={{ background: "none", border: "none", cursor: "pointer", padding: 0, lineHeight: 1, color: "inherit", fontSize: "0.9rem", opacity: 0.7 }}>×</button>
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  {formLangs.length > 0 && (
+                    <p style={{ fontSize: "0.75rem", color: "#6B7280", marginTop: "4px" }}>
+                      {formLangs.length} position{formLangs.length !== 1 ? "s" : ""}: 1 driver + {formLangs.length - 1} interpreter{formLangs.length - 1 !== 1 ? "s" : ""}
                     </p>
                   )}
                 </div>
@@ -628,6 +742,83 @@ export default function BrowsePage() {
                     style={{ flex: 1, padding: "10px", fontSize: "0.875rem", background: "var(--blue)", color: "#fff", border: "none", borderRadius: "10px", cursor: "pointer", opacity: formLoading ? 0.5 : 1, fontFamily: "'DM Sans', sans-serif", fontWeight: 600 }}
                   >{formLoading ? "Saving..." : editTarget ? "Save Changes" : "Post Shift"}</button>
                 </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Assign Volunteer Modal */}
+        {assignModal && (
+          <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.45)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 200, padding: "16px" }}>
+            <div style={{ background: "var(--card-bg)", borderRadius: "16px", boxShadow: "0 8px 32px rgba(0,0,0,.18)", width: "100%", maxWidth: "440px" }}>
+              <div style={{ padding: "16px 24px", borderBottom: "1.5px solid var(--card-border)" }}>
+                <h3 style={{ fontSize: "0.875rem", fontWeight: 700, color: "var(--gray-900)", margin: 0 }}>Assign Volunteer</h3>
+                <p style={{ fontSize: "0.75rem", color: "#111827", marginTop: "4px" }}>
+                  {assignModal.position.isDriver ? "Driver + Interpreter" : "Interpreter"} · {langName(assignModal.position.languageCode ?? "")} · {fmtDate(assignModal.shift.date)} · {assignModal.shift.clinic.name}
+                </p>
+              </div>
+              <div style={{ padding: "16px 24px" }}>
+                {!assignSelected ? (
+                  <>
+                    <input
+                      autoFocus
+                      type="text"
+                      placeholder="Search by name or email…"
+                      value={assignSearch}
+                      onChange={(e) => setAssignSearch(e.target.value)}
+                      style={{ width: "100%", padding: "9px 12px", fontSize: "0.875rem", border: "1.5px solid var(--card-border)", borderRadius: "9px", background: "var(--card-bg)", color: "var(--gray-900)", outline: "none", fontFamily: "'DM Sans', sans-serif", marginBottom: "10px", boxSizing: "border-box" }}
+                    />
+                    <div style={{ maxHeight: "256px", overflowY: "auto", display: "flex", flexDirection: "column", gap: "4px" }}>
+                      {users
+                        .filter((u) => (u.role === "VOLUNTEER" || u.role === "ADMIN") && u.status === "ACTIVE")
+                        .filter((u) => {
+                          const q = assignSearch.toLowerCase();
+                          return !q || (u.name?.toLowerCase().includes(q) ?? false) || u.email.toLowerCase().includes(q);
+                        })
+                        .map((u) => (
+                          <button
+                            key={u.id}
+                            onClick={() => setAssignSelected(u)}
+                            style={{ width: "100%", textAlign: "left", padding: "10px 12px", borderRadius: "9px", border: "1px solid transparent", background: "none", cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}
+                          >
+                            <div style={{ fontSize: "0.875rem", fontWeight: 600, color: "var(--gray-900)" }}>{u.name ?? "—"}</div>
+                            <div style={{ fontSize: "0.72rem", color: "#111827" }}>{u.email}</div>
+                          </button>
+                        ))}
+                    </div>
+                    <button onClick={() => setAssignModal(null)} style={{ marginTop: "12px", fontSize: "0.75rem", color: "var(--gray-400)", background: "none", border: "none", cursor: "pointer" }}>Cancel</button>
+                  </>
+                ) : (
+                  <>
+                    <div style={{ background: "#FFFBEB", border: "1px solid #FDE68A", borderRadius: "9px", padding: "10px 14px", marginBottom: "12px" }}>
+                      <p style={{ fontSize: "0.82rem", fontWeight: 700, color: "#92400E" }}>Assign <strong>{assignSelected.name ?? assignSelected.email}</strong></p>
+                      <p style={{ fontSize: "0.75rem", color: "#78350F", marginTop: "2px" }}>{assignSelected.email}</p>
+                    </div>
+                    {assignModal.position.isDriver && (
+                      <div style={{ marginBottom: "12px" }}>
+                        <p style={{ fontSize: "0.78rem", fontWeight: 600, color: "#374151", marginBottom: "8px" }}>Which language will they interpret?</p>
+                        <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                          {assignModal.shift.languagesNeeded.map((lang) => (
+                            <button
+                              key={lang}
+                              onClick={() => setAssignLangChoice(lang)}
+                              style={{ padding: "6px 14px", borderRadius: "99px", fontSize: "0.82rem", fontWeight: 500, cursor: "pointer", fontFamily: "'DM Sans', sans-serif", border: assignLangChoice === lang ? "1.5px solid var(--blue)" : "1.5px solid var(--card-border)", background: assignLangChoice === lang ? "var(--blue)" : "var(--card-bg)", color: assignLangChoice === lang ? "#fff" : "#111827" }}
+                            >{langName(lang)}</button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {assignError && <p style={{ fontSize: "0.75rem", color: "#DC2626", marginBottom: "8px" }}>{assignError}</p>}
+                    <div style={{ display: "flex", gap: "8px" }}>
+                      <button onClick={() => setAssignSelected(null)} style={{ flex: 1, padding: "9px", fontSize: "0.875rem", border: "1.5px solid var(--card-border)", color: "#111827", borderRadius: "10px", background: "none", cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>← Back</button>
+                      <button
+                        disabled={assignLoading || (assignModal.position.isDriver && !assignLangChoice)}
+                        onClick={confirmAssign}
+                        style={{ flex: 1, padding: "9px", fontSize: "0.875rem", background: "var(--blue)", color: "#fff", border: "none", borderRadius: "10px", cursor: "pointer", fontWeight: 600, opacity: (assignLoading || (assignModal.position.isDriver && !assignLangChoice)) ? 0.5 : 1, fontFamily: "'DM Sans', sans-serif" }}
+                      >{assignLoading ? "Assigning…" : "Confirm"}</button>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
           </div>
@@ -755,12 +946,18 @@ export default function BrowsePage() {
                         <span style={{ fontSize: "0.95rem", fontWeight: 600, color: "var(--gray-900)" }}>{fmtDate(shift.date)}</span>
                       </div>
                       <div style={{ display: "flex", flexDirection: "column", gap: "3px" }}>
-                        <span style={{ fontSize: "0.68rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.09em", color: "var(--gray-400)" }}>Interpreting</span>
-                        <span style={{ fontSize: "0.95rem", fontWeight: 600, color: "var(--gray-900)" }}>{fmtMin(shift.volunteerStart)} – {fmtMin(shift.volunteerEnd)}</span>
+                        <span style={{ fontSize: "0.68rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.09em", color: "#111827" }}>Full Time Commitment</span>
+                        <span style={{ fontSize: "0.95rem", fontWeight: 600, color: "#111827" }}>
+                          {fmtMin(shift.keyRetrievalTime)} – {fmtMin(shift.keyReturnTime)}
+                          <span style={{ fontSize: "0.78rem", fontWeight: 400, marginLeft: "5px" }}>({Math.round((shift.keyReturnTime - shift.keyRetrievalTime) / 60 * 10) / 10} hrs)</span>
+                        </span>
                       </div>
                       <div style={{ display: "flex", flexDirection: "column", gap: "3px" }}>
-                        <span style={{ fontSize: "0.68rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.09em", color: "var(--gray-400)" }}>Full Time Commitment</span>
-                        <span style={{ fontSize: "0.95rem", fontWeight: 600, color: "var(--gray-900)" }}>{fmtMin(shift.keyRetrievalTime)} – {fmtMin(shift.keyReturnTime)}</span>
+                        <span style={{ fontSize: "0.68rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.09em", color: "#111827" }}>Interpreting Window</span>
+                        <span style={{ fontSize: "0.95rem", fontWeight: 600, color: "#111827" }}>
+                          {fmtMin(shift.volunteerStart)} – {fmtMin(shift.volunteerEnd)}
+                          <span style={{ fontSize: "0.78rem", fontWeight: 400, marginLeft: "5px" }}>({Math.round((shift.volunteerEnd - shift.volunteerStart) / 60 * 10) / 10} hrs)</span>
+                        </span>
                       </div>
                       {shift.clinic.address && (
                         <div style={{ display: "flex", flexDirection: "column", gap: "3px" }}>
