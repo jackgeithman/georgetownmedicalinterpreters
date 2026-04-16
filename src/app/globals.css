@@ -25,4 +25,166 @@ body {
   color: var(--gray-900);
   min-height: 100vh;
   -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+/* Profile page: 2-col grid that stacks on mobile */
+.profile-grid {
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  gap: 20px;
+  align-items: start;
+}
+
+/* All Users page: table vs card layout */
+.users-table-wrap { display: block; }
+.users-card-list  { display: none; }
+
+/* Tab ribbon: overflow must stay visible on desktop so folder dropdowns aren't clipped.
+   overflow-x: auto forces overflow-y: auto too (CSS spec), which clips position:absolute children. */
+.tab-ribbon-scroll {
+  overflow: visible;
+}
+
+/* Clinic page responsive */
+.clinic-tab-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 28px;
+}
+
+.clinic-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+/* Browse filter rows */
+.browse-langs-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
+/* Browse mobile: language + clinic dropdown row (hidden on desktop) */
+.browse-mobile-top { display: none; }
+
+
+/* ── Landing page responsive ─────────────────────────────────────────────── */
+.landing-hero {
+  display: grid;
+  grid-template-columns: 1fr 380px;
+  gap: 48px;
+  align-items: start;
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 48px 32px;
+}
+
+.landing-signin-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #94A3B8;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 12px;
+}
+
+/* ── Shared mobile breakpoint ────────────────────────────────────────────── */
+@media (max-width: 640px) {
+  .profile-grid {
+    grid-template-columns: 1fr;
+  }
+
+  /* Header: hide secondary info on mobile to prevent overflow */
+  .dash-header-contact,
+  .dash-header-email,
+  .dash-header-rolebadge,
+  .dash-header-devbadge {
+    display: none !important;
+  }
+
+  .dash-header {
+    padding: 0 16px !important;
+  }
+
+  .dash-content {
+    padding: 24px 16px !important;
+  }
+
+  .users-table-wrap { display: none; }
+  .users-card-list  { display: flex; flex-direction: column; gap: 10px; }
+
+  /* Tab ribbon: wrap into equal-width 2-row grid instead of scrolling */
+  .tab-ribbon-scroll {
+    overflow-x: visible;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+
+  /* Each tab fills 1/3 of the row — 3+3 for instructor, 3+2 for volunteer */
+  .tab-ribbon-item {
+    flex: 1 1 33.33%;
+    min-width: 0;
+    justify-content: center !important;
+    border-bottom: none !important;
+    padding: 10px 6px !important;
+    font-size: 0.875rem !important;
+  }
+
+  /* Admin folder tab buttons fill their grid cell */
+  .tab-ribbon-item > button {
+    width: 100%;
+    justify-content: center !important;
+    font-size: 0.9rem !important;
+  }
+
+  /* Clinic: push slot count + post button to the right on mobile */
+  .clinic-slot-actions {
+    align-self: flex-end;
+  }
+
+  /* Browse: hide desktop language button row, show dropdown row */
+  .browse-langs-row { display: none; }
+
+  .browse-mobile-top {
+    display: flex;
+    gap: 10px;
+  }
+
+  /* Hide desktop-only elements (e.g. clinic select in secondary filter row) */
+  .browse-desktop-only { display: none !important; }
+
+  /* Clinic page */
+  .clinic-tab-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .clinic-form-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Landing page: stack to single column, sign-in card first */
+  .landing-hero {
+    grid-template-columns: 1fr !important;
+    padding: 24px 16px !important;
+    gap: 28px !important;
+  }
+
+  .landing-hero-left {
+    order: 2;
+  }
+
+  .landing-hero-right {
+    order: 1;
+  }
+
+  .landing-hero-right h1 {
+    font-size: 1.5rem !important;
+  }
+
 }

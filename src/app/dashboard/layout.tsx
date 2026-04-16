@@ -14,16 +14,26 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [pendingCount, setPendingCount] = useState(0);
   const [unreadMessages, setUnreadMessages] = useState(0);
   const [openFolder, setOpenFolder] = useState<string | null>(null);
+  const [volunteerView, setVolunteerView] = useState(false);
   const folderRef = useRef<HTMLDivElement>(null);
   const redirected = useRef(false);
 
   useEffect(() => {
     if (redirected.current) return;
+
+    // For unauthenticated, wait a tick to let the session load before redirecting.
+    // This prevents a race where client-side navigation lands here before
+    // SessionProvider has re-hydrated the JWT cookie.
     if (status === "unauthenticated") {
-      redirected.current = true;
-      router.push("/login");
-      return;
+      const t = setTimeout(() => {
+        if (!redirected.current) {
+          redirected.current = true;
+          router.push("/login");
+        }
+      }, 1500);
+      return () => clearTimeout(t);
     }
+
     if (status === "authenticated" && session) {
       if (!session.user.onboardingComplete) {
         redirected.current = true;
@@ -161,32 +171,28 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   return (
     <div style={{ minHeight: "100vh", background: "var(--page-bg)", fontFamily: "'DM Sans', system-ui, sans-serif", color: "var(--gray-900)" }}>
       {/* Header — hidden for clinic sessions which render their own */}
-      {role !== "CLINIC" && <header style={{ background: "var(--navy)", height: "64px", position: "sticky", top: 0, zIndex: 100, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 32px" }}>
+      {role !== "CLINIC" && <header className="dash-header" style={{ background: "var(--navy)", height: "64px", position: "sticky", top: 0, zIndex: 100, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 32px" }}>
         <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/logo.svg" alt="GMI" style={{ width: "36px", height: "36px", borderRadius: "9px", flexShrink: 0 }} />
-          <div>
-            <div style={{ color: "#fff", fontSize: "0.95rem", fontWeight: 600 }}>Georgetown Medical Interpreters</div>
-            <div style={{ color: "#94A3B8", fontSize: "0.72rem" }}>
-              {isAdmin || isDev ? "Admin Dashboard" : isInstructor ? "Instructor Dashboard" : "Volunteer Dashboard"}
-            </div>
-          </div>
+          <div style={{ color: "#fff", fontSize: "0.95rem", fontWeight: 600 }}>Georgetown Medical Interpreters</div>
           <Link
             href="/dashboard/messages"
+            className="dash-header-contact"
             style={{ background: "rgba(255,255,255,.08)", border: "1px solid rgba(255,255,255,.2)", color: "#fff", fontFamily: "'DM Sans', sans-serif", fontSize: "0.8rem", fontWeight: 500, padding: "7px 16px", borderRadius: "8px", cursor: "pointer", textDecoration: "none" }}
           >
             Contact Us
           </Link>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
-          <span style={{ color: "#CBD5E1", fontSize: "0.82rem" }}>{session?.user?.email}</span>
+          <span className="dash-header-email" style={{ color: "#CBD5E1", fontSize: "0.82rem" }}>{session?.user?.email}</span>
           {role && (
-            <span style={{ fontSize: "0.72rem", padding: "2px 10px", borderRadius: "99px", background: "rgba(59,130,246,.2)", color: "#bfdbfe", fontWeight: 600 }}>
+            <span className="dash-header-rolebadge" style={{ fontSize: "0.72rem", padding: "2px 10px", borderRadius: "99px", background: "rgba(59,130,246,.2)", color: "#bfdbfe", fontWeight: 600 }}>
               {role}
             </span>
           )}
           {isDev && (
-            <span style={{ fontSize: "0.72rem", padding: "2px 10px", borderRadius: "99px", background: "rgba(167,139,250,.2)", color: "#ddd6fe", fontWeight: 600 }}>
+            <span className="dash-header-devbadge" style={{ fontSize: "0.72rem", padding: "2px 10px", borderRadius: "99px", background: "rgba(167,139,250,.2)", color: "#ddd6fe", fontWeight: 600 }}>
               Developer
             </span>
           )}
@@ -228,15 +234,21 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
       {/* Tab ribbon — hidden for clinic sessions */}
       {role !== "CLINIC" && <div style={{ background: "var(--card-bg)", borderBottom: "1.5px solid var(--card-border)", padding: "0 32px" }}>
-        <div ref={folderRef} style={{ display: "flex", gap: "2px", maxWidth: "1100px", margin: "0 auto", overflowX: (isAdmin || isDev) ? "visible" : "auto", alignItems: "stretch" }}>
+        <div ref={folderRef} className="tab-ribbon-scroll" style={{ display: "flex", gap: "2px", maxWidth: "1100px", margin: "0 auto", alignItems: "stretch" }}>
           {(isAdmin || isDev) ? (
             <>
-              {/* Folder tabs only — Browse Slots and All Users live inside folders */}
-              {adminFolders.map((folder) => {
+              {/* Folder tabs or volunteer preview */}
+              {volunteerView ? (
+                volunteerTabs.map((tab) => (
+                  <Link key={tab.path} href={tab.path} className="tab-ribbon-item" style={tabStyle(tab.path)}>{tab.label}</Link>
+                ))
+              ) : (
+              /* Folder tabs only — Browse Slots and All Users live inside folders */
+              adminFolders.map((folder) => {
                 const folderActive = folder.items.some((item) => tabActive(item.path));
                 const isOpen = openFolder === folder.id;
                 return (
-                  <div key={folder.id} style={{ position: "relative", display: "flex", alignItems: "stretch" }}>
+                  <div key={folder.id} className="tab-ribbon-item" style={{ position: "relative", display: "flex", alignItems: "stretch" }}>
                     <button
                       onClick={() => setOpenFolder(isOpen ? null : folder.id)}
                       style={{
@@ -287,7 +299,22 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                     )}
                   </div>
                 );
-              })}
+              }))}
+              {/* Toggle button — pushed to far right */}
+              <button
+                onClick={() => { setVolunteerView((v) => !v); setOpenFolder(null); }}
+                style={{
+                  marginLeft: "auto", alignSelf: "center", flexShrink: 0,
+                  padding: "5px 12px", borderRadius: "99px", fontSize: "0.72rem", fontWeight: 600,
+                  fontFamily: "'DM Sans', sans-serif", cursor: "pointer",
+                  border: volunteerView ? "1.5px solid var(--blue)" : "1.5px solid var(--card-border)",
+                  background: volunteerView ? "var(--blue-light)" : "transparent",
+                  color: volunteerView ? "var(--blue)" : "#111827",
+                  transition: "all 0.15s",
+                }}
+              >
+                {volunteerView ? "← Admin View" : "Volunteer View"}
+              </button>
             </>
           ) : (
             // Flat ribbon for volunteers / instructors
@@ -302,7 +329,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 ]
               : volunteerTabs
             ).map((tab) => (
-              <Link key={tab.path} href={tab.path} style={tabStyle(tab.path)}>{tab.label}</Link>
+              <Link key={tab.path} href={tab.path} className="tab-ribbon-item" style={tabStyle(tab.path)}>{tab.label}</Link>
             ))
           )}
         </div>
@@ -310,7 +337,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
       {/* Page content — clinic manages its own layout */}
       {role === "CLINIC" ? children : (
-        <div style={{ maxWidth: "1100px", margin: "0 auto", padding: "36px 32px" }}>
+        <div className="dash-content" style={{ maxWidth: "1100px", margin: "0 auto", padding: "36px 32px" }}>
           {children}
         </div>
       )}
