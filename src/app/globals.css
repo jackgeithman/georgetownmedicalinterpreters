@@ -12,9 +12,9 @@
   --gray-400: #94A3B8;
   --gray-600: #475569;
   --gray-900: #0F172A;
-  --page-bg: #EEEAE4;
-  --card-bg: #F7F4F0;
-  --card-border: #DDD9D3;
+  --page-bg: #B8BCC1;
+  --card-bg: #F0F2F4;
+  --card-border: #C8CDD3;
 }
 
 *, *::before, *::after { box-sizing: border-box; }
@@ -71,6 +71,18 @@ body {
 /* Browse mobile: language + clinic dropdown row (hidden on desktop) */
 .browse-mobile-top { display: none; }
 
+
+/* ── Landing page desktop text scaling ───────────────────────────────────── */
+@media (min-width: 768px) {
+  .landing-page p,
+  .landing-page li,
+  .landing-page h3 {
+    font-size: 1.07em;
+  }
+  .landing-page h2 {
+    font-size: 1.1em;
+  }
+}
 
 /* ── Landing page responsive ─────────────────────────────────────────────── */
 .landing-hero {

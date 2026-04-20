@@ -153,7 +153,7 @@ function LandingContent() {
   }, [status, session, router]);
 
   return (
-    <div style={{ minHeight: "100vh", background: "var(--page-bg)", fontFamily: "'DM Sans', system-ui, sans-serif" }}>
+    <div className="landing-page" style={{ minHeight: "100vh", background: "var(--page-bg)", fontFamily: "'DM Sans', system-ui, sans-serif" }}>
 
       {/* Navbar */}
       <nav style={{
