@@ -78,7 +78,7 @@ function minutesToTimeInput(m: number): string {
 
 function posStatus(pos: Position) {
   if (pos.status === "FILLED") return { label: "Filled", bg: "#DCFCE7", color: "#15803D" };
-  if (pos.status === "LOCKED") return { label: "Locked", bg: "#F3F4F6", color: "#6B7280" };
+  if (pos.status === "LOCKED") return { label: "Locked", bg: "#E5E7EB", color: "#111827" };
   if (pos.status === "OPEN") return { label: "Open", bg: "#EFF6FF", color: "#2563EB" };
   return { label: pos.status, bg: "#F3F4F6", color: "#374151" };
 }
@@ -944,7 +944,7 @@ export default function BrowsePage() {
                     </div>
                     <div style={{ display: "flex", gap: "24px", marginTop: "12px", flexWrap: "wrap" }}>
                       <div style={{ display: "flex", flexDirection: "column", gap: "3px" }}>
-                        <span style={{ fontSize: "0.68rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.09em", color: "var(--gray-400)" }}>Date</span>
+                        <span style={{ fontSize: "0.68rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.09em", color: "#374151" }}>Date</span>
                         <span style={{ fontSize: "0.95rem", fontWeight: 600, color: "var(--gray-900)" }}>{fmtDate(shift.date)}</span>
                       </div>
                       <div style={{ display: "flex", flexDirection: "column", gap: "3px" }}>
@@ -1002,7 +1002,7 @@ export default function BrowsePage() {
                         {pos.languageCode ? (
                           <span style={{ marginLeft: "6px", fontSize: "0.82rem", color: "#374151" }}>{langName(pos.languageCode)}</span>
                         ) : pos.status === "LOCKED" ? (
-                          <span style={{ marginLeft: "6px", fontSize: "0.78rem", color: "#9CA3AF" }}>Unlocks when driver signs up</span>
+                          <span style={{ marginLeft: "6px", fontSize: "0.78rem", color: "#111827" }}>Unlocks when driver signs up</span>
                         ) : null}
                         {pos.isDriver && pos.status === "OPEN" && !pos.languageCode && (
                           <span style={{ marginLeft: "6px", fontSize: "0.78rem", color: "#6B7280" }}>You pick your language</span>

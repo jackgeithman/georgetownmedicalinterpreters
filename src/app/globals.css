@@ -12,9 +12,9 @@
   --gray-400: #94A3B8;
   --gray-600: #475569;
   --gray-900: #0F172A;
-  --page-bg: #B8BCC1;
-  --card-bg: #F0F2F4;
-  --card-border: #C8CDD3;
+  --page-bg: #D6D1CB;
+  --card-bg: #F2EDE7;
+  --card-border: #C8C2BB;
 }
 
 *, *::before, *::after { box-sizing: border-box; }

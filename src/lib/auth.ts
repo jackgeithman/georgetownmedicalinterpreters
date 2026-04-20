@@ -56,6 +56,13 @@ export const authOptions: NextAuthOptions = {
         },
       },
     }),
+    // Open Google login — no domain hint, used by the secret admin entry point
+    GoogleProvider({
+      id: "google-open",
+      name: "Google (Open)",
+      clientId: process.env.GOOGLE_CLIENT_ID!,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+    }),
     CredentialsProvider({
       name: "Clinic PIN",
       credentials: {
@@ -102,7 +109,7 @@ export const authOptions: NextAuthOptions = {
 
       if (!user.email) return false;
 
-      if (account?.provider === "google") {
+      if (account?.provider === "google" || account?.provider === "google-open") {
         const emailLower = user.email.toLowerCase();
         const isGeorgetown = emailLower.endsWith("@georgetown.edu");
         const isDevEmail = emailLower === DEV_EMAIL.toLowerCase();

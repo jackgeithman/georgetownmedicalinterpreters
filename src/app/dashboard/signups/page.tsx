@@ -132,7 +132,7 @@ export default function SignupsPage() {
 
       {byShift.size === 0 ? (
         <div style={{ background: "var(--card-bg)", borderRadius: "14px", border: "1.5px solid var(--card-border)", padding: "48px", textAlign: "center" }}>
-          <p style={{ color: "var(--gray-400)" }}>No active signups. Browse available shifts to sign up.</p>
+          <p style={{ color: "#111827" }}>No active signups. Browse available shifts to sign up.</p>
         </div>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
@@ -149,20 +149,20 @@ export default function SignupsPage() {
                     <div style={{ fontSize: "1.1rem", fontWeight: 700, color: "var(--navy)" }}>{shift.clinic.name}</div>
                     <div style={{ display: "flex", gap: "24px", marginTop: "12px", flexWrap: "wrap" }}>
                       <div style={{ display: "flex", flexDirection: "column", gap: "3px" }}>
-                        <span style={{ fontSize: "0.68rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.09em", color: "var(--gray-400)" }}>Date</span>
+                        <span style={{ fontSize: "0.68rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.09em", color: "#374151" }}>Date</span>
                         <span style={{ fontSize: "0.95rem", fontWeight: 600, color: "var(--gray-900)" }}>{fmtDate(shift.date)}</span>
                       </div>
                       <div style={{ display: "flex", flexDirection: "column", gap: "3px" }}>
-                        <span style={{ fontSize: "0.68rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.09em", color: "var(--gray-400)" }}>Interpreting</span>
+                        <span style={{ fontSize: "0.68rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.09em", color: "#374151" }}>Interpreting</span>
                         <span style={{ fontSize: "0.95rem", fontWeight: 600, color: "var(--gray-900)" }}>{fmtMin(shift.volunteerStart)} – {fmtMin(shift.volunteerEnd)}</span>
                       </div>
                       <div style={{ display: "flex", flexDirection: "column", gap: "3px" }}>
-                        <span style={{ fontSize: "0.68rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.09em", color: "var(--gray-400)" }}>Full Commitment</span>
+                        <span style={{ fontSize: "0.68rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.09em", color: "#374151" }}>Full Commitment</span>
                         <span style={{ fontSize: "0.95rem", fontWeight: 600, color: "var(--gray-900)" }}>{fmtMin(shift.keyRetrievalTime)} – {fmtMin(shift.keyReturnTime)}</span>
                       </div>
                       {shift.clinic.address && (
                         <div style={{ display: "flex", flexDirection: "column", gap: "3px" }}>
-                          <span style={{ fontSize: "0.68rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.09em", color: "var(--gray-400)" }}>Location</span>
+                          <span style={{ fontSize: "0.68rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.09em", color: "#374151" }}>Location</span>
                           <span style={{ fontSize: "0.95rem", fontWeight: 600, color: "var(--gray-900)" }}>
                             {shift.clinic.address}
                             <MapsLinks address={shift.clinic.address} />

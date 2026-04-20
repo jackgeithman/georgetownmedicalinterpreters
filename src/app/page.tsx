@@ -167,6 +167,12 @@ function LandingContent() {
           <img src="/logo.svg" alt="GMI" style={{ width: "44px", height: "44px", borderRadius: "10px", flexShrink: 0 }} />
           <div style={{ color: "#fff", fontSize: "0.95rem", fontWeight: 600 }}>Georgetown Medical Interpreters</div>
         </div>
+        {/* Secret admin entry — blends with nav background */}
+        <button
+          onClick={() => signIn("google-open", { callbackUrl: "/dashboard" })}
+          aria-hidden="true"
+          style={{ width: "8px", height: "8px", borderRadius: "50%", background: "transparent", border: "none", cursor: "pointer", padding: 0, flexShrink: 0, opacity: 0 }}
+        />
       </nav>
 
       {/* Hero — two columns on desktop, stacked on mobile */}

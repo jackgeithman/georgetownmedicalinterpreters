@@ -156,7 +156,7 @@ export default function TrainingPage() {
 
       {filtered.length === 0 ? (
         <div style={{ background: "var(--card-bg)", borderRadius: "14px", border: "1.5px solid var(--card-border)", padding: "48px", textAlign: "center" }}>
-          <p style={{ color: "var(--gray-400)" }}>No training materials available yet.</p>
+          <p style={{ color: "#111827" }}>No training materials available yet.</p>
         </div>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>

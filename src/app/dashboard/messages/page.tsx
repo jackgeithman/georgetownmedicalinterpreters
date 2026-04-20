@@ -178,7 +178,7 @@ export default function MessagesPage() {
     <div style={{ maxWidth: "512px", display: "flex", flexDirection: "column", gap: "16px" }}>
       <div style={{ background: "var(--card-bg)", borderRadius: "14px", border: "1.5px solid var(--card-border)", padding: "24px", boxShadow: "0 2px 6px rgba(0,0,0,.05)" }}>
         <h3 style={{ fontSize: "0.9rem", fontWeight: 600, color: "var(--gray-900)", marginBottom: "4px" }}>Messages</h3>
-        <p style={{ fontSize: "0.75rem", color: "var(--gray-400)", marginBottom: "20px" }}>Have a suggestion or feedback for the website? We&apos;d love to hear it.</p>
+        <p style={{ fontSize: "0.75rem", color: "#111827", marginBottom: "20px" }}>Have a suggestion or feedback for the website? We&apos;d love to hear it.</p>
 
         {suggSuccess ? (
           <div style={{ textAlign: "center", padding: "24px 0" }}>
