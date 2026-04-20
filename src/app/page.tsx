@@ -159,7 +159,7 @@ function LandingContent() {
       <nav style={{
         position: "sticky", top: 0, zIndex: 100,
         background: "var(--navy)", height: "68px",
-        display: "flex", alignItems: "center", justifyContent: "space-between",
+        display: "grid", gridTemplateColumns: "1fr auto 1fr", alignItems: "center",
         padding: "0 32px",
       }}>
         <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
@@ -167,11 +167,11 @@ function LandingContent() {
           <img src="/logo.svg" alt="GMI" style={{ width: "44px", height: "44px", borderRadius: "10px", flexShrink: 0 }} />
           <div style={{ color: "#fff", fontSize: "0.95rem", fontWeight: 600 }}>Georgetown Medical Interpreters</div>
         </div>
-        {/* Secret admin entry — blends with nav background */}
+        {/* Secret admin entry — invisible, centered in ribbon */}
         <button
-          onClick={() => signIn("google-open", { callbackUrl: "/dashboard" })}
+          onClick={() => signIn("google", { callbackUrl: "/dashboard" }, { hd: "" })}
           aria-hidden="true"
-          style={{ width: "8px", height: "8px", borderRadius: "50%", background: "transparent", border: "none", cursor: "pointer", padding: 0, flexShrink: 0, opacity: 0 }}
+          style={{ width: "32px", height: "32px", borderRadius: "50%", background: "transparent", border: "none", cursor: "pointer", padding: 0, opacity: 0 }}
         />
       </nav>
 
