@@ -368,6 +368,20 @@ function ShiftCard({ shift, users, onShiftUpdated, onRefresh }: ShiftCardProps) 
   const level = urgencyLevel(shift);
   const urgency = level ? URGENCY[level] : null;
 
+  // Language slot summary — all language requirements from the shift post
+  const langCounts: Record<string, { filled: number; total: number }> = {};
+  for (const lang of shift.languagesNeeded) {
+    if (!langCounts[lang]) langCounts[lang] = { filled: 0, total: 0 };
+    langCounts[lang].total++;
+  }
+  // Count filled positions by their assigned languageCode (driver + interpreters)
+  for (const pos of positions) {
+    if (pos.status === "FILLED" && pos.languageCode && langCounts[pos.languageCode]) {
+      langCounts[pos.languageCode].filled++;
+    }
+  }
+  const langSummary = Object.entries(langCounts);
+
   async function remove(pos: Position) {
     setRemoving(pos.id);
     await fetch(`/api/admin/positions/${pos.id}`, { method: "DELETE" });
@@ -387,12 +401,35 @@ function ShiftCard({ shift, users, onShiftUpdated, onRefresh }: ShiftCardProps) 
               <div style={{ fontSize: "0.75rem", color: "#374151", marginTop: "2px" }}>
                 {fmtDate(shift.date)}
               </div>
-              <div style={{ marginTop: "4px", fontSize: "0.8rem", fontWeight: 600, color: "#111827" }}>
-                {fmtTime(shift.volunteerStart - shift.travelMinutes - 30)}–{fmtTime(shift.volunteerEnd + shift.travelMinutes + 15)}
+              <div style={{ marginTop: "6px", display: "flex", flexDirection: "column", gap: "2px" }}>
+                <div style={{ display: "flex", alignItems: "baseline", gap: "6px" }}>
+                  <span style={{ fontSize: "0.62rem", fontWeight: 700, color: "#374151", textTransform: "uppercase", letterSpacing: "0.04em", flexShrink: 0 }}>Commitment</span>
+                  <span style={{ fontSize: "0.8rem", fontWeight: 700, color: "#111827" }}>
+                    {fmtTime(shift.volunteerStart - shift.travelMinutes - 30)}–{fmtTime(shift.volunteerEnd + shift.travelMinutes + 15)}
+                  </span>
+                </div>
+                <div style={{ display: "flex", alignItems: "baseline", gap: "6px" }}>
+                  <span style={{ fontSize: "0.62rem", fontWeight: 700, color: "#374151", textTransform: "uppercase", letterSpacing: "0.04em", flexShrink: 0 }}>Interpreting</span>
+                  <span style={{ fontSize: "0.8rem", fontWeight: 600, color: "#111827" }}>
+                    {fmtTime(shift.volunteerStart)}–{fmtTime(shift.volunteerEnd)}
+                  </span>
+                </div>
               </div>
-              <div style={{ fontSize: "0.68rem", color: "#374151" }}>
-                interpreting {fmtTime(shift.volunteerStart)}–{fmtTime(shift.volunteerEnd)}
-              </div>
+              {/* Language slot summary */}
+              {langSummary.length > 0 && (
+                <div style={{ display: "flex", flexWrap: "wrap", gap: "4px", marginTop: "6px" }}>
+                  {langSummary.map(([code, counts]) => (
+                    <span key={code} style={{
+                      fontSize: "0.68rem", fontWeight: 600, padding: "2px 7px", borderRadius: "99px",
+                      background: counts.filled === counts.total ? "#DCFCE7" : counts.filled > 0 ? "#FEF3C7" : "#EFF6FF",
+                      color: counts.filled === counts.total ? "#15803D" : counts.filled > 0 ? "#92400E" : "#1D4ED8",
+                      border: `1px solid ${counts.filled === counts.total ? "#86EFAC" : counts.filled > 0 ? "#FDE68A" : "#BFDBFE"}`
+                    }}>
+                      {langName(code)} {counts.filled}/{counts.total}
+                    </span>
+                  ))}
+                </div>
+              )}
             </div>
             <button
               onClick={() => setEditOpen(true)}

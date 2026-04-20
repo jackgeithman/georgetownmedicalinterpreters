@@ -11,11 +11,9 @@ const ERROR_MESSAGES: Record<string, string> = {
 };
 
 const CAROUSEL_IMAGES = [
-  { src: "/stock1.jpg", alt: "Medical team at nursing station" },
-  { src: "/stock2.webp", alt: "Medical interpretation in clinic" },
-  { src: "https://picsum.photos/seed/clinic1/1200/600", alt: "Clinic volunteers" },
-  { src: "https://picsum.photos/seed/medical2/1200/600", alt: "Patient care" },
-  { src: "https://picsum.photos/seed/hospital3/1200/600", alt: "Healthcare team" },
+  { src: "/gmi-spanish-class-2.jpg", alt: "Spanish interpreting class" },
+  { src: "/gmi-spanish-class-1.jpg", alt: "Spanish interpreting class" },
+  { src: "/gmi-board-meeting.jpg", alt: "GMI board meeting" },
 ];
 
 function Carousel() {
@@ -78,41 +76,6 @@ function SignInCard() {
   const searchParams = useSearchParams();
   const errorKey = searchParams.get("error") ?? "";
 
-  const [pin, setPin] = useState("");
-  const [pinVisible, setPinVisible] = useState(false);
-  const [clinicError, setClinicError] = useState("");
-  const [clinicLoading, setClinicLoading] = useState(false);
-
-  const handleClinicSignIn = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setClinicError("");
-    setClinicLoading(true);
-
-    const lookupRes = await fetch("/api/clinic-pin-lookup", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ pin }),
-    });
-
-    if (!lookupRes.ok) {
-      setClinicError("Invalid PIN. Please check your PIN and try again.");
-      setPin("");
-      setClinicLoading(false);
-      return;
-    }
-
-    const { token } = await lookupRes.json();
-    const result = await signIn("credentials", { token, pin, redirect: false });
-    setClinicLoading(false);
-
-    if (result?.ok) {
-      window.location.href = "/dashboard/clinic";
-    } else {
-      setClinicError("Sign in failed. Please try again.");
-      setPin("");
-    }
-  };
-
   return (
     <div style={{
       background: "var(--card-bg)", border: "1.5px solid var(--card-border)",
@@ -132,7 +95,7 @@ function SignInCard() {
           width: "100%", padding: "15px 20px",
           background: "linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)",
           border: "none", borderRadius: "12px",
-          fontFamily: "inherit", fontSize: "1.05rem", fontWeight: 600,
+          fontFamily: "inherit", fontSize: "1.2rem", fontWeight: 700,
           color: "#fff", cursor: "pointer",
           boxShadow: "0 4px 14px rgba(37,99,235,.35)",
           transition: "box-shadow .15s, transform .1s",
@@ -148,57 +111,25 @@ function SignInCard() {
             <path fill="#EA4335" d="M12.255 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C18.205 1.19 15.495 0 12.255 0c-4.64 0-8.74 2.7-10.71 6.62l3.98 3.09c.95-2.85 3.6-4.96 6.73-4.96z"/>
           </svg>
         </div>
-        Volunteer &amp; Admin Login
+        Volunteer Login Here!
       </button>
 
-      <div style={{ height: "1px", background: "var(--card-border)", margin: "20px 0" }} />
+      <div style={{ height: "1px", background: "var(--card-border)", margin: "24px 0" }} />
 
-      {clinicError && (
-        <div style={{ marginBottom: "12px", padding: "10px 14px", background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: "10px", fontSize: "0.875rem", color: "#DC2626" }}>
-          {clinicError}
-        </div>
-      )}
-      <form onSubmit={handleClinicSignIn} style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-        <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-          <label style={{ fontSize: "1rem", fontWeight: 700, color: "#000" }}>Clinic PIN</label>
-          <div style={{ position: "relative" }}>
-            <input
-              type={pinVisible ? "text" : "password"}
-              inputMode="numeric"
-              pattern="[0-9]{6,8}"
-              maxLength={8}
-              placeholder="# # # # # # # # #"
-              value={pin}
-              onChange={(e) => setPin(e.target.value.replace(/\D/g, ""))}
-              disabled={clinicLoading}
-              autoFocus={false}
-              style={{
-                width: "100%", padding: "11px 44px 11px 14px",
-                border: "1.5px solid var(--card-border)", borderRadius: "10px",
-                fontFamily: "inherit", fontSize: "1.05rem", color: "#000",
-                background: "#fff", outline: "none", boxSizing: "border-box",
-              }}
-            />
-            <button type="button" onClick={() => setPinVisible(!pinVisible)} tabIndex={-1}
-              style={{ position: "absolute", right: "12px", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: "var(--gray-400)", display: "flex", alignItems: "center", padding: 0 }}>
-              {pinVisible ? (
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
-              ) : (
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-              )}
-            </button>
-          </div>
-        </div>
-        <button type="submit" disabled={pin.length < 6 || clinicLoading} style={{
-          width: "100%", padding: "13px", border: "none", borderRadius: "10px",
-          background: "var(--blue)", color: "#fff", fontFamily: "inherit",
-          fontSize: "1.05rem", fontWeight: 600, cursor: "pointer",
-          opacity: pin.length < 6 || clinicLoading ? 0.5 : 1,
-          transition: "all .18s",
-        }}>
-          {clinicLoading ? "Signing in…" : "Sign In"}
-        </button>
-      </form>
+      <p style={{ fontSize: "1.1rem", fontWeight: 700, color: "#0D1F3C", marginBottom: "10px" }}>Are You a Clinic?</p>
+      <p style={{ color: "#111827", lineHeight: 1.6, marginBottom: "16px", fontSize: "0.95rem" }}>
+        Simply let us know when you need volunteers and which languages are required, and we will send our trained interpreters to your clinic.
+      </p>
+      <a
+        href="mailto:georgetownmedicalinterpreters@gmail.com"
+        style={{
+          display: "inline-flex", alignItems: "center", gap: "8px",
+          background: "var(--green)", color: "#fff", padding: "12px 20px",
+          borderRadius: "10px", fontWeight: 600, fontSize: "1rem", textDecoration: "none",
+        }}
+      >
+        Contact Us →
+      </a>
 
       <p style={{ textAlign: "center", marginTop: "16px", fontSize: "0.78rem", color: "#111827", lineHeight: 1.7 }}>
         By signing in you agree to our{" "}
@@ -227,49 +158,43 @@ function LandingContent() {
       {/* Navbar */}
       <nav style={{
         position: "sticky", top: 0, zIndex: 100,
-        background: "var(--navy)", height: "64px",
-        display: "flex", alignItems: "center",
+        background: "var(--navy)", height: "68px",
+        display: "flex", alignItems: "center", justifyContent: "space-between",
         padding: "0 32px",
       }}>
-        <button
-          onClick={() => signIn("google", { callbackUrl: "/dashboard" }, { hd: "" })}
-          title="Sign in with any Google account"
-          style={{
-            display: "flex", alignItems: "center", gap: "14px",
-            background: "none", border: "none", cursor: "pointer", padding: 0,
-          }}
-        >
+        <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/logo.svg" alt="GMI" style={{ width: "36px", height: "36px", borderRadius: "9px", flexShrink: 0 }} />
-          <div>
-            <div style={{ color: "#fff", fontSize: "0.95rem", fontWeight: 600 }}>Georgetown Medical Interpreters</div>
-            <div style={{ color: "#94A3B8", fontSize: "0.72rem" }}>Volunteer Platform</div>
-          </div>
-        </button>
+          <img src="/logo.svg" alt="GMI" style={{ width: "44px", height: "44px", borderRadius: "10px", flexShrink: 0 }} />
+          <div style={{ color: "#fff", fontSize: "0.95rem", fontWeight: 600 }}>Georgetown Medical Interpreters</div>
+        </div>
       </nav>
 
       {/* Hero — two columns on desktop, stacked on mobile */}
       <section className="landing-hero">
 
-        {/* Left: what we do + carousel */}
+        {/* Left: what we do */}
         <div className="landing-hero-left">
           <h1 style={{ fontSize: "2rem", fontWeight: 700, color: "#0D1F3C", marginBottom: "16px", lineHeight: 1.25, letterSpacing: "-0.02em" }}>
             Connecting bilingual volunteers with patients who need language support
           </h1>
-          <p style={{ fontSize: "1.05rem", color: "#111827", lineHeight: 1.65, marginBottom: "32px" }}>
-            Georgetown Medical Interpreters partners with clinics across the DMV area to provide
-            free medical interpretation services — bridging language gaps between patients and their care teams.
+          <p style={{ fontSize: "1.05rem", color: "#111827", lineHeight: 1.65 }}>
+            Founded in 2026, Georgetown Medical Interpreters partners with clinics across the DMV area to provide
+            free medical interpretation services by trained Georgetown students. We currently offer interpretation
+            services in Spanish, Mandarin and Korean.
           </p>
-          <Carousel />
         </div>
 
         {/* Right: sign-in card */}
         <div className="landing-hero-right">
-          <p className="landing-signin-label">Sign In</p>
           <Suspense>
             <SignInCard />
           </Suspense>
         </div>
+      </section>
+
+      {/* Full-width carousel */}
+      <section style={{ padding: "0 32px 48px", maxWidth: "1100px", margin: "0 auto" }}>
+        <Carousel />
       </section>
 
       {/* How It Works */}
@@ -278,7 +203,7 @@ function LandingContent() {
         <div style={{ display: "flex", flexDirection: "column", gap: "28px" }}>
           {[
             { n: "1", title: "We train interpreters", desc: "Bilingual Georgetown students complete our training program to become medical interpreters." },
-            { n: "2", title: "Clinics request support", desc: "Partner clinics submit interpretation requests and our volunteers sign up for shifts." },
+            { n: "2", title: "Clinics contact us", desc: "Partner clinics reach out to let us know when they need volunteers and for which languages." },
             { n: "3", title: "Patients get language support", desc: "Volunteers arrive at the clinic and provide real-time interpretation so patients can communicate with their care team." },
           ].map(({ n, title, desc }) => (
             <div key={n} style={{ display: "flex", gap: "20px", alignItems: "flex-start" }}>
@@ -290,31 +215,37 @@ function LandingContent() {
             </div>
           ))}
         </div>
-        <div style={{ marginTop: "40px", borderRadius: "16px", overflow: "hidden" }}>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/stock2.webp" alt="Medical interpretation session" style={{ width: "100%", display: "block", objectFit: "cover", maxHeight: "400px" }} />
-        </div>
       </section>
 
-      {/* Get Involved */}
+      {/* Contact CTA */}
       <section style={{ padding: "48px 32px", maxWidth: "960px", margin: "0 auto" }}>
-        <h2 style={{ fontSize: "2rem", fontWeight: 700, color: "#0D1F3C", marginBottom: "32px", textAlign: "center" }}>Get Involved</h2>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "20px" }}>
-          <div style={{ background: "var(--card-bg)", border: "1.5px solid var(--card-border)", borderRadius: "16px", padding: "28px", display: "flex", flexDirection: "column" }}>
-            <h3 style={{ fontWeight: 700, fontSize: "1.25rem", color: "#0D1F3C", marginBottom: "12px" }}>Want to Volunteer?</h3>
-            <p style={{ color: "#111827", lineHeight: 1.6, marginBottom: "24px", fontSize: "1rem", flex: 1 }}>
-              We welcome bilingual Georgetown students to serve as medical interpreters. No prior medical experience required. We provide full training.
+        <h2 style={{ fontSize: "1.6rem", fontWeight: 700, color: "#0D1F3C", marginBottom: "32px", textAlign: "center" }}>
+          Get Involved
+        </h2>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "24px" }}>
+          {/* Volunteer card */}
+          <div style={{ background: "var(--card-bg)", border: "1px solid var(--card-border)", borderRadius: "16px", padding: "28px", display: "flex", flexDirection: "column", gap: "14px" }}>
+            <h3 style={{ fontSize: "1.15rem", fontWeight: 700, color: "#0D1F3C", margin: 0 }}>Want to Volunteer?</h3>
+            <p style={{ fontSize: "0.97rem", color: "#111827", lineHeight: 1.6, margin: 0 }}>
+              We welcome bilingual Georgetown students who want to make a difference in their community. Join our training program and start interpreting at partner clinics across the DMV area.
             </p>
-            <a href="mailto:georgetownmedicalinterpreters@gmail.com" style={{ display: "inline-flex", alignItems: "center", gap: "8px", alignSelf: "flex-start", background: "var(--blue)", color: "#fff", padding: "12px 20px", borderRadius: "10px", fontWeight: 600, fontSize: "1rem", textDecoration: "none" }}>
+            <a
+              href="mailto:georgetownmedicalinterpreters@gmail.com"
+              style={{ display: "inline-flex", alignItems: "center", gap: "8px", background: "var(--blue)", color: "#fff", padding: "12px 22px", borderRadius: "10px", fontWeight: 700, fontSize: "1rem", textDecoration: "none", marginTop: "auto" }}
+            >
               Contact Us →
             </a>
           </div>
-          <div style={{ background: "var(--card-bg)", border: "1.5px solid var(--card-border)", borderRadius: "16px", padding: "28px", display: "flex", flexDirection: "column" }}>
-            <h3 style={{ fontWeight: 700, fontSize: "1.25rem", color: "#0D1F3C", marginBottom: "12px" }}>Are You a Clinic?</h3>
-            <p style={{ color: "#111827", lineHeight: 1.6, marginBottom: "24px", fontSize: "1rem", flex: 1 }}>
-              We partner with clinics in the DC area to provide interpretation services to your patients at no cost to you or them.
+          {/* Clinic card */}
+          <div style={{ background: "var(--card-bg)", border: "1px solid var(--card-border)", borderRadius: "16px", padding: "28px", display: "flex", flexDirection: "column", gap: "14px" }}>
+            <h3 style={{ fontSize: "1.15rem", fontWeight: 700, color: "#0D1F3C", margin: 0 }}>Are You a Clinic?</h3>
+            <p style={{ fontSize: "0.97rem", color: "#111827", lineHeight: 1.6, margin: 0 }}>
+              Simply let us know when you need interpreters and which languages are required. We will coordinate and send trained volunteers directly to your clinic at no cost.
             </p>
-            <a href="mailto:georgetownmedicalinterpreters@gmail.com" style={{ display: "inline-flex", alignItems: "center", gap: "8px", alignSelf: "flex-start", background: "var(--green)", color: "#fff", padding: "12px 20px", borderRadius: "10px", fontWeight: 600, fontSize: "1rem", textDecoration: "none" }}>
+            <a
+              href="mailto:georgetownmedicalinterpreters@gmail.com"
+              style={{ display: "inline-flex", alignItems: "center", gap: "8px", background: "var(--green)", color: "#fff", padding: "12px 22px", borderRadius: "10px", fontWeight: 700, fontSize: "1rem", textDecoration: "none", marginTop: "auto" }}
+            >
               Contact Us →
             </a>
           </div>
@@ -328,10 +259,33 @@ function LandingContent() {
           <img src="/logo.svg" alt="GMI" style={{ width: "28px", height: "28px", borderRadius: "6px" }} />
           <span style={{ color: "#111827", fontSize: "0.9rem" }}>Georgetown Medical Interpreters 2026</span>
         </div>
-        <div style={{ display: "flex", gap: "20px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "20px" }}>
           {[{ label: "Terms", href: "/terms" }, { label: "Privacy", href: "/privacy" }, { label: "Contact", href: "mailto:georgetownmedicalinterpreters@gmail.com" }].map(({ label, href }) => (
             <a key={label} href={href} style={{ color: "var(--blue)", fontSize: "0.9rem", textDecoration: "none" }}>{label}</a>
           ))}
+          <a
+            href="https://www.instagram.com/gumedicalinterpreters/"
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="Instagram"
+            style={{ display: "flex", alignItems: "center" }}
+          >
+            <svg width="22" height="22" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <defs>
+                <radialGradient id="ig-grad" cx="30%" cy="107%" r="150%">
+                  <stop offset="0%" stopColor="#fdf497"/>
+                  <stop offset="5%" stopColor="#fdf497"/>
+                  <stop offset="45%" stopColor="#fd5949"/>
+                  <stop offset="60%" stopColor="#d6249f"/>
+                  <stop offset="90%" stopColor="#285AEB"/>
+                </radialGradient>
+              </defs>
+              <rect x="2" y="2" width="20" height="20" rx="5" ry="5" fill="url(#ig-grad)"/>
+              <rect x="2" y="2" width="20" height="20" rx="5" ry="5" fill="none" stroke="none"/>
+              <circle cx="12" cy="12" r="4.2" fill="none" stroke="#fff" strokeWidth="1.8"/>
+              <circle cx="17.5" cy="6.5" r="1.2" fill="#fff"/>
+            </svg>
+          </a>
         </div>
       </footer>
     </div>

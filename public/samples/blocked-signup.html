@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Blocked Signup Samples</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: #F3F4F6;
+      padding: 40px 24px;
+      color: #111827;
+    }
+    h2 {
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: #6B7280;
+      margin-bottom: 12px;
+    }
+    .section { margin-bottom: 48px; }
+    .card {
+      background: #fff;
+      border: 1.5px solid #E5E7EB;
+      border-radius: 14px;
+      overflow: hidden;
+      box-shadow: 0 2px 6px rgba(0,0,0,.05);
+      max-width: 680px;
+    }
+
+    /* Slot header */
+    .slot-header {
+      padding: 16px 22px 14px;
+      border-bottom: 1.5px solid #E5E7EB;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .slot-title { font-size: 1.1rem; font-weight: 700; color: #002147; }
+    .slot-meta { font-size: 0.875rem; color: #111827; margin-top: 2px; }
+    .open-badge {
+      background: #ECFDF5;
+      color: #065F46;
+      font-size: 0.875rem;
+      font-weight: 700;
+      padding: 9px 18px;
+      border-radius: 10px;
+      text-align: center;
+      line-height: 1.2;
+    }
+    .open-badge span { display: block; font-size: 0.72rem; font-weight: 500; opacity: 0.8; }
+
+    /* Sub-block row */
+    .subblock {
+      display: flex;
+      align-items: center;
+      padding: 13px 22px;
+      border-bottom: 1px solid #F3F4F6;
+      gap: 16px;
+    }
+    .dot { width: 9px; height: 9px; border-radius: 50%; background: #10B981; flex-shrink: 0; }
+    .time { font-size: 0.95rem; font-weight: 600; min-width: 145px; }
+    .filled { font-size: 0.875rem; font-weight: 500; flex: 1; }
+
+    /* ── Sample A: Gray button with lock icon ── */
+    .btn-blocked-a {
+      background: #E5E7EB;
+      color: #9CA3AF;
+      border: none;
+      border-radius: 8px;
+      padding: 9px 22px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.875rem;
+      font-weight: 600;
+      cursor: not-allowed;
+      white-space: nowrap;
+    }
+
+    /* ── Sample B: Outlined gray with tooltip hint ── */
+    .btn-blocked-b-wrap { display: flex; flex-direction: column; align-items: flex-end; gap: 3px; }
+    .btn-blocked-b {
+      background: #fff;
+      color: #9CA3AF;
+      border: 1.5px solid #D1D5DB;
+      border-radius: 8px;
+      padding: 8px 20px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.875rem;
+      font-weight: 600;
+      cursor: not-allowed;
+      white-space: nowrap;
+    }
+    .btn-hint { font-size: 0.68rem; color: #9CA3AF; }
+
+    /* ── Sample C: Tag-style pill ── */
+    .btn-blocked-c {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: #F3F4F6;
+      color: #6B7280;
+      border: 1.5px solid #E5E7EB;
+      border-radius: 99px;
+      padding: 7px 16px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: not-allowed;
+      white-space: nowrap;
+    }
+
+    /* Active sign-up button for comparison */
+    .btn-active {
+      background: #1D4ED8;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 9px 22px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.875rem;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    .label {
+      display: inline-block;
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      padding: 3px 8px;
+      border-radius: 4px;
+      margin-bottom: 14px;
+    }
+    .label-a { background: #EEF2FF; color: #4338CA; }
+    .label-b { background: #FEF3C7; color: #92400E; }
+    .label-c { background: #ECFDF5; color: #065F46; }
+  </style>
+</head>
+<body>
+
+  <!-- ─────────────── SAMPLE A ─────────────── -->
+  <div class="section">
+    <span class="label label-a">Option A — Solid gray "Not Cleared"</span>
+    <div class="card">
+      <div class="slot-header">
+        <div>
+          <div class="slot-title">Jack's Med Schack</div>
+          <div class="slot-meta">Spanish · Tuesday, April 7</div>
+        </div>
+        <div class="open-badge">10 open<span>slots</span></div>
+      </div>
+
+      <!-- Cleared language row -->
+      <div class="subblock">
+        <div class="dot"></div>
+        <span class="time">10:00 AM – 11:00 AM</span>
+        <span class="filled">0/2 filled</span>
+        <button class="btn-active">Sign Up</button>
+      </div>
+
+      <!-- Blocked language row -->
+      <div class="subblock" style="background: rgba(0,0,0,.015);">
+        <div class="dot" style="background:#D1D5DB"></div>
+        <span class="time" style="color:#6B7280">11:00 AM – 12:00 PM</span>
+        <span class="filled" style="color:#6B7280">1/2 filled</span>
+        <button class="btn-blocked-a">🔒 Not Cleared</button>
+      </div>
+
+      <!-- Another blocked row -->
+      <div class="subblock" style="background: rgba(0,0,0,.015);">
+        <div class="dot" style="background:#D1D5DB"></div>
+        <span class="time" style="color:#6B7280">12:00 PM – 1:00 PM</span>
+        <span class="filled" style="color:#6B7280">0/2 filled</span>
+        <button class="btn-blocked-a">🔒 Not Cleared</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─────────────── SAMPLE B ─────────────── -->
+  <div class="section">
+    <span class="label label-b">Option B — Outlined with helper text</span>
+    <div class="card">
+      <div class="slot-header">
+        <div>
+          <div class="slot-title">Jack's Med Schack</div>
+          <div class="slot-meta">Spanish · Tuesday, April 7</div>
+        </div>
+        <div class="open-badge">10 open<span>slots</span></div>
+      </div>
+
+      <div class="subblock">
+        <div class="dot"></div>
+        <span class="time">10:00 AM – 11:00 AM</span>
+        <span class="filled">0/2 filled</span>
+        <button class="btn-active">Sign Up</button>
+      </div>
+
+      <div class="subblock" style="background: rgba(0,0,0,.015);">
+        <div class="dot" style="background:#D1D5DB"></div>
+        <span class="time" style="color:#6B7280">11:00 AM – 12:00 PM</span>
+        <span class="filled" style="color:#6B7280">1/2 filled</span>
+        <div class="btn-blocked-b-wrap">
+          <button class="btn-blocked-b">Not Cleared</button>
+          <span class="btn-hint">Add language in Profile →</span>
+        </div>
+      </div>
+
+      <div class="subblock" style="background: rgba(0,0,0,.015);">
+        <div class="dot" style="background:#D1D5DB"></div>
+        <span class="time" style="color:#6B7280">12:00 PM – 1:00 PM</span>
+        <span class="filled" style="color:#6B7280">0/2 filled</span>
+        <div class="btn-blocked-b-wrap">
+          <button class="btn-blocked-b">Not Cleared</button>
+          <span class="btn-hint">Add language in Profile →</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─────────────── SAMPLE C ─────────────── -->
+  <div class="section">
+    <span class="label label-c">Option C — Pill badge, no button</span>
+    <div class="card">
+      <div class="slot-header">
+        <div>
+          <div class="slot-title">Jack's Med Schack</div>
+          <div class="slot-meta">Spanish · Tuesday, April 7</div>
+        </div>
+        <div class="open-badge">10 open<span>slots</span></div>
+      </div>
+
+      <div class="subblock">
+        <div class="dot"></div>
+        <span class="time">10:00 AM – 11:00 AM</span>
+        <span class="filled">0/2 filled</span>
+        <button class="btn-active">Sign Up</button>
+      </div>
+
+      <div class="subblock" style="background: rgba(0,0,0,.015);">
+        <div class="dot" style="background:#D1D5DB"></div>
+        <span class="time" style="color:#6B7280">11:00 AM – 12:00 PM</span>
+        <span class="filled" style="color:#6B7280">1/2 filled</span>
+        <span class="btn-blocked-c">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          Not Cleared
+        </span>
+      </div>
+
+      <div class="subblock" style="background: rgba(0,0,0,.015);">
+        <div class="dot" style="background:#D1D5DB"></div>
+        <span class="time" style="color:#6B7280">12:00 PM – 1:00 PM</span>
+        <span class="filled" style="color:#6B7280">0/2 filled</span>
+        <span class="btn-blocked-c">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          Not Cleared
+        </span>
+      </div>
+    </div>
+  </div>
+
+</body>
+</html>

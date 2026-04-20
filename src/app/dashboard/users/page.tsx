@@ -90,6 +90,9 @@ export default function UsersPage() {
   const [suspendUserConfirm, setSuspendUserConfirm] = useState<{ userId: string; userName: string } | null>(null);
   const [deleteUserConfirm, setDeleteUserConfirm] = useState<{ userId: string; userName: string } | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const [mobileRoleOpen, setMobileRoleOpen] = useState<string | null>(null);
+  const [mobileLangOpen, setMobileLangOpen] = useState<string | null>(null);
+  const [mobileLangSearch, setMobileLangSearch] = useState("");
 
   useEffect(() => { setMounted(true); }, []);
 
@@ -697,6 +700,13 @@ export default function UsersPage() {
           const canAdminModify = viewerIsAdmin && canModify;
           const pendingRoles = (user.roles ?? []).filter((r) => r.endsWith("_PENDING"));
           const ROLE_LABEL: Record<string, string> = { VOLUNTEER_PENDING: "Volunteer", INSTRUCTOR_PENDING: "Instructor", ADMIN_PENDING: "Admin" };
+          const addableRoles = ROLE_CHIPS.filter(r => {
+            if (roleChips.includes(r.key)) return false;
+            if (r.key === "DEV") return false;
+            if (r.key === "ADMIN" && !isSuperAdmin) return false;
+            if (isUserSuperAdmin) return false;
+            return true;
+          });
           return (
             <div key={user.id} style={{ background: "var(--card-bg)", borderRadius: "14px", border: user.status === "PENDING_APPROVAL" ? "1.5px solid #FDE68A" : "1.5px solid var(--card-border)", padding: "16px", boxShadow: "0 1px 4px rgba(0,0,0,.04)" }}>
 
@@ -709,14 +719,37 @@ export default function UsersPage() {
                   )}
                   {roleChips.map(r => {
                     const chip = ROLE_CHIPS.find(c => c.key === r);
+                    const isLoading = roleActionLoading === `remove-${user.id}-${r}`;
                     return (
-                      <span key={r} style={{ fontSize: "0.7rem", padding: "2px 8px", borderRadius: "99px", fontWeight: 600, background: chip?.bg ?? "#F1F5F9", color: chip?.color ?? "#475569", border: `1px solid ${chip?.border ?? "#CBD5E1"}` }}>
+                      <span key={r} style={{ display: "inline-flex", alignItems: "center", gap: "2px", fontSize: "0.7rem", padding: "2px 4px 2px 8px", borderRadius: "99px", fontWeight: 600, background: chip?.bg ?? "#F1F5F9", color: chip?.color ?? "#475569", border: `1px solid ${chip?.border ?? "#CBD5E1"}` }}>
                         {chip?.label ?? r}
+                        {canAdminModify && r !== "PENDING" && r !== "DEV" && (
+                          <button onClick={() => handleRemoveRole(user.id, r)} disabled={!!isLoading} style={{ background: "none", border: "none", cursor: "pointer", color: "inherit", opacity: isLoading ? 0.4 : 0.6, fontSize: "0.85rem", lineHeight: 1, padding: "0 2px", fontFamily: "'DM Sans', sans-serif" }}>×</button>
+                        )}
                       </span>
                     );
                   })}
                 </div>
               </div>
+
+              {/* Mobile: Add role inline */}
+              {canAdminModify && addableRoles.length > 0 && (
+                <div style={{ marginTop: "6px" }}>
+                  {mobileRoleOpen === user.id ? (
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: "4px", padding: "8px", background: "#F9FAFB", borderRadius: "8px", border: "1px solid #E5E7EB" }}>
+                      {addableRoles.map(r => (
+                        <button key={r.key} onClick={() => { void handleAddRole(user.id, r.key); setMobileRoleOpen(null); }}
+                          style={{ fontSize: "0.72rem", padding: "4px 10px", borderRadius: "99px", border: `1px solid ${r.border}`, background: r.bg, color: r.color, cursor: "pointer", fontFamily: "'DM Sans', sans-serif", fontWeight: 600 }}>
+                          + {r.label}
+                        </button>
+                      ))}
+                      <button onClick={() => setMobileRoleOpen(null)} style={{ fontSize: "0.72rem", padding: "4px 10px", borderRadius: "99px", border: "1px solid #E5E7EB", background: "#fff", color: "#374151", cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>Cancel</button>
+                    </div>
+                  ) : (
+                    <button onClick={() => setMobileRoleOpen(user.id)} style={{ fontSize: "0.7rem", padding: "2px 9px", borderRadius: "99px", border: "1.5px dashed #CBD5E1", background: "none", color: "#6B7280", cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>+ Role</button>
+                  )}
+                </div>
+              )}
 
               {/* Contact */}
               <p style={{ fontSize: "0.78rem", color: "#111827", marginBottom: "2px" }}>{user.email}</p>
@@ -759,6 +792,56 @@ export default function UsersPage() {
                       );
                     })}
                   </div>
+                </div>
+              )}
+
+              {/* Mobile: Add language inline */}
+              {canModify && (
+                <div style={{ marginBottom: "8px" }}>
+                  {mobileLangOpen === user.id ? (
+                    <div style={{ background: "#F9FAFB", border: "1px solid #E5E7EB", borderRadius: "10px", padding: "10px" }}>
+                      <input
+                        type="text"
+                        placeholder="Search language..."
+                        value={mobileLangSearch}
+                        onChange={(e) => setMobileLangSearch(e.target.value)}
+                        style={{ width: "100%", padding: "6px 10px", fontSize: "0.8rem", border: "1.5px solid #D1D5DB", borderRadius: "7px", fontFamily: "'DM Sans', sans-serif", color: "#111827", outline: "none", boxSizing: "border-box", marginBottom: "6px" }}
+                      />
+                      <div style={{ maxHeight: "130px", overflowY: "auto", display: "flex", flexDirection: "column", gap: "2px" }}>
+                        {languages
+                          .filter(l => l.isActive && !langChips.find(c => c.code === l.code) && l.name.toLowerCase().includes(mobileLangSearch.toLowerCase()))
+                          .slice(0, 25)
+                          .map(l => (
+                            <button key={l.code} onClick={() => { void handleAddLanguage(user.id, l.code); setMobileLangOpen(null); setMobileLangSearch(""); }}
+                              style={{ textAlign: "left", padding: "5px 8px", fontSize: "0.78rem", color: "#111827", background: "none", border: "none", cursor: "pointer", fontFamily: "'DM Sans', sans-serif", borderRadius: "5px" }}>
+                              {l.name}
+                            </button>
+                          ))}
+                      </div>
+                      <button onClick={() => { setMobileLangOpen(null); setMobileLangSearch(""); }} style={{ marginTop: "6px", fontSize: "0.72rem", padding: "3px 10px", borderRadius: "99px", border: "1px solid #E5E7EB", background: "#fff", color: "#374151", cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>Cancel</button>
+                    </div>
+                  ) : (
+                    <button onClick={() => { setMobileLangOpen(user.id); setMobileLangSearch(""); }} style={{ fontSize: "0.7rem", padding: "2px 9px", borderRadius: "99px", border: "1.5px dashed #94A3B8", background: "none", color: "#6B7280", cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>+ Language</button>
+                  )}
+                </div>
+              )}
+
+              {/* Mobile: Driver status */}
+              {user.volunteer && canAdminModify && (
+                <div style={{ borderTop: "1px solid var(--card-border)", paddingTop: "8px", marginBottom: "8px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                  <span style={{ fontSize: "0.75rem", fontWeight: 600, color: "#111827" }}>Driver Cleared</span>
+                  <button
+                    onClick={() => void toggleDriverCleared(user.id, user.volunteer!.driverCleared)}
+                    disabled={actionLoading === `driver-${user.id}`}
+                    style={{
+                      fontSize: "0.72rem", fontWeight: 600, padding: "3px 10px", borderRadius: "99px", cursor: "pointer", fontFamily: "'DM Sans', sans-serif",
+                      background: user.volunteer.driverCleared ? "#DCFCE7" : "#F1F5F9",
+                      color: user.volunteer.driverCleared ? "#15803D" : "#475569",
+                      border: user.volunteer.driverCleared ? "1px solid #86EFAC" : "1px solid #CBD5E1",
+                      opacity: actionLoading === `driver-${user.id}` ? 0.5 : 1,
+                    }}>
+                    {user.volunteer.driverCleared ? "✓ Cleared" : "Not cleared"}
+                  </button>
                 </div>
               )}
 

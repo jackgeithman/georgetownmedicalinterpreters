@@ -176,12 +176,12 @@ export default function ClinicsPage() {
       {showClinicForm && (
         <div style={{ background: "var(--card-bg)", borderRadius: "14px", border: "1.5px solid var(--card-border)", padding: "24px", marginBottom: "16px" }}>
           <h3 style={{ fontSize: "0.875rem", fontWeight: 600, color: "#111827", marginBottom: "16px" }}>New Clinic</h3>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
             <input placeholder="Clinic Name" value={clinicForm.name} onChange={(e) => setClinicForm({ ...clinicForm, name: e.target.value })} style={{ padding: "9px 12px", fontSize: "0.875rem", border: "1.5px solid var(--card-border)", borderRadius: "9px", background: "var(--card-bg)", color: "var(--gray-900)", outline: "none", fontFamily: "'DM Sans', sans-serif" }} />
             <input placeholder="Address" value={clinicForm.address} onChange={(e) => setClinicForm({ ...clinicForm, address: e.target.value })} style={{ padding: "9px 12px", fontSize: "0.875rem", border: "1.5px solid var(--card-border)", borderRadius: "9px", background: "var(--card-bg)", color: "var(--gray-900)", outline: "none", fontFamily: "'DM Sans', sans-serif" }} />
             <input placeholder="Contact Name" value={clinicForm.contactName} onChange={(e) => setClinicForm({ ...clinicForm, contactName: e.target.value })} style={{ padding: "9px 12px", fontSize: "0.875rem", border: "1.5px solid var(--card-border)", borderRadius: "9px", background: "var(--card-bg)", color: "var(--gray-900)", outline: "none", fontFamily: "'DM Sans', sans-serif" }} />
             <input placeholder="Contact Email" value={clinicForm.contactEmail} onChange={(e) => setClinicForm({ ...clinicForm, contactEmail: e.target.value })} style={{ padding: "9px 12px", fontSize: "0.875rem", border: "1.5px solid var(--card-border)", borderRadius: "9px", background: "var(--card-bg)", color: "var(--gray-900)", outline: "none", fontFamily: "'DM Sans', sans-serif" }} />
-            <div style={{ gridColumn: "1 / -1", display: "flex", alignItems: "center", gap: "10px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
               <label style={{ fontSize: "0.82rem", color: "#374151", fontWeight: 500 }}>Travel time (one-way, minutes):</label>
               <input
                 type="number" min={0} max={240}

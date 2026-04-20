@@ -73,42 +73,39 @@ export default function ActivityPage() {
           <p style={{ color: "var(--gray-400)" }}>No activity logged yet.</p>
         </div>
       ) : (
-        <div style={{ background: "var(--card-bg)", borderRadius: "14px", border: "1.5px solid var(--card-border)", overflow: "hidden" }}>
+        <div style={{ background: "var(--card-bg)", borderRadius: "14px", border: "1.5px solid var(--card-border)", padding: "10px" }}>
           {activityLogLoading && activityLogs.length === 0 ? (
             <div style={{ padding: "32px", textAlign: "center" }}>
               <p style={{ fontSize: "0.875rem", color: "var(--gray-400)" }}>Loading...</p>
             </div>
           ) : (
-            <table style={{ width: "100%", borderCollapse: "collapse" }}>
-              <thead>
-                <tr style={{ borderBottom: "1.5px solid var(--card-border)" }}>
-                  {["Timestamp", "User", "Action", "Detail"].map((h) => (
-                    <th key={h} style={{ padding: "10px 16px", textAlign: "left", fontSize: "0.72rem", fontWeight: 700, color: "#000", textTransform: "uppercase", letterSpacing: "0.06em" }}>{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {activityLogs.map((entry) => (
-                  <tr key={entry.id} style={{ borderBottom: "1px solid var(--card-border)" }}>
-                    <td style={{ padding: "10px 16px", fontSize: "0.75rem", color: "var(--gray-400)", whiteSpace: "nowrap" }}>
-                      {new Date(entry.createdAt).toLocaleString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" })}
-                    </td>
-                    <td style={{ padding: "10px 16px", fontSize: "0.75rem", color: "#111827" }}>
-                      {entry.actorName ?? entry.actorEmail ?? "System"}
+            <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+              {activityLogs.map((entry) => (
+                <div key={entry.id} style={{ padding: "12px 16px", borderBottom: "1px solid var(--card-border)" }}>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px", marginBottom: "4px" }}>
+                    <div>
+                      <span style={{ fontSize: "0.875rem", fontWeight: 700, color: "#111827" }}>
+                        {entry.actorName ?? entry.actorEmail ?? "System"}
+                      </span>
                       {entry.actorEmail && entry.actorName && (
-                        <div style={{ fontSize: "0.68rem", color: "var(--gray-400)" }}>{entry.actorEmail}</div>
+                        <div style={{ fontSize: "0.72rem", color: "#374151" }}>{entry.actorEmail}</div>
                       )}
-                    </td>
-                    <td style={{ padding: "10px 16px" }}>
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px", flexShrink: 0 }}>
                       <span style={{ fontSize: "0.72rem", fontFamily: "monospace", fontWeight: 600, padding: "2px 7px", background: "var(--gray-200)", color: "#111827", borderRadius: "5px" }}>
                         {entry.action}
                       </span>
-                    </td>
-                    <td style={{ padding: "10px 16px", fontSize: "0.78rem", color: "#111827" }}>{entry.detail ?? "—"}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                      <span style={{ fontSize: "0.72rem", color: "#374151", whiteSpace: "nowrap" }}>
+                        {new Date(entry.createdAt).toLocaleString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" })}
+                      </span>
+                    </div>
+                  </div>
+                  {entry.detail && (
+                    <div style={{ fontSize: "0.78rem", color: "#111827" }}>{entry.detail}</div>
+                  )}
+                </div>
+              ))}
+            </div>
           )}
           {activityLogNextCursor && (
             <div style={{ padding: "12px", textAlign: "center", borderTop: "1px solid var(--card-border)" }}>
