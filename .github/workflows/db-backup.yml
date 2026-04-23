@@ -31,7 +31,7 @@ jobs:
           echo "Backup created: $FILENAME ($(du -sh $FILENAME | cut -f1))"
 
       - name: Checkout db-backups branch
-        uses: actions/checkout@v4
+        uses: actions/checkout@v4.2.2
         with:
           ref: db-backups
           path: backups
