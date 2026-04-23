@@ -1,0 +1,59 @@
+name: Database Backup
+
+on:
+  schedule:
+    - cron: '0 2 * * *'   # 2 AM UTC every day
+  workflow_dispatch:        # Manual trigger from GitHub Actions UI
+
+permissions:
+  contents: write           # Needed to push to db-backups branch
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Install PostgreSQL client
+        run: sudo apt-get install -y postgresql-client
+
+      - name: Create backup
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          FILENAME="backup-$(date +%Y-%m-%d).sql.gz"
+          pg_dump "$SUPABASE_DB_URL" \
+            --no-owner \
+            --no-acl \
+            --no-privileges \
+            | gzip > "$FILENAME"
+          echo "FILENAME=$FILENAME" >> $GITHUB_ENV
+          echo "Backup created: $FILENAME ($(du -sh $FILENAME | cut -f1))"
+
+      - name: Checkout db-backups branch
+        uses: actions/checkout@v4
+        with:
+          ref: db-backups
+          path: backups
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Add backup and prune files older than 30 days
+        run: |
+          cp "$FILENAME" backups/
+          cd backups
+          # Remove backups older than 30 days
+          find . -name "backup-*.sql.gz" -mtime +30 -print -delete
+          echo "Current backups:"
+          ls -lh backup-*.sql.gz 2>/dev/null || echo "(none yet)"
+
+      - name: Commit and push
+        run: |
+          cd backups
+          git config user.name "GMI Backup Bot"
+          git config user.email "noreply@github.com"
+          git add -A
+          # Only commit if there are actual changes
+          git diff --staged --quiet && echo "No changes to commit" && exit 0
+          git commit -m "backup: $(date +%Y-%m-%d)"
+          git push
+          echo "Backup pushed to db-backups branch."
