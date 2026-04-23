@@ -800,9 +800,9 @@ export default function BrowsePage() {
                       <div style={{ marginBottom: "12px" }}>
                         <p style={{ fontSize: "0.78rem", fontWeight: 600, color: "#374151", marginBottom: "8px" }}>Which language will they interpret?</p>
                         <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
-                          {assignModal.shift.languagesNeeded.map((lang) => (
+                          {assignModal.shift.languagesNeeded.map((lang, i) => (
                             <button
-                              key={lang}
+                              key={`${lang}-${i}`}
                               onClick={() => setAssignLangChoice(lang)}
                               style={{ padding: "6px 14px", borderRadius: "99px", fontSize: "0.82rem", fontWeight: 500, cursor: "pointer", fontFamily: "'DM Sans', sans-serif", border: assignLangChoice === lang ? "1.5px solid var(--blue)" : "1.5px solid var(--card-border)", background: assignLangChoice === lang ? "var(--blue)" : "var(--card-bg)", color: assignLangChoice === lang ? "#fff" : "#111827" }}
                             >{langName(lang)}</button>
@@ -937,8 +937,8 @@ export default function BrowsePage() {
                   <div>
                     <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
                       <div style={{ fontSize: "1.1rem", fontWeight: 700, color: "var(--navy)" }}>{shift.clinic.name}</div>
-                      {shift.languagesNeeded.map((lang) => (
-                        <span key={lang} style={{ fontSize: "0.72rem", fontWeight: 600, padding: "2px 8px", borderRadius: "99px", background: "#EFF6FF", color: "#1D4ED8" }}>{langName(lang)}</span>
+                      {shift.languagesNeeded.map((lang, i) => (
+                        <span key={`${lang}-${i}`} style={{ fontSize: "0.72rem", fontWeight: 600, padding: "2px 8px", borderRadius: "99px", background: "#EFF6FF", color: "#1D4ED8" }}>{langName(lang)}</span>
                       ))}
                       {anyMine && <span style={{ fontSize: "0.72rem", fontWeight: 600, padding: "2px 8px", borderRadius: "99px", background: "#DCFCE7", color: "#15803D" }}>Signed up</span>}
                     </div>
@@ -1005,7 +1005,7 @@ export default function BrowsePage() {
                           <span style={{ marginLeft: "6px", fontSize: "0.78rem", color: "#111827" }}>Unlocks when driver signs up</span>
                         ) : null}
                         {pos.isDriver && pos.status === "OPEN" && !pos.languageCode && (
-                          <span style={{ marginLeft: "6px", fontSize: "0.78rem", color: "#6B7280" }}>You pick your language</span>
+                          <span style={{ marginLeft: "6px", fontSize: "0.78rem", color: "#111827" }}>You pick your language</span>
                         )}
                       </div>
                       <span style={{ fontSize: "0.72rem", fontWeight: 600, padding: "2px 8px", borderRadius: "99px", background: st.bg, color: st.color }}>{st.label}</span>
@@ -1023,9 +1023,9 @@ export default function BrowsePage() {
                           style={{ background: "var(--blue)", color: "#fff", border: "none", borderRadius: "8px", padding: "8px 18px", fontFamily: "'DM Sans', sans-serif", fontSize: "0.82rem", fontWeight: 600, cursor: "pointer", opacity: loading ? 0.4 : 1, whiteSpace: "nowrap" }}
                         >{loading ? "..." : "Sign Up"}</button>
                       ) : pos.status === "LOCKED" ? (
-                        <span style={{ fontSize: "0.72rem", color: "#9CA3AF", padding: "6px 10px" }}>🔒 Locked</span>
+                        <span style={{ fontSize: "0.72rem", color: "#111827", padding: "6px 10px" }}>🔒 Locked</span>
                       ) : pos.status === "FILLED" ? null : (
-                        <span style={{ fontSize: "0.72rem", color: "#9CA3AF", padding: "6px 10px" }}>Not eligible</span>
+                        <span style={{ fontSize: "0.72rem", color: "#111827", padding: "6px 10px" }}>Not eligible</span>
                       )}
                     </div>
                   );
@@ -1046,9 +1046,9 @@ export default function BrowsePage() {
             </div>
             <div style={{ padding: "20px 24px" }}>
               <div style={{ display: "flex", flexDirection: "column", gap: "8px", marginBottom: "20px" }}>
-                {driverLangPicker.availableLangs.map((lang) => (
+                {driverLangPicker.availableLangs.map((lang, i) => (
                   <button
-                    key={lang}
+                    key={`${lang}-${i}`}
                     onClick={() => setDriverLangChoice(lang)}
                     style={{ padding: "12px 16px", borderRadius: "10px", fontSize: "0.9rem", fontWeight: 500, cursor: "pointer", fontFamily: "'DM Sans', sans-serif", border: driverLangChoice === lang ? "2px solid var(--blue)" : "1.5px solid var(--card-border)", background: driverLangChoice === lang ? "#EFF6FF" : "var(--card-bg)", color: "#111827", textAlign: "left" }}
                   >{langName(lang)}</button>
