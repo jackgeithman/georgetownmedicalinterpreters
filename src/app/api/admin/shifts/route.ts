@@ -44,7 +44,7 @@ export async function POST(req: NextRequest) {
   if (!admin) return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
 
   const body = await req.json();
-  const { clinicId, date, volunteerStart, volunteerEnd, travelMinutes, languagesNeeded, notes } = body;
+  const { clinicId, date, volunteerStart, volunteerEnd, travelMinutes, keyRetrievalTime, keyReturnTime, languagesNeeded, notes } = body;
 
   // Basic validation
   if (!clinicId || !date || volunteerStart == null || volunteerEnd == null || !Array.isArray(languagesNeeded) || languagesNeeded.length === 0) {
@@ -76,6 +76,8 @@ export async function POST(req: NextRequest) {
         volunteerStart: Number(volunteerStart),
         volunteerEnd: Number(volunteerEnd),
         travelMinutes: resolvedTravel,
+        keyRetrievalTime: keyRetrievalTime != null ? Number(keyRetrievalTime) : null,
+        keyReturnTime: keyReturnTime != null ? Number(keyReturnTime) : null,
         languagesNeeded,
         notes: notes || null,
         postedById: admin.id,

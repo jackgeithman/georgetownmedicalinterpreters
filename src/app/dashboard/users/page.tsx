@@ -14,6 +14,7 @@ type VolunteerStats = {
   isCleared: boolean;
   clearedAt: string | null;
   driverCleared: boolean;
+  requestedDriverClearance: boolean;
 };
 
 type User = {
@@ -590,7 +591,10 @@ export default function UsersPage() {
                             {user.volunteer.driverCleared ? (
                               <span style={{ fontSize: "0.68rem", background: "#DCFCE7", color: "#15803D", padding: "1px 6px", borderRadius: "4px", fontWeight: 600 }}>Driver</span>
                             ) : (
-                              <span style={{ fontSize: "0.68rem", color: "var(--gray-400)" }}>No driver</span>
+                              <span style={{ fontSize: "0.68rem", color: "#111827" }}>No driver</span>
+                            )}
+                            {!user.volunteer.driverCleared && user.volunteer.requestedDriverClearance && (
+                              <span style={{ fontSize: "0.68rem", background: "#FEF3C7", color: "#92400E", padding: "1px 6px", borderRadius: "4px", fontWeight: 600, border: "1px solid #FDE68A" }}>CSJ requested</span>
                             )}
                             {canAdminModify && (
                               <button
@@ -828,8 +832,13 @@ export default function UsersPage() {
 
               {/* Mobile: Driver status */}
               {user.volunteer && canAdminModify && (
-                <div style={{ borderTop: "1px solid var(--card-border)", paddingTop: "8px", marginBottom: "8px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                  <span style={{ fontSize: "0.75rem", fontWeight: 600, color: "#111827" }}>Driver Cleared</span>
+                <div style={{ borderTop: "1px solid var(--card-border)", paddingTop: "8px", marginBottom: "8px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px", flexWrap: "wrap" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                    <span style={{ fontSize: "0.75rem", fontWeight: 600, color: "#111827" }}>Driver Cleared</span>
+                    {!user.volunteer.driverCleared && user.volunteer.requestedDriverClearance && (
+                      <span style={{ fontSize: "0.68rem", background: "#FEF3C7", color: "#92400E", padding: "1px 6px", borderRadius: "4px", fontWeight: 600, border: "1px solid #FDE68A" }}>CSJ requested</span>
+                    )}
+                  </div>
                   <button
                     onClick={() => void toggleDriverCleared(user.id, user.volunteer!.driverCleared)}
                     disabled={actionLoading === `driver-${user.id}`}

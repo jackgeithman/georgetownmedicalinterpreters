@@ -66,10 +66,10 @@ export async function GET() {
       return { ...pos, isMyPosition: myPosition, canSignUp };
     });
 
-    // Derived times
-    const keyRetrievalTime = shift.volunteerStart - shift.travelMinutes - 30;
+    // Derived times — use admin-set values if present, otherwise fall back to formula
+    const keyRetrievalTime = shift.keyRetrievalTime ?? (shift.volunteerStart - shift.travelMinutes - 30);
     const driveStartTime = shift.volunteerStart - shift.travelMinutes;
-    const keyReturnTime = shift.volunteerEnd + shift.travelMinutes + 15;
+    const keyReturnTime = shift.keyReturnTime ?? (shift.volunteerEnd + shift.travelMinutes + 15);
 
     return {
       ...shift,

@@ -128,6 +128,10 @@ export default function BrowsePage() {
   const [formStart, setFormStart] = useState("09:00");
   const [formEnd, setFormEnd] = useState("13:00");
   const [formTravel, setFormTravel] = useState<number | null>(null);
+  const [formPreBuffer, setFormPreBuffer] = useState(30);
+  const [formPostBuffer, setFormPostBuffer] = useState(15);
+  const [formKeyRetrieval, setFormKeyRetrieval] = useState("");
+  const [formKeyReturn, setFormKeyReturn] = useState("");
   const [formLangs, setFormLangs] = useState<string[]>([]);
   const [formNotes, setFormNotes] = useState("");
   const [formError, setFormError] = useState("");
@@ -192,12 +196,27 @@ export default function BrowsePage() {
 
   // ── Admin: Create Shift ───────────────────────────────────────────────────
 
+  const calcKeyRetrieval = (start: string, travel: number, pre: number) => {
+    const vs = timeInputToMinutes(start);
+    return minutesToTimeInput(vs - travel - pre);
+  };
+  const calcKeyReturn = (end: string, travel: number, post: number) => {
+    const ve = timeInputToMinutes(end);
+    return minutesToTimeInput(ve + travel + post);
+  };
+
   const openCreate = () => {
-    setFormClinicId(clinics[0]?.id ?? "");
+    const defaultClinic = clinics[0];
+    const travel = defaultClinic?.travelMinutes ?? 30;
+    setFormClinicId(defaultClinic?.id ?? "");
     setFormDate("");
     setFormStart("09:00");
     setFormEnd("13:00");
     setFormTravel(null);
+    setFormPreBuffer(15);
+    setFormPostBuffer(15);
+    setFormKeyRetrieval(calcKeyRetrieval("09:00", travel, 15));
+    setFormKeyReturn(calcKeyReturn("13:00", travel, 15));
     setFormLangs([]);
     setFormNotes("");
     setFormError("");
@@ -206,11 +225,23 @@ export default function BrowsePage() {
   };
 
   const openEdit = (shift: AdminShift) => {
+    const pre = 30;
+    const post = 15;
+    const travel = shift.travelMinutes;
+    const startStr = minutesToTimeInput(shift.volunteerStart);
+    const endStr = minutesToTimeInput(shift.volunteerEnd);
     setFormClinicId(shift.clinic.id);
     setFormDate(shift.date.slice(0, 10));
-    setFormStart(minutesToTimeInput(shift.volunteerStart));
-    setFormEnd(minutesToTimeInput(shift.volunteerEnd));
-    setFormTravel(shift.travelMinutes);
+    setFormStart(startStr);
+    setFormEnd(endStr);
+    setFormTravel(travel);
+    setFormPreBuffer(pre);
+    setFormPostBuffer(post);
+    // Use stored values if available, otherwise compute from formula
+    const storedRetrieval = (shift as AdminShift & { keyRetrievalTime?: number | null }).keyRetrievalTime;
+    const storedReturn = (shift as AdminShift & { keyReturnTime?: number | null }).keyReturnTime;
+    setFormKeyRetrieval(storedRetrieval != null ? minutesToTimeInput(storedRetrieval) : calcKeyRetrieval(startStr, travel, pre));
+    setFormKeyReturn(storedReturn != null ? minutesToTimeInput(storedReturn) : calcKeyReturn(endStr, travel, post));
     setFormLangs([...shift.languagesNeeded]);
     setFormNotes(shift.notes ?? "");
     setFormError("");
@@ -237,6 +268,20 @@ export default function BrowsePage() {
       setFormError("End time must be after start time.");
       return;
     }
+    if (!formKeyRetrieval || !formKeyReturn) {
+      setFormError("Full commitment start and end times are required.");
+      return;
+    }
+    const kr = timeInputToMinutes(formKeyRetrieval);
+    const kret = timeInputToMinutes(formKeyReturn);
+    if (kr >= vs) {
+      setFormError("Commitment start must be before interpreting start.");
+      return;
+    }
+    if (kret <= ve) {
+      setFormError("Commitment end must be after interpreting end.");
+      return;
+    }
 
     setFormLoading(true);
     setFormError("");
@@ -248,6 +293,8 @@ export default function BrowsePage() {
       volunteerStart: vs,
       volunteerEnd: ve,
       travelMinutes: formTravel ?? selectedClinic?.travelMinutes ?? 30,
+      keyRetrievalTime: kr,
+      keyReturnTime: kret,
       languagesNeeded: formLangs,
       notes: formNotes || null,
     };
@@ -525,7 +572,12 @@ export default function BrowsePage() {
                   {pos.languageCode && (
                     <span style={{ marginLeft: "6px", fontSize: "0.75rem", color: "#374151" }}>{langName(pos.languageCode)}</span>
                   )}
-                  {!pos.languageCode && pos.status === "LOCKED" && (
+                  {pos.isDriver && !pos.languageCode && pos.status === "OPEN" && (() => {
+                    const uniqueLangs = [...new Set(shift.languagesNeeded)];
+                    const label = uniqueLangs.map(langName).join(" or ");
+                    return <span style={{ marginLeft: "6px", fontSize: "0.75rem", color: "#374151" }}>({label})</span>;
+                  })()}
+                  {!pos.languageCode && !pos.isDriver && pos.status === "LOCKED" && (
                     <span style={{ marginLeft: "6px", fontSize: "0.75rem", color: "#111827" }}>(Language TBD)</span>
                   )}
                 </div>
@@ -654,43 +706,93 @@ export default function BrowsePage() {
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
                   <div>
                     <label style={{ fontSize: "0.78rem", fontWeight: 600, color: "#374151", display: "block", marginBottom: "5px" }}>Interpreting Start (XX1)</label>
-                    <input type="time" value={formStart} onChange={(e) => setFormStart(e.target.value)} style={{ width: "100%", padding: "9px 12px", fontSize: "0.875rem", border: "1.5px solid var(--card-border)", borderRadius: "9px", background: "var(--card-bg)", color: "var(--gray-900)", fontFamily: "'DM Sans', sans-serif", outline: "none", boxSizing: "border-box" }} />
+                    <input type="time" value={formStart} onChange={(e) => {
+                      const val = e.target.value;
+                      setFormStart(val);
+                      setFormKeyRetrieval(calcKeyRetrieval(val, formTravel ?? clinics.find((c) => c.id === formClinicId)?.travelMinutes ?? 30, formPreBuffer));
+                    }} style={{ width: "100%", padding: "9px 12px", fontSize: "0.875rem", border: "1.5px solid var(--card-border)", borderRadius: "9px", background: "var(--card-bg)", color: "var(--gray-900)", fontFamily: "'DM Sans', sans-serif", outline: "none", boxSizing: "border-box" }} />
                   </div>
                   <div>
                     <label style={{ fontSize: "0.78rem", fontWeight: 600, color: "#374151", display: "block", marginBottom: "5px" }}>Interpreting End (XX2)</label>
-                    <input type="time" value={formEnd} onChange={(e) => setFormEnd(e.target.value)} style={{ width: "100%", padding: "9px 12px", fontSize: "0.875rem", border: "1.5px solid var(--card-border)", borderRadius: "9px", background: "var(--card-bg)", color: "var(--gray-900)", fontFamily: "'DM Sans', sans-serif", outline: "none", boxSizing: "border-box" }} />
+                    <input type="time" value={formEnd} onChange={(e) => {
+                      const val = e.target.value;
+                      setFormEnd(val);
+                      setFormKeyReturn(calcKeyReturn(val, formTravel ?? clinics.find((c) => c.id === formClinicId)?.travelMinutes ?? 30, formPostBuffer));
+                    }} style={{ width: "100%", padding: "9px 12px", fontSize: "0.875rem", border: "1.5px solid var(--card-border)", borderRadius: "9px", background: "var(--card-bg)", color: "var(--gray-900)", fontFamily: "'DM Sans', sans-serif", outline: "none", boxSizing: "border-box" }} />
                   </div>
                 </div>
-                {/* Preview full commitment */}
-                {formStart && formEnd && (() => {
-                  const vs = timeInputToMinutes(formStart);
-                  const ve = timeInputToMinutes(formEnd);
-                  const t = formTravel ?? clinics.find((c) => c.id === formClinicId)?.travelMinutes ?? 30;
-                  const keyRetrieval = vs - t - 30;
-                  const keyReturn = ve + t + 15;
-                  if (ve > vs) {
-                    return (
-                      <div style={{ background: "#F0F9FF", border: "1px solid #BAE6FD", borderRadius: "9px", padding: "10px 14px", fontSize: "0.82rem", color: "#0369A1" }}>
-                        <strong>Full commitment:</strong> {fmtMin(keyRetrieval)} – {fmtMin(keyReturn)}
-                        <span style={{ marginLeft: "8px", opacity: 0.8 }}>({fmtMin(vs)} – {fmtMin(ve)} interpreting)</span>
-                      </div>
-                    );
-                  }
-                  return null;
-                })()}
-                {/* Travel Minutes */}
-                <div>
-                  <label style={{ fontSize: "0.78rem", fontWeight: 600, color: "#374151", display: "block", marginBottom: "5px" }}>
-                    Travel Minutes (t) <span style={{ fontWeight: 400, color: "#6B7280" }}>— one-way drive to clinic</span>
-                  </label>
-                  <input
-                    type="number"
-                    min={0}
-                    max={120}
-                    value={formTravel ?? clinics.find((c) => c.id === formClinicId)?.travelMinutes ?? 30}
-                    onChange={(e) => setFormTravel(Number(e.target.value))}
-                    style={{ width: "100%", padding: "9px 12px", fontSize: "0.875rem", border: "1.5px solid var(--card-border)", borderRadius: "9px", background: "var(--card-bg)", color: "var(--gray-900)", fontFamily: "'DM Sans', sans-serif", outline: "none", boxSizing: "border-box" }}
-                  />
+                {/* Travel + Buffers */}
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "10px" }}>
+                  <div>
+                    <label style={{ fontSize: "0.78rem", fontWeight: 600, color: "#374151", display: "block", marginBottom: "5px" }}>Travel (min)</label>
+                    <input
+                      type="number" min={0} max={120}
+                      value={formTravel ?? clinics.find((c) => c.id === formClinicId)?.travelMinutes ?? 30}
+                      onChange={(e) => {
+                        const t = Number(e.target.value);
+                        setFormTravel(t);
+                        setFormKeyRetrieval(calcKeyRetrieval(formStart, t, formPreBuffer));
+                        setFormKeyReturn(calcKeyReturn(formEnd, t, formPostBuffer));
+                      }}
+                      style={{ width: "100%", padding: "9px 12px", fontSize: "0.875rem", border: "1.5px solid var(--card-border)", borderRadius: "9px", background: "var(--card-bg)", color: "var(--gray-900)", fontFamily: "'DM Sans', sans-serif", outline: "none", boxSizing: "border-box" }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: "0.78rem", fontWeight: 600, color: "#374151", display: "block", marginBottom: "5px" }}>Pre-buffer (min)</label>
+                    <input
+                      type="number" min={0} max={120}
+                      value={formPreBuffer}
+                      onChange={(e) => {
+                        const pre = Number(e.target.value);
+                        setFormPreBuffer(pre);
+                        setFormKeyRetrieval(calcKeyRetrieval(formStart, formTravel ?? clinics.find((c) => c.id === formClinicId)?.travelMinutes ?? 30, pre));
+                      }}
+                      style={{ width: "100%", padding: "9px 12px", fontSize: "0.875rem", border: "1.5px solid var(--card-border)", borderRadius: "9px", background: "var(--card-bg)", color: "var(--gray-900)", fontFamily: "'DM Sans', sans-serif", outline: "none", boxSizing: "border-box" }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: "0.78rem", fontWeight: 600, color: "#374151", display: "block", marginBottom: "5px" }}>Post-buffer (min)</label>
+                    <input
+                      type="number" min={0} max={120}
+                      value={formPostBuffer}
+                      onChange={(e) => {
+                        const post = Number(e.target.value);
+                        setFormPostBuffer(post);
+                        setFormKeyReturn(calcKeyReturn(formEnd, formTravel ?? clinics.find((c) => c.id === formClinicId)?.travelMinutes ?? 30, post));
+                      }}
+                      style={{ width: "100%", padding: "9px 12px", fontSize: "0.875rem", border: "1.5px solid var(--card-border)", borderRadius: "9px", background: "var(--card-bg)", color: "var(--gray-900)", fontFamily: "'DM Sans', sans-serif", outline: "none", boxSizing: "border-box" }}
+                    />
+                  </div>
+                </div>
+
+                {/* Full Commitment Times */}
+                <div style={{ background: "#F0F9FF", border: "1px solid #BAE6FD", borderRadius: "9px", padding: "12px 14px" }}>
+                  <div style={{ fontSize: "0.78rem", fontWeight: 700, color: "#0369A1", marginBottom: "8px" }}>
+                    Full Time Commitment <span style={{ fontWeight: 400, fontSize: "0.72rem" }}>— edit as needed, then confirm</span>
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+                    <div>
+                      <label style={{ fontSize: "0.72rem", fontWeight: 600, color: "#0369A1", display: "block", marginBottom: "4px" }}>Commitment Start</label>
+                      <input
+                        type="time" value={formKeyRetrieval}
+                        onChange={(e) => setFormKeyRetrieval(e.target.value)}
+                        style={{ width: "100%", padding: "8px 10px", fontSize: "0.875rem", border: "1.5px solid #BAE6FD", borderRadius: "8px", background: "#fff", color: "#0369A1", fontFamily: "'DM Sans', sans-serif", outline: "none", boxSizing: "border-box", fontWeight: 600 }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: "0.72rem", fontWeight: 600, color: "#0369A1", display: "block", marginBottom: "4px" }}>Commitment End</label>
+                      <input
+                        type="time" value={formKeyReturn}
+                        onChange={(e) => setFormKeyReturn(e.target.value)}
+                        style={{ width: "100%", padding: "8px 10px", fontSize: "0.875rem", border: "1.5px solid #BAE6FD", borderRadius: "8px", background: "#fff", color: "#0369A1", fontFamily: "'DM Sans', sans-serif", outline: "none", boxSizing: "border-box", fontWeight: 600 }}
+                      />
+                    </div>
+                  </div>
+                  {formKeyRetrieval && formKeyReturn && formStart && formEnd && (
+                    <div style={{ fontSize: "0.72rem", color: "#0369A1", marginTop: "8px", opacity: 0.8 }}>
+                      Interpreting window: {fmtMin(timeInputToMinutes(formStart))} – {fmtMin(timeInputToMinutes(formEnd))}
+                    </div>
+                  )}
                 </div>
                 {/* Languages */}
                 <div>
@@ -1004,9 +1106,11 @@ export default function BrowsePage() {
                         ) : pos.status === "LOCKED" ? (
                           <span style={{ marginLeft: "6px", fontSize: "0.78rem", color: "#111827" }}>Unlocks when driver signs up</span>
                         ) : null}
-                        {pos.isDriver && pos.status === "OPEN" && !pos.languageCode && (
-                          <span style={{ marginLeft: "6px", fontSize: "0.78rem", color: "#111827" }}>You pick your language</span>
-                        )}
+                        {pos.isDriver && pos.status === "OPEN" && !pos.languageCode && (() => {
+                          const uniqueLangs = [...new Set(shift.languagesNeeded)];
+                          const label = uniqueLangs.map(langName).join(" or ");
+                          return <span style={{ marginLeft: "6px", fontSize: "0.78rem", color: "#111827" }}>({label})</span>;
+                        })()}
                       </div>
                       <span style={{ fontSize: "0.72rem", fontWeight: 600, padding: "2px 8px", borderRadius: "99px", background: st.bg, color: st.color }}>{st.label}</span>
                       {pos.isMyPosition ? (

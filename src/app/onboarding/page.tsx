@@ -36,6 +36,7 @@ export default function OnboardingPage() {
   const [selectedRoles, setSelectedRoles] = useState<Role[]>([]);
   const [languages, setLanguages] = useState<string[]>([]);
   const [langSearch, setLangSearch] = useState("");
+  const [requestedDriverClearance, setRequestedDriverClearance] = useState(false);
   const [notifPrefs, setNotifPrefs] = useState({
     signupReceipt: true,
     cancellationReceipt: true,
@@ -101,6 +102,7 @@ export default function OnboardingPage() {
           roles: selectedRoles,
           languages,
           notifPrefs: selectedRoles.includes("VOLUNTEER") ? notifPrefs : null,
+          requestedDriverClearance: selectedRoles.includes("VOLUNTEER") ? requestedDriverClearance : false,
         }),
       });
       if (!res.ok) {
@@ -344,7 +346,50 @@ export default function OnboardingPage() {
           </div>
         </div>
 
-        {/* Section 4 — Notifications (volunteer only) */}
+        {/* Section 4 — CSJ Driver Clearance (volunteer only) */}
+        {isVolunteer && (
+          <div style={{ background: "var(--card-bg)", borderRadius: "16px", border: "1.5px solid var(--card-border)", overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,.04)" }}>
+            <div style={{ padding: "16px 20px 14px", borderBottom: "1.5px solid #F3F4F6" }}>
+              <h2 style={{ fontSize: "0.8rem", fontWeight: 700, color: "#111827", textTransform: "uppercase", letterSpacing: "0.07em", margin: 0 }}>Driver Clearance</h2>
+            </div>
+            <div style={{ padding: "20px" }}>
+              <p style={{ fontSize: "0.82rem", color: "#111827", lineHeight: 1.6, marginBottom: "16px" }}>
+                Drivers transport the volunteer team to and from clinic sites. To drive, volunteers must hold a valid CSJ Driver Clearance through Georgetown.
+              </p>
+              <button
+                onClick={() => setRequestedDriverClearance((v) => !v)}
+                style={{
+                  display: "flex", alignItems: "center", justifyContent: "space-between",
+                  width: "100%", padding: "14px 16px", borderRadius: "12px", cursor: "pointer",
+                  border: requestedDriverClearance ? "1.5px solid #2563EB" : "1.5px solid var(--card-border)",
+                  background: requestedDriverClearance ? "#EFF6FF" : "#fff",
+                  fontFamily: "'DM Sans', sans-serif", textAlign: "left",
+                  transition: "border-color 0.12s, background 0.12s",
+                }}
+              >
+                <div>
+                  <p style={{ fontSize: "0.9rem", fontWeight: 600, color: "#111827", margin: 0 }}>I have CSJ Driver Clearance</p>
+                  <p style={{ fontSize: "0.78rem", color: "#111827", margin: "2px 0 0" }}>Select if you are cleared to drive through Georgetown&apos;s CSJ program</p>
+                </div>
+                <span style={{
+                  width: "20px", height: "20px", borderRadius: "6px", flexShrink: 0, marginLeft: "12px",
+                  border: requestedDriverClearance ? "2px solid #2563EB" : "2px solid #D1D5DB",
+                  background: requestedDriverClearance ? "#2563EB" : "#fff",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                }}>
+                  {requestedDriverClearance && <span style={{ color: "#fff", fontSize: "0.75rem", fontWeight: 700, lineHeight: 1 }}>✓</span>}
+                </span>
+              </button>
+              {requestedDriverClearance && (
+                <p style={{ fontSize: "0.75rem", color: "#2563EB", marginTop: "10px", lineHeight: 1.5 }}>
+                  ✓ An admin will verify your clearance and enable your driver access.
+                </p>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Section 5 — Notifications (volunteer only) */}
         {isVolunteer && (
           <div style={{ background: "var(--card-bg)", borderRadius: "16px", border: "1.5px solid var(--card-border)", overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,.04)" }}>
             <div style={{ padding: "16px 20px 14px", borderBottom: "1.5px solid #F3F4F6" }}>

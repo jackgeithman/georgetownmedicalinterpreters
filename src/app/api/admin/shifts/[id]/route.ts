@@ -19,7 +19,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
   const { id } = await params;
   const body = await req.json();
-  const { date, volunteerStart, volunteerEnd, travelMinutes, languagesNeeded, notes } = body;
+  const { date, volunteerStart, volunteerEnd, travelMinutes, keyRetrievalTime, keyReturnTime, languagesNeeded, notes } = body;
 
   const shift = await prisma.shift.findUnique({
     where: { id },
@@ -41,6 +41,8 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if (volunteerStart != null) updateData.volunteerStart = Number(volunteerStart);
   if (volunteerEnd != null) updateData.volunteerEnd = Number(volunteerEnd);
   if (travelMinutes != null) updateData.travelMinutes = Number(travelMinutes);
+  if (keyRetrievalTime !== undefined) updateData.keyRetrievalTime = keyRetrievalTime != null ? Number(keyRetrievalTime) : null;
+  if (keyReturnTime !== undefined) updateData.keyReturnTime = keyReturnTime != null ? Number(keyReturnTime) : null;
   if (notes !== undefined) updateData.notes = notes || null;
 
   // If languagesNeeded changed: rebuild positions, cancel filled ones

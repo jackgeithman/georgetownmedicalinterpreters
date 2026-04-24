@@ -39,6 +39,7 @@ export async function GET() {
           clearedAt: true,
           clearedById: true,
           driverCleared: true,
+          requestedDriverClearance: true,
           clearanceLogs: {
             orderBy: { createdAt: "desc" },
             take: 1,

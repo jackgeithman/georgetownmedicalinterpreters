@@ -31,9 +31,10 @@ export async function POST(req: NextRequest) {
     roles?: string[];
     languages?: string[];
     notifPrefs?: NotifPrefs | null;
+    requestedDriverClearance?: boolean;
   };
 
-  const { firstName, lastName, phone, roles, languages, notifPrefs } = body;
+  const { firstName, lastName, phone, roles, languages, notifPrefs, requestedDriverClearance } = body;
 
   if (!firstName?.trim() || !lastName?.trim()) {
     return NextResponse.json({ error: "First and last name are required." }, { status: 400 });
@@ -72,6 +73,7 @@ export async function POST(req: NextRequest) {
           data: {
             userId: user.id,
             languages: (languages ?? []).map((c) => c.toUpperCase()),
+            requestedDriverClearance: requestedDriverClearance === true,
           },
         });
         if (notifPrefs) {

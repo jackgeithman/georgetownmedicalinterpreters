@@ -143,6 +143,7 @@ model VolunteerProfile {
   hoursVolunteered       Int                  @default(0)
   drivingHours           Int                  @default(0)
   driverCleared          Boolean              @default(false)
+  requestedDriverClearance Boolean            @default(false)
   cancellationsWithin24h Int                  @default(0)
   cancellationsWithin2h  Int                  @default(0)
   noShows                Int                  @default(0)
@@ -169,21 +170,23 @@ model ClearanceLog {
 }
 
 model Shift {
-  id              String          @id @default(uuid())
-  clinicId        String
-  clinic          Clinic          @relation(fields: [clinicId], references: [id])
-  date            DateTime
-  volunteerStart  Int             // XX1: minutes from midnight (e.g. 540 = 9:00 AM)
-  volunteerEnd    Int             // XX2: minutes from midnight
-  travelMinutes   Int             // t: copied from clinic at creation, can be overridden
-  languagesNeeded String[]        // e.g. ["ES", "ZH"] — total language needs for this shift
-  notes           String?
-  status          ShiftStatus     @default(ACTIVE)
-  postedById      String
-  postedBy        User            @relation("PostedShifts", fields: [postedById], references: [id])
-  positions       ShiftPosition[]
-  createdAt       DateTime        @default(now())
-  updatedAt       DateTime        @updatedAt
+  id                 String          @id @default(uuid())
+  clinicId           String
+  clinic             Clinic          @relation(fields: [clinicId], references: [id])
+  date               DateTime
+  volunteerStart     Int             // XX1: minutes from midnight (e.g. 540 = 9:00 AM)
+  volunteerEnd       Int             // XX2: minutes from midnight
+  travelMinutes      Int             // t: copied from clinic at creation, can be overridden
+  keyRetrievalTime   Int?            // full-commitment start (admin-set); null = use formula
+  keyReturnTime      Int?            // full-commitment end   (admin-set); null = use formula
+  languagesNeeded    String[]        // e.g. ["ES", "ZH"] — total language needs for this shift
+  notes              String?
+  status             ShiftStatus     @default(ACTIVE)
+  postedById         String
+  postedBy           User            @relation("PostedShifts", fields: [postedById], references: [id])
+  positions          ShiftPosition[]
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
 }
 
 model ShiftPosition {
