@@ -24,6 +24,8 @@ type AdminShift = {
   volunteerStart: number;
   volunteerEnd: number;
   travelMinutes: number;
+  keyRetrievalTime: number | null;
+  keyReturnTime: number | null;
   languagesNeeded: string[];
   notes: string | null;
   status: string;
@@ -205,6 +207,10 @@ export default function BrowsePage() {
     return minutesToTimeInput(ve + travel + post);
   };
 
+  // Helper: get effective travel for the form (uses formTravel if set, else clinic default)
+  const effectiveTravel = () =>
+    formTravel ?? clinics.find((c) => c.id === formClinicId)?.travelMinutes ?? 30;
+
   const openCreate = () => {
     const defaultClinic = clinics[0];
     const travel = defaultClinic?.travelMinutes ?? 30;
@@ -225,11 +231,20 @@ export default function BrowsePage() {
   };
 
   const openEdit = (shift: AdminShift) => {
-    const pre = 30;
-    const post = 15;
     const travel = shift.travelMinutes;
     const startStr = minutesToTimeInput(shift.volunteerStart);
     const endStr = minutesToTimeInput(shift.volunteerEnd);
+    // Back-calculate buffers from stored commitment times if available
+    let pre = 15;
+    let post = 15;
+    if (shift.keyRetrievalTime != null) {
+      const derivedPre = shift.volunteerStart - shift.travelMinutes - shift.keyRetrievalTime;
+      if (derivedPre >= 0) pre = derivedPre;
+    }
+    if (shift.keyReturnTime != null) {
+      const derivedPost = shift.keyReturnTime - shift.volunteerEnd - shift.travelMinutes;
+      if (derivedPost >= 0) post = derivedPost;
+    }
     setFormClinicId(shift.clinic.id);
     setFormDate(shift.date.slice(0, 10));
     setFormStart(startStr);
@@ -237,11 +252,8 @@ export default function BrowsePage() {
     setFormTravel(travel);
     setFormPreBuffer(pre);
     setFormPostBuffer(post);
-    // Use stored values if available, otherwise compute from formula
-    const storedRetrieval = (shift as AdminShift & { keyRetrievalTime?: number | null }).keyRetrievalTime;
-    const storedReturn = (shift as AdminShift & { keyReturnTime?: number | null }).keyReturnTime;
-    setFormKeyRetrieval(storedRetrieval != null ? minutesToTimeInput(storedRetrieval) : calcKeyRetrieval(startStr, travel, pre));
-    setFormKeyReturn(storedReturn != null ? minutesToTimeInput(storedReturn) : calcKeyReturn(endStr, travel, post));
+    setFormKeyRetrieval(shift.keyRetrievalTime != null ? minutesToTimeInput(shift.keyRetrievalTime) : calcKeyRetrieval(startStr, travel, pre));
+    setFormKeyReturn(shift.keyReturnTime != null ? minutesToTimeInput(shift.keyReturnTime) : calcKeyReturn(endStr, travel, post));
     setFormLangs([...shift.languagesNeeded]);
     setFormNotes(shift.notes ?? "");
     setFormError("");
@@ -274,25 +286,20 @@ export default function BrowsePage() {
     }
     const kr = timeInputToMinutes(formKeyRetrieval);
     const kret = timeInputToMinutes(formKeyReturn);
-    if (kr >= vs) {
-      setFormError("Commitment start must be before interpreting start.");
-      return;
-    }
-    if (kret <= ve) {
-      setFormError("Commitment end must be after interpreting end.");
+    if (isNaN(kr) || isNaN(kret)) {
+      setFormError("Invalid commitment time format.");
       return;
     }
 
     setFormLoading(true);
     setFormError("");
 
-    const selectedClinic = clinics.find((c) => c.id === formClinicId);
     const body = {
       clinicId: formClinicId,
       date: formDate,
       volunteerStart: vs,
       volunteerEnd: ve,
-      travelMinutes: formTravel ?? selectedClinic?.travelMinutes ?? 30,
+      travelMinutes: effectiveTravel(),
       keyRetrievalTime: kr,
       keyReturnTime: kret,
       languagesNeeded: formLangs,
@@ -513,8 +520,11 @@ export default function BrowsePage() {
                 <div style={{ display: "flex", flexDirection: "column", gap: "3px" }}>
                   <span style={{ fontSize: "0.68rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.09em", color: "#111827" }}>Time Commitment</span>
                   <span style={{ fontSize: "0.95rem", fontWeight: 600, color: "#111827" }}>
-                    {fmtMin(shift.volunteerStart - shift.travelMinutes - 30)} – {fmtMin(shift.volunteerEnd + shift.travelMinutes + 15)}
-                    <span style={{ fontSize: "0.78rem", fontWeight: 400, marginLeft: "5px" }}>({Math.round((shift.volunteerEnd + shift.travelMinutes + 15 - (shift.volunteerStart - shift.travelMinutes - 30)) / 60 * 10) / 10} hrs)</span>
+                    {(() => {
+                      const kr = shift.keyRetrievalTime ?? (shift.volunteerStart - shift.travelMinutes - 15);
+                      const kret = shift.keyReturnTime ?? (shift.volunteerEnd + shift.travelMinutes + 15);
+                      return <>{fmtMin(kr)} – {fmtMin(kret)}<span style={{ fontSize: "0.78rem", fontWeight: 400, marginLeft: "5px" }}>({Math.round((kret - kr) / 60 * 10) / 10} hrs)</span></>;
+                    })()}
                   </span>
                 </div>
                 <div style={{ display: "flex", flexDirection: "column", gap: "3px" }}>
@@ -705,19 +715,21 @@ export default function BrowsePage() {
                 {/* Times */}
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
                   <div>
-                    <label style={{ fontSize: "0.78rem", fontWeight: 600, color: "#374151", display: "block", marginBottom: "5px" }}>Interpreting Start (XX1)</label>
+                    <label style={{ fontSize: "0.78rem", fontWeight: 600, color: "#374151", display: "block", marginBottom: "5px" }}>Interpreting Start</label>
                     <input type="time" value={formStart} onChange={(e) => {
                       const val = e.target.value;
                       setFormStart(val);
-                      setFormKeyRetrieval(calcKeyRetrieval(val, formTravel ?? clinics.find((c) => c.id === formClinicId)?.travelMinutes ?? 30, formPreBuffer));
+                      // Recalc commitment start from new interpreting start + current buffers
+                      setFormKeyRetrieval(calcKeyRetrieval(val, effectiveTravel(), formPreBuffer));
                     }} style={{ width: "100%", padding: "9px 12px", fontSize: "0.875rem", border: "1.5px solid var(--card-border)", borderRadius: "9px", background: "var(--card-bg)", color: "var(--gray-900)", fontFamily: "'DM Sans', sans-serif", outline: "none", boxSizing: "border-box" }} />
                   </div>
                   <div>
-                    <label style={{ fontSize: "0.78rem", fontWeight: 600, color: "#374151", display: "block", marginBottom: "5px" }}>Interpreting End (XX2)</label>
+                    <label style={{ fontSize: "0.78rem", fontWeight: 600, color: "#374151", display: "block", marginBottom: "5px" }}>Interpreting End</label>
                     <input type="time" value={formEnd} onChange={(e) => {
                       const val = e.target.value;
                       setFormEnd(val);
-                      setFormKeyReturn(calcKeyReturn(val, formTravel ?? clinics.find((c) => c.id === formClinicId)?.travelMinutes ?? 30, formPostBuffer));
+                      // Recalc commitment end from new interpreting end + current buffers
+                      setFormKeyReturn(calcKeyReturn(val, effectiveTravel(), formPostBuffer));
                     }} style={{ width: "100%", padding: "9px 12px", fontSize: "0.875rem", border: "1.5px solid var(--card-border)", borderRadius: "9px", background: "var(--card-bg)", color: "var(--gray-900)", fontFamily: "'DM Sans', sans-serif", outline: "none", boxSizing: "border-box" }} />
                   </div>
                 </div>
@@ -731,6 +743,7 @@ export default function BrowsePage() {
                       onChange={(e) => {
                         const t = Number(e.target.value);
                         setFormTravel(t);
+                        // Recalc both commitment times with new travel
                         setFormKeyRetrieval(calcKeyRetrieval(formStart, t, formPreBuffer));
                         setFormKeyReturn(calcKeyReturn(formEnd, t, formPostBuffer));
                       }}
@@ -745,7 +758,8 @@ export default function BrowsePage() {
                       onChange={(e) => {
                         const pre = Number(e.target.value);
                         setFormPreBuffer(pre);
-                        setFormKeyRetrieval(calcKeyRetrieval(formStart, formTravel ?? clinics.find((c) => c.id === formClinicId)?.travelMinutes ?? 30, pre));
+                        // Recalc commitment start from new pre-buffer
+                        setFormKeyRetrieval(calcKeyRetrieval(formStart, effectiveTravel(), pre));
                       }}
                       style={{ width: "100%", padding: "9px 12px", fontSize: "0.875rem", border: "1.5px solid var(--card-border)", borderRadius: "9px", background: "var(--card-bg)", color: "var(--gray-900)", fontFamily: "'DM Sans', sans-serif", outline: "none", boxSizing: "border-box" }}
                     />
@@ -758,24 +772,34 @@ export default function BrowsePage() {
                       onChange={(e) => {
                         const post = Number(e.target.value);
                         setFormPostBuffer(post);
-                        setFormKeyReturn(calcKeyReturn(formEnd, formTravel ?? clinics.find((c) => c.id === formClinicId)?.travelMinutes ?? 30, post));
+                        // Recalc commitment end from new post-buffer
+                        setFormKeyReturn(calcKeyReturn(formEnd, effectiveTravel(), post));
                       }}
                       style={{ width: "100%", padding: "9px 12px", fontSize: "0.875rem", border: "1.5px solid var(--card-border)", borderRadius: "9px", background: "var(--card-bg)", color: "var(--gray-900)", fontFamily: "'DM Sans', sans-serif", outline: "none", boxSizing: "border-box" }}
                     />
                   </div>
                 </div>
 
-                {/* Full Commitment Times */}
+                {/* Full Commitment Times — editing these back-calculates the buffers */}
                 <div style={{ background: "#F0F9FF", border: "1px solid #BAE6FD", borderRadius: "9px", padding: "12px 14px" }}>
                   <div style={{ fontSize: "0.78rem", fontWeight: 700, color: "#0369A1", marginBottom: "8px" }}>
-                    Full Time Commitment <span style={{ fontWeight: 400, fontSize: "0.72rem" }}>— edit as needed, then confirm</span>
+                    Full Time Commitment
+                    <span style={{ fontWeight: 400, fontSize: "0.72rem", marginLeft: "6px" }}>— override here; buffers update automatically</span>
                   </div>
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
                     <div>
                       <label style={{ fontSize: "0.72rem", fontWeight: 600, color: "#0369A1", display: "block", marginBottom: "4px" }}>Commitment Start</label>
                       <input
                         type="time" value={formKeyRetrieval}
-                        onChange={(e) => setFormKeyRetrieval(e.target.value)}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setFormKeyRetrieval(val);
+                          // Back-calculate pre-buffer from the new commitment start
+                          if (val && formStart) {
+                            const newPre = timeInputToMinutes(formStart) - effectiveTravel() - timeInputToMinutes(val);
+                            if (newPre >= 0) setFormPreBuffer(newPre);
+                          }
+                        }}
                         style={{ width: "100%", padding: "8px 10px", fontSize: "0.875rem", border: "1.5px solid #BAE6FD", borderRadius: "8px", background: "#fff", color: "#0369A1", fontFamily: "'DM Sans', sans-serif", outline: "none", boxSizing: "border-box", fontWeight: 600 }}
                       />
                     </div>
@@ -783,16 +807,33 @@ export default function BrowsePage() {
                       <label style={{ fontSize: "0.72rem", fontWeight: 600, color: "#0369A1", display: "block", marginBottom: "4px" }}>Commitment End</label>
                       <input
                         type="time" value={formKeyReturn}
-                        onChange={(e) => setFormKeyReturn(e.target.value)}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setFormKeyReturn(val);
+                          // Back-calculate post-buffer from the new commitment end
+                          if (val && formEnd) {
+                            const newPost = timeInputToMinutes(val) - timeInputToMinutes(formEnd) - effectiveTravel();
+                            if (newPost >= 0) setFormPostBuffer(newPost);
+                          }
+                        }}
                         style={{ width: "100%", padding: "8px 10px", fontSize: "0.875rem", border: "1.5px solid #BAE6FD", borderRadius: "8px", background: "#fff", color: "#0369A1", fontFamily: "'DM Sans', sans-serif", outline: "none", boxSizing: "border-box", fontWeight: 600 }}
                       />
                     </div>
                   </div>
-                  {formKeyRetrieval && formKeyReturn && formStart && formEnd && (
-                    <div style={{ fontSize: "0.72rem", color: "#0369A1", marginTop: "8px", opacity: 0.8 }}>
-                      Interpreting window: {fmtMin(timeInputToMinutes(formStart))} – {fmtMin(timeInputToMinutes(formEnd))}
-                    </div>
-                  )}
+                  {formKeyRetrieval && formKeyReturn && formStart && formEnd && (() => {
+                    const kr = timeInputToMinutes(formKeyRetrieval);
+                    const kret = timeInputToMinutes(formKeyReturn);
+                    const vs = timeInputToMinutes(formStart);
+                    const ve = timeInputToMinutes(formEnd);
+                    const totalMins = kret - kr;
+                    return (
+                      <div style={{ fontSize: "0.72rem", color: "#0369A1", marginTop: "8px", opacity: 0.85 }}>
+                        Interpreting: {fmtMin(vs)} – {fmtMin(ve)} · Total commitment: {Math.floor(totalMins / 60)}h {totalMins % 60 > 0 ? `${totalMins % 60}m` : ""}
+                        {kr >= vs && <span style={{ color: "#DC2626", marginLeft: "8px" }}>⚠ Commitment start is at or after interpreting start</span>}
+                        {kret <= ve && <span style={{ color: "#DC2626", marginLeft: "8px" }}>⚠ Commitment end is at or before interpreting end</span>}
+                      </div>
+                    );
+                  })()}
                 </div>
                 {/* Languages */}
                 <div>
