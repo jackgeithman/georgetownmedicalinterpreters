@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { logActivity } from "@/lib/activity-log";
+import { createShiftCalEvent } from "@/lib/notifications/gcal";
 
 async function getAdmin() {
   const session = await getServerSession(authOptions);
@@ -97,6 +98,19 @@ export async function POST(req: NextRequest) {
 
     return newShift;
   });
+
+  // Create GCal event for this shift (non-blocking)
+  await createShiftCalEvent(shift.id, {
+    date: shiftDate,
+    volunteerStart: Number(volunteerStart),
+    volunteerEnd: Number(volunteerEnd),
+    travelMinutes: resolvedTravel,
+    keyRetrievalTime: keyRetrievalTime != null ? Number(keyRetrievalTime) : null,
+    keyReturnTime: keyReturnTime != null ? Number(keyReturnTime) : null,
+    clinicName: clinic.name,
+    clinicAddress: clinic.address,
+    notes: notes || null,
+  }).catch(console.error);
 
   await logActivity({
     actorId: admin.id,

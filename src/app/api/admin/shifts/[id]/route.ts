@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { logActivity } from "@/lib/activity-log";
 import { notifyShiftCancelled, notifyShiftUpdated } from "@/lib/notifications";
+import { updateShiftCalEvent } from "@/lib/notifications/gcal";
 
 async function getAdmin() {
   const session = await getServerSession(authOptions);
@@ -84,6 +85,22 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     }
   }
 
+  // Fetch the updated shift to get current values for GCal
+  const updatedShift = await prisma.shift.findUnique({ where: { id }, include: { clinic: true } });
+  if (updatedShift) {
+    await updateShiftCalEvent(id, {
+      date: updatedShift.date,
+      volunteerStart: updatedShift.volunteerStart,
+      volunteerEnd: updatedShift.volunteerEnd,
+      travelMinutes: updatedShift.travelMinutes,
+      keyRetrievalTime: updatedShift.keyRetrievalTime,
+      keyReturnTime: updatedShift.keyReturnTime,
+      clinicName: updatedShift.clinic.name,
+      clinicAddress: updatedShift.clinic.address,
+      notes: updatedShift.notes,
+    }).catch(console.error);
+  }
+
   await logActivity({
     actorId: admin.id,
     actorEmail: admin.email ?? undefined,
@@ -141,16 +158,11 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
     prisma.shift.update({ where: { id }, data: { status: "CANCELLED" } }),
   ]);
 
-  // Notify all affected volunteers
-  const filledPositions = shift.positions;
-  if (filledPositions.length > 0) {
-    const emails = filledPositions
-      .map((p) => p.volunteer?.user?.email)
-      .filter(Boolean) as string[];
-    if (emails.length > 0) {
-      await notifyShiftCancelled({ shift, volunteerEmails: emails }).catch(console.error);
-    }
-  }
+  // Delete GCal event + notify all affected volunteers via Gmail
+  const emails = shift.positions
+    .map((p) => p.volunteer?.user?.email)
+    .filter(Boolean) as string[];
+  await notifyShiftCancelled({ shiftId: id, shift, volunteerEmails: emails }).catch(console.error);
 
   await logActivity({
     actorId: admin.id,

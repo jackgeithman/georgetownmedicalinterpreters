@@ -1,5 +1,11 @@
 import { sendGmail } from "./gmail";
-import { createCalEvent, deleteCalEvent, updateCalEvent, type ShiftPositionInfo } from "./gcal";
+import {
+  addAttendeeToShiftEvent,
+  removeAttendeeFromShiftEvent,
+  updateShiftCalEvent,
+  deleteShiftCalEvent,
+  type ShiftCalInfo,
+} from "./gcal";
 import { sendResendEmail } from "./resend";
 import { langName } from "@/lib/languages";
 
@@ -54,34 +60,34 @@ function shiftTimeBlock(params: {
   travelMinutes: number;
   keyRetrievalTime?: number | null;
   keyReturnTime?: number | null;
-  isDriver: boolean;
 }): string {
-  const { volunteerStart, volunteerEnd, travelMinutes, isDriver } = params;
+  const { volunteerStart, volunteerEnd, travelMinutes } = params;
   const keyRetrieval = params.keyRetrievalTime ?? (volunteerStart - travelMinutes - 15);
   const driveStart   = volunteerStart - travelMinutes;
   const driveEnd     = volunteerEnd   + travelMinutes;
   const keyReturn    = params.keyReturnTime    ?? (volunteerEnd   + travelMinutes + 15);
 
-  const rows = [
-    detail("Key retrieval", minutesTo12(keyRetrieval)),
-    ...(isDriver ? [detail("Depart Georgetown", minutesTo12(driveStart))] : []),
+  return table(
+    detail("Key retrieval (driver only)", minutesTo12(keyRetrieval)),
+    detail("Depart Georgetown (driver only)", minutesTo12(driveStart)),
     detail("Interpreting", `${minutesTo12(volunteerStart)} &ndash; ${minutesTo12(volunteerEnd)}`),
-    ...(isDriver ? [detail("Return + park", minutesTo12(driveEnd))] : []),
-    detail("Return key by", minutesTo12(keyReturn)),
-  ];
-
-  return table(...rows);
+    detail("Return + park (driver only)", minutesTo12(driveEnd)),
+    detail("Return key by (driver only)", minutesTo12(keyReturn)),
+  );
 }
 
 // ─── Volunteer Signup Notification ──────────────────────────────────────────
 
 /**
- * Volunteer signs up for a shift position.
- * Creates a Google Calendar event (GCal sends its own invite email).
+ * Volunteer is added to a shift (self-signup or admin-assigned).
+ * Adds them as a guest on the shift's GCal event — GCal sends the invite.
+ * If byAdmin=true, also sends a Gmail explaining who added them and why.
  */
-export async function notifyVolunteerPositionSignup(params: {
-  positionId: string;
+export async function notifyVolunteerAddedToShift(params: {
+  shiftId: string;
   volunteerEmail: string;
+  volunteerName: string;
+  byAdmin: boolean;
   clinicName: string;
   clinicAddress: string;
   language: string;
@@ -91,10 +97,9 @@ export async function notifyVolunteerPositionSignup(params: {
   travelMinutes: number;
   keyRetrievalTime?: number | null;
   keyReturnTime?: number | null;
-  isDriver: boolean;
   notes?: string | null;
 }): Promise<void> {
-  const info: ShiftPositionInfo = {
+  const calInfo: ShiftCalInfo = {
     date: params.date,
     volunteerStart: params.volunteerStart,
     volunteerEnd: params.volunteerEnd,
@@ -103,11 +108,33 @@ export async function notifyVolunteerPositionSignup(params: {
     keyReturnTime: params.keyReturnTime,
     clinicName: params.clinicName,
     clinicAddress: params.clinicAddress,
-    language: params.language,
-    isDriver: params.isDriver,
     notes: params.notes,
   };
-  await createCalEvent(params.positionId, params.volunteerEmail, info).catch(console.error);
+
+  // Always add to GCal — GCal sends the invite
+  await addAttendeeToShiftEvent(params.shiftId, params.volunteerEmail, calInfo).catch(console.error);
+
+  // Only send Gmail when an admin manually assigned them
+  if (params.byAdmin) {
+    const lang = langName(params.language);
+    const html = wrap(
+      "You Have Been Added to a Shift",
+      `<p>Hi ${params.volunteerName},</p>
+<p>An administrator has added you to the following interpreter shift. You should receive a Google Calendar invite shortly.</p>
+${table(
+  detail("Date", fmtDate(params.date)),
+  detail("Clinic", params.clinicName),
+  detail("Language", lang),
+)}
+${shiftTimeBlock(params)}
+<p style="font-size:13px;color:#6b7280">If you have questions, please contact your program coordinator.</p>`,
+    );
+    await sendGmail(
+      params.volunteerEmail,
+      `Added to Shift: ${params.clinicName} on ${fmtDate(params.date)}`,
+      html,
+    ).catch(console.error);
+  }
 }
 
 // ─── Volunteer Cancellation ──────────────────────────────────────────────────
@@ -118,7 +145,7 @@ export async function notifyVolunteerPositionSignup(params: {
  * Alerts clinic contact if cancellation is within 24h.
  */
 export async function notifyVolunteerCancellation(params: {
-  positionId: string;
+  shiftId: string;
   volunteerEmail: string;
   clinicName: string;
   clinicContactEmail: string;
@@ -129,7 +156,7 @@ export async function notifyVolunteerCancellation(params: {
   isWithin24h: boolean;
 }): Promise<void> {
   const {
-    positionId,
+    shiftId,
     volunteerEmail,
     clinicName,
     clinicContactEmail,
@@ -141,8 +168,9 @@ export async function notifyVolunteerCancellation(params: {
   } = params;
 
   const lang = langName(language);
+  // Remove from shift GCal event — GCal sends cancellation email automatically
   const notifications: Promise<void>[] = [
-    deleteCalEvent(positionId).catch(console.error),
+    removeAttendeeFromShiftEvent(shiftId, volunteerEmail).catch(console.error),
   ];
 
   // Alert clinic on urgent same-day cancellations
@@ -215,9 +243,11 @@ ${table(
 
 /**
  * Admin cancels a shift entirely.
- * All filled volunteers get cancellation emails + GCal events deleted.
+ * Deletes the shift GCal event — GCal notifies all guests automatically.
+ * Also sends a Gmail to each affected volunteer so they know it was cancelled by admin.
  */
 export async function notifyShiftCancelled(params: {
+  shiftId: string;
   shift: {
     clinic: { name: string };
     date: Date;
@@ -226,8 +256,12 @@ export async function notifyShiftCancelled(params: {
   };
   volunteerEmails: string[];
 }): Promise<void> {
-  const { shift, volunteerEmails } = params;
+  const { shiftId, shift, volunteerEmails } = params;
 
+  // Delete the shift event — GCal cancels all guests in one shot
+  await deleteShiftCalEvent(shiftId).catch(console.error);
+
+  // Also send Gmail so volunteers know it was an admin cancellation (not a glitch)
   await Promise.all(
     volunteerEmails.map((email) => {
       const html = wrap(
@@ -238,7 +272,7 @@ ${table(
   detail("Clinic", shift.clinic.name),
   detail("Interpreting", `${minutesTo12(shift.volunteerStart)} &ndash; ${minutesTo12(shift.volunteerEnd)}`),
 )}
-<p style="font-size:13px;color:#6b7280">Your calendar event has been removed.</p>`,
+<p style="font-size:13px;color:#6b7280">Your Google Calendar invite has been cancelled. Check the dashboard for other available shifts.</p>`,
       );
       return sendGmail(email, `Shift Cancelled — ${shift.clinic.name} on ${fmtDate(shift.date)}`, html).catch(console.error);
     }),
@@ -279,7 +313,7 @@ Repeated no-shows may affect your standing as a volunteer.</p>`,
 // ─── Admin removed a volunteer from a position ───────────────────────────────
 
 export async function notifyAdminRemovedFromPosition(params: {
-  positionId: string;
+  shiftId: string;
   volunteerEmail: string;
   volunteerName: string;
   clinicName: string;
@@ -288,13 +322,13 @@ export async function notifyAdminRemovedFromPosition(params: {
   volunteerStart: number;
   volunteerEnd: number;
 }): Promise<void> {
-  const { positionId, volunteerEmail, volunteerName, clinicName, language, date, volunteerStart, volunteerEnd } = params;
+  const { shiftId, volunteerEmail, volunteerName, clinicName, language, date, volunteerStart, volunteerEnd } = params;
   const lang = langName(language);
 
   const html = wrap(
     "You Have Been Removed From a Shift",
     `<p>Hi ${volunteerName},</p>
-<p>An administrator has removed you from the following interpreter shift:</p>
+<p>An administrator has removed you from the following interpreter shift. Your Google Calendar invite has been cancelled.</p>
 ${table(
   detail("Date", fmtDate(date)),
   detail("Interpreting", `${minutesTo12(volunteerStart)} &ndash; ${minutesTo12(volunteerEnd)}`),
@@ -306,7 +340,7 @@ ${table(
 
   await Promise.all([
     sendGmail(volunteerEmail, `Removed From Shift: ${clinicName} on ${fmtDate(date)}`, html).catch(console.error),
-    deleteCalEvent(positionId).catch(console.error),
+    removeAttendeeFromShiftEvent(shiftId, volunteerEmail).catch(console.error),
   ]);
 }
 

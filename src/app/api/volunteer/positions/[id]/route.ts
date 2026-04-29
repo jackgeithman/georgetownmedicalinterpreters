@@ -84,7 +84,7 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
   // Send notification
   if (user.email) {
     await notifyVolunteerCancellation({
-      positionId: id,
+      shiftId: position.shiftId,
       volunteerEmail: user.email,
       clinicName: position.shift.clinic.name,
       date: position.shift.date,

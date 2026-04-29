@@ -11,22 +11,20 @@ function getAuth() {
 }
 
 /** GCal event IDs must use lowercase [a-v0-9]. UUID hex chars [0-9a-f] are valid. */
-function calEventId(positionId: string): string {
-  return positionId.replace(/-/g, "");
+function shiftEventId(shiftId: string): string {
+  return shiftId.replace(/-/g, "");
 }
 
 function gmiCalendarId(): string {
   return process.env.GOOGLE_GCAL_CALENDAR_ID ?? "primary";
 }
 
-/** Convert minutes-from-midnight to "HH:MM:00" */
 function minutesToTimeStr(minutes: number): string {
   const h = Math.floor(minutes / 60);
   const m = minutes % 60;
   return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:00`;
 }
 
-/** Convert minutes-from-midnight to "9:00 AM" or "1:30 PM" */
 function minutesTo12(minutes: number): string {
   const h = Math.floor(minutes / 60);
   const m = minutes % 60;
@@ -35,49 +33,50 @@ function minutesTo12(minutes: number): string {
   return m === 0 ? `${h12}:00 ${period}` : `${h12}:${String(m).padStart(2, "0")} ${period}`;
 }
 
-import { langName } from "@/lib/languages";
-
-export interface ShiftPositionInfo {
+export interface ShiftCalInfo {
   date: Date;
-  volunteerStart: number;     // XX1, minutes from midnight
-  volunteerEnd: number;       // XX2, minutes from midnight
-  travelMinutes: number;      // t
-  keyRetrievalTime?: number | null;  // stored commitment start (null = use formula)
-  keyReturnTime?: number | null;     // stored commitment end   (null = use formula)
+  volunteerStart: number;    // minutes from midnight
+  volunteerEnd: number;      // minutes from midnight
+  travelMinutes: number;
+  keyRetrievalTime?: number | null;  // stored commitment start; null = use formula
+  keyReturnTime?: number | null;     // stored commitment end;   null = use formula
   clinicName: string;
   clinicAddress: string;
-  language: string;
-  isDriver: boolean;
   notes?: string | null;
 }
 
-function buildEventBody(volunteerEmail: string, info: ShiftPositionInfo, titlePrefix = "") {
-  const lang = langName(info.language);
-  const senderEmail = process.env.GOOGLE_GMAIL_SENDER_EMAIL!;
-  const dateStr = info.date.toISOString().slice(0, 10); // "YYYY-MM-DD"
+type Attendee = { email?: string | null; organizer?: boolean | null; responseStatus?: string | null };
 
-  // Full time commitment: use stored values, fall back to formula
+function buildShiftEventBody(info: ShiftCalInfo, attendees: Attendee[] = []) {
+  const senderEmail = process.env.GOOGLE_GMAIL_SENDER_EMAIL!;
+  const dateStr = info.date.toISOString().slice(0, 10);
+
   const keyRetrieval = info.keyRetrievalTime ?? (info.volunteerStart - info.travelMinutes - 15);
-  const keyReturn    = info.keyReturnTime    ?? (info.volunteerEnd   + info.travelMinutes + 15);
+  const driveStart   = info.volunteerStart - info.travelMinutes;
+  const driveEnd     = info.volunteerEnd   + info.travelMinutes;
+  const keyReturn    = info.keyReturnTime  ?? (info.volunteerEnd + info.travelMinutes + 15);
 
   const startStr = `${dateStr}T${minutesToTimeStr(keyRetrieval)}`;
   const endStr   = `${dateStr}T${minutesToTimeStr(keyReturn)}`;
 
   const lines = [
-    `Role: ${info.isDriver ? "Driver + Interpreter" : "Interpreter"}`,
-    `Language: ${lang}`,
+    "── Schedule ──────────────────────────────────────",
+    `Key retrieval (DRIVER ONLY):      ${minutesTo12(keyRetrieval)}`,
+    `Depart Georgetown (DRIVER ONLY):  ${minutesTo12(driveStart)}`,
+    `Interpreting starts:              ${minutesTo12(info.volunteerStart)}`,
+    `Interpreting ends:                ${minutesTo12(info.volunteerEnd)}`,
+    `Return + park (DRIVER ONLY):      ${minutesTo12(driveEnd)}`,
+    `Return key by (DRIVER ONLY):      ${minutesTo12(keyReturn)}`,
     "",
-    "── Full Time Commitment ──────────────────",
-    `Key retrieval:       ${minutesTo12(keyRetrieval)}`,
-    `Depart Georgetown:   ${minutesTo12(info.volunteerStart - info.travelMinutes)}`,
-    `Interpreting starts: ${minutesTo12(info.volunteerStart)}`,
-    `Interpreting ends:   ${minutesTo12(info.volunteerEnd)}`,
-    `Return + park:       ${minutesTo12(info.volunteerEnd + info.travelMinutes)}`,
-    `Return key by:       ${minutesTo12(keyReturn)}`,
+    "── Meeting Location ──────────────────────────────",
+    "Meet outside the Leavey Garage on the side of the building",
+    "next to Aruppe and Reiss. The van will be parked there once",
+    "the driver has retrieved it.",
     "",
-    `Clinic: ${info.clinicName}`,
-    `Address: ${info.clinicAddress}`,
-    ...(info.notes ? [`Notes: ${info.notes}`] : []),
+    "── Clinic ────────────────────────────────────────",
+    info.clinicName,
+    info.clinicAddress,
+    ...(info.notes ? ["", `Notes: ${info.notes}`] : []),
     "",
     "Georgetown Medical Interpreters",
     "georgetownmedicalinterpreters.org",
@@ -85,17 +84,18 @@ function buildEventBody(volunteerEmail: string, info: ShiftPositionInfo, titlePr
     "If you need to cancel, please do so as early as possible via the volunteer dashboard.",
   ];
 
-  const driverLabel = info.isDriver ? " (Driver + Interpreter)" : "";
+  // Ensure organizer is always present
+  const organizerEntry: Attendee = { email: senderEmail, organizer: true };
+  const hasOrganizer = attendees.some((a) => a.email === senderEmail);
+  const fullAttendees = hasOrganizer ? attendees : [organizerEntry, ...attendees];
+
   return {
-    summary: `${titlePrefix}GMI — ${lang}${driverLabel} at ${info.clinicName}`,
+    summary: `GMI at ${info.clinicName}`,
     location: info.clinicAddress,
     description: lines.join("\n"),
     start: { dateTime: startStr, timeZone: "America/New_York" },
     end:   { dateTime: endStr,   timeZone: "America/New_York" },
-    attendees: [
-      { email: senderEmail, organizer: true },
-      { email: volunteerEmail },
-    ],
+    attendees: fullAttendees,
     reminders: {
       useDefault: false,
       overrides: [
@@ -106,35 +106,49 @@ function buildEventBody(volunteerEmail: string, info: ShiftPositionInfo, titlePr
   };
 }
 
-export async function createCalEvent(
-  positionId: string,
-  volunteerEmail: string,
-  info: ShiftPositionInfo,
-): Promise<void> {
+// ─── Internal helpers ─────────────────────────────────────────────────────────
+
+function errStatus(err: unknown): number | undefined {
+  return (
+    (err as { code?: number })?.code ??
+    (err as { response?: { status?: number } })?.response?.status
+  );
+}
+
+async function fetchAttendees(
+  cal: ReturnType<typeof google.calendar>,
+  eventId: string,
+): Promise<Attendee[]> {
+  const res = await cal.events.get({ calendarId: gmiCalendarId(), eventId });
+  return (res.data.attendees ?? []) as Attendee[];
+}
+
+// ─── Public API ───────────────────────────────────────────────────────────────
+
+/**
+ * Create a GCal event when a shift is posted.
+ * No volunteer attendees yet — just the GMI organizer.
+ */
+export async function createShiftCalEvent(shiftId: string, info: ShiftCalInfo): Promise<void> {
   if (!process.env.GOOGLE_GMAIL_REFRESH_TOKEN || !process.env.GOOGLE_GMAIL_SENDER_EMAIL) return;
   const cal = google.calendar({ version: "v3", auth: getAuth() });
-  const eventId = calEventId(positionId);
-  const body = buildEventBody(volunteerEmail, info);
+  const eventId = shiftEventId(shiftId);
 
   try {
     await cal.events.insert({
       calendarId: gmiCalendarId(),
-      sendUpdates: "all",
-      requestBody: { id: eventId, ...body },
+      sendUpdates: "none",   // no volunteers yet, no emails needed
+      requestBody: { id: eventId, ...buildShiftEventBody(info) },
     });
-  } catch (err: unknown) {
-    // Google Calendar returns 409 when an event with this ID already exists or was recently
-    // deleted (tombstone window). This happens on cancel → re-signup for the same position.
-    // Fall back to update, which restores the event and re-sends the invite.
-    const status =
-      (err as { code?: number })?.code ??
-      (err as { response?: { status?: number } })?.response?.status;
-    if (status === 409) {
+  } catch (err) {
+    if (errStatus(err) === 409) {
+      // Already exists — update it
+      const current = await fetchAttendees(cal, eventId);
       await cal.events.update({
         calendarId: gmiCalendarId(),
         eventId,
         sendUpdates: "all",
-        requestBody: { id: eventId, ...body },
+        requestBody: { id: eventId, ...buildShiftEventBody(info, current) },
       });
     } else {
       throw err;
@@ -142,31 +156,115 @@ export async function createCalEvent(
   }
 }
 
-export async function updateCalEvent(
-  positionId: string,
+/**
+ * Add a volunteer as a guest to the shift's GCal event.
+ * Lazy-creates the event if the shift predates this system.
+ * GCal automatically sends an invite email to the volunteer.
+ */
+export async function addAttendeeToShiftEvent(
+  shiftId: string,
   volunteerEmail: string,
-  info: ShiftPositionInfo,
+  info: ShiftCalInfo,
 ): Promise<void> {
   if (!process.env.GOOGLE_GMAIL_REFRESH_TOKEN || !process.env.GOOGLE_GMAIL_SENDER_EMAIL) return;
   const cal = google.calendar({ version: "v3", auth: getAuth() });
-  await cal.events.update({
+  const eventId = shiftEventId(shiftId);
+
+  let current: Attendee[];
+  try {
+    current = await fetchAttendees(cal, eventId);
+  } catch (err) {
+    if (errStatus(err) === 404) {
+      // Shift predates this system — create event first
+      await createShiftCalEvent(shiftId, info);
+      current = await fetchAttendees(cal, eventId);
+    } else {
+      throw err;
+    }
+  }
+
+  // Already a guest — nothing to do (handles re-signup after cancel gracefully)
+  if (current.some((a) => a.email === volunteerEmail)) return;
+
+  await cal.events.patch({
     calendarId: gmiCalendarId(),
-    eventId: calEventId(positionId),
+    eventId,
     sendUpdates: "all",
-    requestBody: { id: calEventId(positionId), ...buildEventBody(volunteerEmail, info, "[Updated] ") },
+    requestBody: {
+      attendees: [...current, { email: volunteerEmail }],
+    },
   });
 }
 
-export async function deleteCalEvent(positionId: string): Promise<void> {
+/**
+ * Remove a volunteer from the shift's GCal event guest list.
+ * GCal automatically sends a cancellation email to the volunteer.
+ */
+export async function removeAttendeeFromShiftEvent(
+  shiftId: string,
+  volunteerEmail: string,
+): Promise<void> {
+  if (!process.env.GOOGLE_GMAIL_REFRESH_TOKEN) return;
+  const cal = google.calendar({ version: "v3", auth: getAuth() });
+  const eventId = shiftEventId(shiftId);
+
+  try {
+    const current = await fetchAttendees(cal, eventId);
+    const updated = current.filter((a) => a.email !== volunteerEmail);
+    if (updated.length === current.length) return; // not a guest, nothing to do
+
+    await cal.events.patch({
+      calendarId: gmiCalendarId(),
+      eventId,
+      sendUpdates: "all",
+      requestBody: { attendees: updated },
+    });
+  } catch {
+    // 404 = shift event doesn't exist yet, nothing to remove
+  }
+}
+
+/**
+ * Update the shift event details when the shift is edited.
+ * Preserves the current attendee list and notifies all guests of the change.
+ */
+export async function updateShiftCalEvent(shiftId: string, info: ShiftCalInfo): Promise<void> {
+  if (!process.env.GOOGLE_GMAIL_REFRESH_TOKEN || !process.env.GOOGLE_GMAIL_SENDER_EMAIL) return;
+  const cal = google.calendar({ version: "v3", auth: getAuth() });
+  const eventId = shiftEventId(shiftId);
+
+  try {
+    const current = await fetchAttendees(cal, eventId);
+    await cal.events.update({
+      calendarId: gmiCalendarId(),
+      eventId,
+      sendUpdates: "all",
+      requestBody: { id: eventId, ...buildShiftEventBody(info, current) },
+    });
+  } catch (err) {
+    if (errStatus(err) === 404) {
+      // Shift predates this system — create fresh
+      await createShiftCalEvent(shiftId, info);
+    } else {
+      throw err;
+    }
+  }
+}
+
+/**
+ * Delete the shift event when a shift is cancelled.
+ * GCal automatically sends cancellation emails to all guests.
+ */
+export async function deleteShiftCalEvent(shiftId: string): Promise<void> {
   if (!process.env.GOOGLE_GMAIL_REFRESH_TOKEN) return;
   const cal = google.calendar({ version: "v3", auth: getAuth() });
   try {
     await cal.events.delete({
       calendarId: gmiCalendarId(),
-      eventId: calEventId(positionId),
+      eventId: shiftEventId(shiftId),
       sendUpdates: "all",
     });
   } catch {
-    // 404 = event was never created
+    // 404 = event doesn't exist, nothing to do
   }
 }

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { notifyVolunteerPositionSignup } from "@/lib/notifications";
+import { notifyVolunteerAddedToShift } from "@/lib/notifications";
 import { logActivity } from "@/lib/activity-log";
 
 async function getActiveVolunteer() {
@@ -174,9 +174,11 @@ export async function POST(req: NextRequest) {
 
   if ((notifPrefs?.signupReceipt ?? true) && user.email) {
     const { shift } = position;
-    await notifyVolunteerPositionSignup({
-      positionId,
+    await notifyVolunteerAddedToShift({
+      shiftId: position.shiftId,
       volunteerEmail: user.email,
+      volunteerName: user.name ?? user.email,
+      byAdmin: false,
       clinicName: shift.clinic.name,
       clinicAddress: shift.clinic.address,
       language: assignedLanguage,
@@ -186,7 +188,6 @@ export async function POST(req: NextRequest) {
       travelMinutes: shift.travelMinutes,
       keyRetrievalTime: shift.keyRetrievalTime,
       keyReturnTime: shift.keyReturnTime,
-      isDriver: position.isDriver,
       notes: shift.notes,
     }).catch(console.error);
   }

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { notifyVolunteerPositionSignup } from "@/lib/notifications";
+import { notifyVolunteerAddedToShift, notifyAdminRemovedFromPosition } from "@/lib/notifications";
 import { logActivity } from "@/lib/activity-log";
 
 async function getAdmin() {
@@ -89,9 +89,11 @@ export async function PATCH(
   // Notify
   if (targetUser.email) {
     const { shift } = position;
-    await notifyVolunteerPositionSignup({
-      positionId,
+    await notifyVolunteerAddedToShift({
+      shiftId: position.shiftId,
       volunteerEmail: targetUser.email,
+      volunteerName: targetUser.name ?? targetUser.email,
+      byAdmin: true,
       clinicName: shift.clinic.name,
       clinicAddress: shift.clinic.address,
       language: assignedLanguage,
@@ -101,7 +103,6 @@ export async function PATCH(
       travelMinutes: shift.travelMinutes,
       keyRetrievalTime: shift.keyRetrievalTime,
       keyReturnTime: shift.keyReturnTime,
-      isDriver: position.isDriver,
       notes: shift.notes,
     }).catch(console.error);
   }
@@ -130,7 +131,10 @@ export async function DELETE(
   const { id: positionId } = await params;
   const position = await prisma.shiftPosition.findUnique({
     where: { id: positionId },
-    include: { shift: { include: { clinic: true, positions: { orderBy: { positionNumber: "asc" } } } } },
+    include: {
+      shift: { include: { clinic: true, positions: { orderBy: { positionNumber: "asc" } } } },
+      volunteer: { include: { user: true } },
+    },
   });
   if (!position) return NextResponse.json({ error: "Position not found" }, { status: 404 });
   if (position.status !== "FILLED") return NextResponse.json({ error: "Position is not filled" }, { status: 409 });
@@ -152,6 +156,22 @@ export async function DELETE(
       }
     }
   });
+
+  // Remove from GCal and notify volunteer
+  const volunteerEmail = position.volunteer?.user?.email;
+  const volunteerName = position.volunteer?.user?.name ?? volunteerEmail ?? "Volunteer";
+  if (volunteerEmail && position.languageCode) {
+    await notifyAdminRemovedFromPosition({
+      shiftId: position.shiftId,
+      volunteerEmail,
+      volunteerName,
+      clinicName: position.shift.clinic.name,
+      language: position.languageCode,
+      date: position.shift.date,
+      volunteerStart: position.shift.volunteerStart,
+      volunteerEnd: position.shift.volunteerEnd,
+    }).catch(console.error);
+  }
 
   await logActivity({
     actorId: admin.id,
