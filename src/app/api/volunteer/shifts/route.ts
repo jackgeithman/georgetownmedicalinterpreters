@@ -50,15 +50,15 @@ export async function GET() {
       let canSignUp = false;
 
       if (pos.status === "OPEN" && volunteerProfile) {
-        if (pos.isDriver) {
-          // Driver seat: need driver clearance + at least one needed language clearance
+        if (pos.isDriver && !shift.isUberShift) {
+          // Van mode driver seat: need driver clearance + at least one needed language clearance
           const hasDriverClearance = volunteerProfile.driverCleared;
           const hasAnyLanguage = shift.languagesNeeded.some((lang) =>
             userRoles.includes(`LANG_${lang}_CLEARED`),
           );
           canSignUp = hasDriverClearance && hasAnyLanguage;
         } else {
-          // Interpreter seat: need clearance for this position's assigned language
+          // Interpreter seat (or Uber mode — all seats are interpreter seats)
           canSignUp = pos.languageCode != null && userRoles.includes(`LANG_${pos.languageCode}_CLEARED`);
         }
       }

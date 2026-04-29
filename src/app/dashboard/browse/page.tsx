@@ -46,6 +46,7 @@ type BrowseShift = {
   travelMinutes: number;
   languagesNeeded: string[];
   notes: string | null;
+  isUberShift: boolean;
   keyRetrievalTime: number;
   driveStartTime: number;
   keyReturnTime: number;
@@ -1028,7 +1029,7 @@ export default function BrowsePage() {
               <div style={{ padding: "16px 24px", borderBottom: "1.5px solid var(--card-border)" }}>
                 <h3 style={{ fontSize: "0.875rem", fontWeight: 700, color: "var(--gray-900)", margin: 0 }}>Assign Volunteer</h3>
                 <p style={{ fontSize: "0.75rem", color: "#111827", marginTop: "4px" }}>
-                  {assignModal.position.isDriver ? "Driver + Interpreter" : "Interpreter"} · {langName(assignModal.position.languageCode ?? "")} · {fmtDate(assignModal.shift.date)} · {assignModal.shift.clinic.name}
+                  {assignModal.position.isDriver && !assignModal.shift.isUberShift ? "Driver + Interpreter" : "Interpreter"} · {langName(assignModal.position.languageCode ?? "")} · {fmtDate(assignModal.shift.date)} · {assignModal.shift.clinic.name}
                 </p>
               </div>
               <div style={{ padding: "16px 24px" }}>
@@ -1068,7 +1069,7 @@ export default function BrowsePage() {
                       <p style={{ fontSize: "0.82rem", fontWeight: 700, color: "#92400E" }}>Assign <strong>{assignSelected.name ?? assignSelected.email}</strong></p>
                       <p style={{ fontSize: "0.75rem", color: "#78350F", marginTop: "2px" }}>{assignSelected.email}</p>
                     </div>
-                    {assignModal.position.isDriver && (
+                    {assignModal.position.isDriver && !assignModal.shift.isUberShift && (
                       <div style={{ marginBottom: "12px" }}>
                         <p style={{ fontSize: "0.78rem", fontWeight: 600, color: "#374151", marginBottom: "8px" }}>Which language will they interpret?</p>
                         <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
@@ -1086,9 +1087,9 @@ export default function BrowsePage() {
                     <div style={{ display: "flex", gap: "8px" }}>
                       <button onClick={() => setAssignSelected(null)} style={{ flex: 1, padding: "9px", fontSize: "0.875rem", border: "1.5px solid var(--card-border)", color: "#111827", borderRadius: "10px", background: "none", cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>← Back</button>
                       <button
-                        disabled={assignLoading || (assignModal.position.isDriver && !assignLangChoice)}
+                        disabled={assignLoading || (assignModal.position.isDriver && !assignModal.shift.isUberShift && !assignLangChoice)}
                         onClick={confirmAssign}
-                        style={{ flex: 1, padding: "9px", fontSize: "0.875rem", background: "var(--blue)", color: "#fff", border: "none", borderRadius: "10px", cursor: "pointer", fontWeight: 600, opacity: (assignLoading || (assignModal.position.isDriver && !assignLangChoice)) ? 0.5 : 1, fontFamily: "'DM Sans', sans-serif" }}
+                        style={{ flex: 1, padding: "9px", fontSize: "0.875rem", background: "var(--blue)", color: "#fff", border: "none", borderRadius: "10px", cursor: "pointer", fontWeight: 600, opacity: (assignLoading || (assignModal.position.isDriver && !assignModal.shift.isUberShift && !assignLangChoice)) ? 0.5 : 1, fontFamily: "'DM Sans', sans-serif" }}
                       >{assignLoading ? "Assigning…" : "Confirm"}</button>
                     </div>
                   </>
@@ -1330,23 +1331,33 @@ export default function BrowsePage() {
                   </div>
                 )}
                 {/* Positions */}
-                {shift.positions.map((pos) => {
+                {/* Uber mode: decorative Uber driver row */}
+                {shift.isUberShift && (
+                  <div style={{ display: "flex", alignItems: "center", padding: "12px 22px", borderBottom: "1px solid var(--card-border)", gap: "14px", background: "#111827" }}>
+                    <div style={{ width: "9px", height: "9px", borderRadius: "50%", background: "#22C55E", flexShrink: 0 }} />
+                    <span style={{ fontSize: "1.05rem", fontWeight: 900, color: "#fff", letterSpacing: "-0.04em" }}>Uber</span>
+                  </div>
+                )}
+                {shift.positions.map((pos, idx) => {
                   const st = posStatus(pos);
                   const loading = actionLoading === pos.id;
+                  const seatLabel = shift.isUberShift
+                    ? `Seat ${idx + 1}`
+                    : pos.isDriver ? "Driver + Interpreter" : "Interpreter";
 
                   return (
                     <div key={pos.id} style={{ display: "flex", alignItems: "center", padding: "12px 22px", borderBottom: "1px solid var(--card-border)", gap: "14px", flexWrap: "wrap" }}>
                       <div style={{ width: "9px", height: "9px", borderRadius: "50%", background: pos.status === "FILLED" ? "var(--green)" : pos.status === "OPEN" ? "#3B82F6" : "var(--gray-400)", flexShrink: 0 }} />
                       <div style={{ flex: 1, minWidth: "140px" }}>
                         <span style={{ fontSize: "0.88rem", fontWeight: 700, color: "#111827" }}>
-                          {pos.isDriver ? "Driver + Interpreter" : "Interpreter"}
+                          {seatLabel}
                         </span>
                         {pos.languageCode ? (
                           <span style={{ marginLeft: "6px", fontSize: "0.82rem", color: "#374151" }}>{langName(pos.languageCode)}</span>
                         ) : pos.status === "LOCKED" ? (
                           <span style={{ marginLeft: "6px", fontSize: "0.78rem", color: "#111827" }}>Unlocks when driver signs up</span>
                         ) : null}
-                        {pos.isDriver && pos.status === "OPEN" && !pos.languageCode && (() => {
+                        {pos.isDriver && pos.status === "OPEN" && !pos.languageCode && !shift.isUberShift && (() => {
                           const uniqueLangs = [...new Set(shift.languagesNeeded)];
                           const label = uniqueLangs.map(langName).join(" or ");
                           return <span style={{ marginLeft: "6px", fontSize: "0.78rem", color: "#111827" }}>({label})</span>;
