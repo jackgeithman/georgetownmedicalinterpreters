@@ -60,18 +60,18 @@ function buildShiftEventBody(info: ShiftCalInfo, attendees: Attendee[] = []) {
   const lines = [
     "If you need to cancel, please do so as early as possible via the volunteer dashboard.",
     "",
-    "── Schedule ──────────────────────────────────────",
+    "── Schedule ───────────────────────",
     `Depart Georgetown:   ${minutesTo12(driveStart)}`,
     `Interpreting starts: ${minutesTo12(info.volunteerStart)}`,
     `Interpreting ends:   ${minutesTo12(info.volunteerEnd)}`,
     `Return + park:       ${minutesTo12(driveEnd)}`,
     "",
-    "── Meeting Location ──────────────────────────────",
+    "── Meeting Location ────────────────",
     "Meet outside the Leavey Garage on the side of the building",
-    "next to Aruppe and Reiss. The van will be parked there once",
-    "the driver has retrieved it.",
+    "next to Aruppe and Reiss. Once everyone is assembled outside,",
+    "you will retrieve the van from the garage.",
     "",
-    "── Clinic ────────────────────────────────────────",
+    "── Clinic ──────────────────────────",
     info.clinicName,
     info.clinicAddress,
     ...(info.notes ? ["", `Notes: ${info.notes}`] : []),
@@ -81,10 +81,10 @@ function buildShiftEventBody(info: ShiftCalInfo, attendees: Attendee[] = []) {
     "In the event of an issue with the website or Google Calendar, text Jack Geithman at (425) 877-4701.",
   ];
 
-  // Ensure organizer is always present
-  const organizerEntry: Attendee = { email: senderEmail, organizer: true };
-  const hasOrganizer = attendees.some((a) => a.email === senderEmail);
-  const fullAttendees = hasOrganizer ? attendees : [organizerEntry, ...attendees];
+  // Only include volunteer attendees — the organizer email is excluded because the event
+  // already lives on their calendar. Including the organizer as an attendee causes Google
+  // to create a duplicate event on their primary calendar when sendUpdates: "all" fires.
+  const volunteerAttendees = attendees.filter((a) => a.email !== senderEmail);
 
   return {
     summary: `GMI at ${info.clinicName}`,
@@ -92,7 +92,7 @@ function buildShiftEventBody(info: ShiftCalInfo, attendees: Attendee[] = []) {
     description: lines.join("\n"),
     start: { dateTime: startStr, timeZone: "America/New_York" },
     end:   { dateTime: endStr,   timeZone: "America/New_York" },
-    attendees: fullAttendees,
+    attendees: volunteerAttendees,
     reminders: {
       useDefault: false,
       overrides: [
