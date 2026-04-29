@@ -99,8 +99,12 @@ export async function sendReminder(opts: {
   subBlockHour: number;
   language: string;
   hoursUntil: number;
+  isUberShift?: boolean;
 }) {
   const label = opts.hoursUntil === 24 ? "24 hours" : opts.hoursUntil === 8 ? "8 hours" : "2 hours";
+  const meetingLine = opts.isUberShift
+    ? `<li><strong>Meeting point:</strong> <span style="color:#dc2626;font-weight:700">Front Gates of Georgetown University — transportation by Uber</span></li>`
+    : `<li><strong>Meeting point:</strong> Outside the Leavey Garage (next to Aruppe and Reiss)</li>`;
   await send({
     from: FROM(),
     to: opts.to,
@@ -114,6 +118,7 @@ export async function sendReminder(opts: {
   <li><strong>Date:</strong> ${fmt(opts.date)}</li>
   <li><strong>Time:</strong> ${fmtTime(opts.subBlockHour)} – ${fmtTime(opts.subBlockHour + 1)}</li>
   <li><strong>Language:</strong> ${opts.language}</li>
+  ${meetingLine}
 </ul>
 <p>Thank you for volunteering!</p>`,
   });

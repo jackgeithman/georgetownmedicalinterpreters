@@ -376,6 +376,42 @@ ${table(
   ]);
 }
 
+// ─── Uber Location Change Notification ──────────────────────────────────────
+
+/**
+ * Sent to all currently signed-up volunteers when a shift is switched to Uber mode.
+ * Alerts them that the meeting location has changed to the Front Gates.
+ */
+export async function notifyUberLocationChange(params: {
+  volunteers: { email: string; name: string }[];
+  clinicName: string;
+  date: Date;
+  volunteerStart: number;
+  volunteerEnd: number;
+  uberBookedBy: string;
+}): Promise<void> {
+  const { volunteers, clinicName, date, volunteerStart, volunteerEnd, uberBookedBy } = params;
+
+  await Promise.all(
+    volunteers.map(({ email, name }) => {
+      const html = wrap(
+        "Meeting Location Changed — Front Gates",
+        `<p>Hi ${name},</p>
+<p>The transportation for your upcoming shift has changed. Instead of meeting at the Leavey Garage, <strong>you will now meet at the Front Gates of Georgetown University</strong>. An Uber has been arranged.</p>
+${table(
+  detail("Date", fmtDate(date)),
+  detail("Clinic", clinicName),
+  detail("Interpreting", `${minutesTo12(volunteerStart)} &ndash; ${minutesTo12(volunteerEnd)}`),
+  detail("Meeting point", "Front Gates of Georgetown University"),
+  detail("Uber booker", uberBookedBy),
+)}
+<p style="font-size:13px;color:#6b7280">Your Google Calendar invite has been updated with the new meeting location. Please do not go to the Leavey Garage.</p>`,
+      );
+      return sendGmail(email, `Location Change: Meet at Front Gates — ${fmtDate(date)}`, html).catch(console.error);
+    }),
+  );
+}
+
 // ─── Language Clearance Notifications ───────────────────────────────────────
 
 export async function notifyLanguageCleared(params: {

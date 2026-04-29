@@ -182,6 +182,9 @@ model Shift {
   languagesNeeded    String[]        // e.g. ["ES", "ZH"] — total language needs for this shift
   notes              String?
   status             ShiftStatus     @default(ACTIVE)
+  isUberShift        Boolean         @default(false)
+  uberBooked         Boolean         @default(false)
+  uberBookedBy       String?
   postedById         String
   postedBy           User            @relation("PostedShifts", fields: [postedById], references: [id])
   positions          ShiftPosition[]

@@ -54,6 +54,7 @@ export interface ShiftCalInfo {
   notes?: string | null;
   languagesNeeded?: string[];   // e.g. ["ES", "ES", "ZH"]
   positions?: PositionInfo[];   // current roster — passed after DB update
+  isUberShift?: boolean;
 }
 
 type Attendee = { email?: string | null; organizer?: boolean | null; responseStatus?: string | null };
@@ -84,9 +85,16 @@ function buildDescription(info: ShiftCalInfo): string {
     `Return + park:       ${minutesTo12(driveEnd)}`,
     "",
     "── Meeting Location ────────────────",
-    "Meet outside the Leavey Garage on the side of the building",
-    "next to Aruppe and Reiss. Once everyone is assembled outside,",
-    "you will retrieve the van from the garage.",
+    ...(info.isUberShift
+      ? [
+          "Meet at the Front Gates of Georgetown University.",
+          "An Uber will be arranged for transportation to the clinic.",
+        ]
+      : [
+          "Meet outside the Leavey Garage on the side of the building",
+          "next to Aruppe and Reiss. Once everyone is assembled outside,",
+          "you will retrieve the van from the garage.",
+        ]),
     "",
   ];
 
@@ -141,6 +149,7 @@ function buildDescription(info: ShiftCalInfo): string {
     "",
     "Georgetown Medical Interpreters",
     "georgetownmedicalinterpreters.org",
+    "",
     "In the event of an issue with the website or Google Calendar, text Jack Geithman at (425) 877-4701.",
   );
 

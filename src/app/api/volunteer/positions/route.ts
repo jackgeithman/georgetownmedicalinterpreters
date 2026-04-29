@@ -87,15 +87,26 @@ export async function POST(req: NextRequest) {
   if (alreadyIn) return NextResponse.json({ error: "You are already signed up for this shift" }, { status: 409 });
 
   let assignedLanguage: string;
+  const isUberMode = position.shift.isUberShift;
 
-  if (position.isDriver) {
-    // Driver seat: need driver clearance + language clearance
+  if (position.isDriver && !isUberMode) {
+    // Van mode driver seat: need driver clearance + language clearance
     if (!profile.driverCleared) {
       return NextResponse.json({ error: "You do not have driver clearance" }, { status: 403 });
     }
 
     // Determine which language the driver will interpret
-    const eligibleLanguages = position.shift.languagesNeeded.filter((lang) =>
+    // Exclude languages already held by filled non-driver seats (post-Uber→Van state)
+    const filledLanguages = position.shift.positions
+      .filter((p) => !p.isDriver && p.status === "FILLED" && p.languageCode)
+      .map((p) => p.languageCode!);
+    const availableLanguages = [...position.shift.languagesNeeded];
+    for (const fl of filledLanguages) {
+      const idx = availableLanguages.indexOf(fl);
+      if (idx !== -1) availableLanguages.splice(idx, 1);
+    }
+
+    const eligibleLanguages = availableLanguages.filter((lang) =>
       user.roles.includes(`LANG_${lang}_CLEARED`),
     );
     if (eligibleLanguages.length === 0) {
@@ -107,7 +118,6 @@ export async function POST(req: NextRequest) {
     if (eligibleLanguages.length === 1) {
       assignedLanguage = eligibleLanguages[0];
     } else {
-      // Driver has multiple eligible languages — they must specify
       if (!languageCode || !eligibleLanguages.includes(languageCode)) {
         return NextResponse.json({
           error: "multiple_languages",
@@ -118,7 +128,7 @@ export async function POST(req: NextRequest) {
       assignedLanguage = languageCode;
     }
   } else {
-    // Interpreter seat: language already assigned, just verify clearance
+    // Interpreter seat (or Uber mode seat 1): language already assigned, verify clearance
     if (!position.languageCode) {
       return NextResponse.json({ error: "Position language not yet assigned — driver must sign up first" }, { status: 409 });
     }
@@ -130,38 +140,36 @@ export async function POST(req: NextRequest) {
     assignedLanguage = position.languageCode;
   }
 
-  // Transactionally fill the position and unlock remaining seats if this is the driver
+  // Transactionally fill the position and unlock remaining seats if this is the Van-mode driver
   await prisma.$transaction(async (tx) => {
-    // Fill the position
     await tx.shiftPosition.update({
       where: { id: positionId },
-      data: {
-        volunteerId: profile!.id,
-        languageCode: assignedLanguage,
-        status: "FILLED",
-        signedUpAt: new Date(),
-      },
+      data: { volunteerId: profile!.id, languageCode: assignedLanguage, status: "FILLED", signedUpAt: new Date() },
     });
 
-    if (position.isDriver) {
-      // Assign remaining languages to positions 2+ and unlock them
-      const remaining = position.shift.languagesNeeded.filter((l) => l !== assignedLanguage);
-      // Re-add the driver's language at end if there are duplicates (e.g. 2 Spanish needed)
+    if (position.isDriver && !isUberMode) {
+      // Distribute remaining languages only to LOCKED positions (skip already-filled seats)
       const otherNeeded = [...position.shift.languagesNeeded];
       const driverLangIdx = otherNeeded.findIndex((l) => l === assignedLanguage);
       otherNeeded.splice(driverLangIdx !== -1 ? driverLangIdx : 0, 1);
 
-      const otherPositions = position.shift.positions
-        .filter((p) => !p.isDriver)
+      // Remove languages already claimed by filled seats
+      const filledLangs = position.shift.positions
+        .filter((p) => !p.isDriver && p.status === "FILLED" && p.languageCode)
+        .map((p) => p.languageCode!);
+      for (const fl of filledLangs) {
+        const idx = otherNeeded.indexOf(fl);
+        if (idx !== -1) otherNeeded.splice(idx, 1);
+      }
+
+      const lockedPositions = position.shift.positions
+        .filter((p) => !p.isDriver && p.status === "LOCKED")
         .sort((a, b) => a.positionNumber - b.positionNumber);
 
-      for (let i = 0; i < otherPositions.length; i++) {
+      for (let i = 0; i < lockedPositions.length; i++) {
         await tx.shiftPosition.update({
-          where: { id: otherPositions[i].id },
-          data: {
-            languageCode: otherNeeded[i] ?? null,
-            status: "OPEN",
-          },
+          where: { id: lockedPositions[i].id },
+          data: { languageCode: otherNeeded[i] ?? null, status: "OPEN" },
         });
       }
     }

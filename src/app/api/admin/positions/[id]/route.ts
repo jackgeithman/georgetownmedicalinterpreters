@@ -68,18 +68,27 @@ export async function PATCH(
       data: { volunteerId: profile!.id, languageCode: assignedLanguage, status: "FILLED", signedUpAt: new Date() },
     });
 
-    if (position.isDriver) {
+    if (position.isDriver && !position.shift.isUberShift) {
+      // Distribute remaining languages only to LOCKED positions (skip already-filled seats)
       const otherNeeded = [...position.shift.languagesNeeded];
       const driverLangIdx = otherNeeded.findIndex((l) => l === assignedLanguage);
       otherNeeded.splice(driverLangIdx !== -1 ? driverLangIdx : 0, 1);
 
-      const otherPositions = position.shift.positions
-        .filter((p) => !p.isDriver)
+      const filledLangs = position.shift.positions
+        .filter((p) => !p.isDriver && p.status === "FILLED" && p.languageCode)
+        .map((p) => p.languageCode!);
+      for (const fl of filledLangs) {
+        const idx = otherNeeded.indexOf(fl);
+        if (idx !== -1) otherNeeded.splice(idx, 1);
+      }
+
+      const lockedPositions = position.shift.positions
+        .filter((p) => !p.isDriver && p.status === "LOCKED")
         .sort((a, b) => a.positionNumber - b.positionNumber);
 
-      for (let i = 0; i < otherPositions.length; i++) {
+      for (let i = 0; i < lockedPositions.length; i++) {
         await tx.shiftPosition.update({
-          where: { id: otherPositions[i].id },
+          where: { id: lockedPositions[i].id },
           data: { languageCode: otherNeeded[i] ?? null, status: "OPEN" },
         });
       }

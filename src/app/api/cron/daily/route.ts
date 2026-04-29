@@ -52,7 +52,7 @@ export async function GET(req: Request) {
       shift: { status: "ACTIVE", date: { gte: dayStart, lte: dayEnd } },
     },
     include: {
-      shift: { include: { clinic: true } },
+      shift: { include: { clinic: true, positions: false } },
       volunteer: { include: { user: true, notifPrefs: true } },
     },
   });
@@ -89,6 +89,7 @@ export async function GET(req: Request) {
         subBlockHour: minutesToHour(position.shift.volunteerStart),
         language: langLabel(position.languageCode ?? ""),
         hoursUntil: 24,
+        isUberShift: position.shift.isUberShift,
       });
       await prisma.notifLog.create({
         data: { type: "REMINDER_24H", recipientEmail: email, positionId: position.id },

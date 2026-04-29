@@ -29,6 +29,9 @@ type AdminShift = {
   languagesNeeded: string[];
   notes: string | null;
   status: string;
+  isUberShift: boolean;
+  uberBooked: boolean;
+  uberBookedBy: string | null;
   clinic: { id: string; name: string; address: string };
   postedBy: { name: string | null; email: string };
   positions: Position[];
@@ -142,6 +145,12 @@ export default function BrowsePage() {
   // Cancel shift confirmation
   const [cancelTarget, setCancelTarget] = useState<AdminShift | null>(null);
   const [cancelInput, setCancelInput] = useState("");
+
+  // Uber mode confirmation modal
+  const [uberTarget, setUberTarget] = useState<AdminShift | null>(null);
+  const [uberBookedByInput, setUberBookedByInput] = useState("");
+  const [uberLoading, setUberLoading] = useState(false);
+  const [uberError, setUberError] = useState("");
 
   // Admin: assign volunteer modal
   const [assignModal, setAssignModal] = useState<{
@@ -325,6 +334,55 @@ export default function BrowsePage() {
     setFormLoading(false);
   };
 
+  // ── Admin: Uber Mode ─────────────────────────────────────────────────────
+
+  const confirmSwitchToUber = async () => {
+    if (!uberTarget || !uberBookedByInput.trim()) return;
+    setUberLoading(true);
+    setUberError("");
+    const res = await fetch(`/api/admin/shifts/${uberTarget.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ isUberShift: true, uberBookedBy: uberBookedByInput.trim() }),
+    });
+    if (res.ok) {
+      setUberTarget(null);
+      setUberBookedByInput("");
+      await fetchData();
+    } else {
+      const err = await res.json().catch(() => ({}));
+      setUberError((err as { error?: string }).error ?? "Failed to switch to Uber.");
+    }
+    setUberLoading(false);
+  };
+
+  const switchToVan = async (shift: AdminShift) => {
+    setActionLoading(`van-${shift.id}`);
+    const res = await fetch(`/api/admin/shifts/${shift.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ isUberShift: false }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      alert((err as { error?: string }).error ?? "Failed to switch to Van.");
+    } else {
+      await fetchData();
+    }
+    setActionLoading(null);
+  };
+
+  const toggleUberBooked = async (shift: AdminShift) => {
+    setActionLoading(`booked-${shift.id}`);
+    await fetch(`/api/admin/shifts/${shift.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ uberBooked: !shift.uberBooked }),
+    });
+    await fetchData();
+    setActionLoading(null);
+  };
+
   // ── Admin: Cancel Shift ───────────────────────────────────────────────────
 
   const confirmCancelShift = async () => {
@@ -503,6 +561,9 @@ export default function BrowsePage() {
             <div>
               <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
                 <div style={{ fontSize: "1.1rem", fontWeight: 700, color: "var(--navy)" }}>{shift.clinic.name}</div>
+                {shift.isUberShift && (
+                  <span style={{ fontSize: "0.7rem", fontWeight: 800, padding: "3px 10px", borderRadius: "99px", background: "#111827", color: "#fff", letterSpacing: "0.05em" }}>UBER</span>
+                )}
                 {Object.entries(langCounts).map(([lang, { filled, total }]) => {
                   const allFilled = filled >= total;
                   return (
@@ -547,11 +608,31 @@ export default function BrowsePage() {
                 <span style={{ background: "var(--gray-200)", color: "var(--gray-600)", fontSize: "0.7rem", fontWeight: 600, padding: "4px 10px", borderRadius: "99px", textTransform: "uppercase" }}>Past</span>
               ) : (
                 <>
-                  <div style={{ display: "flex", gap: "6px" }}>
+                  <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", justifyContent: "flex-end" }}>
                     <button
                       onClick={() => openEdit(shift)}
                       style={{ fontSize: "0.75rem", padding: "4px 10px", background: "#EEF2FF", color: "#4338CA", border: "1px solid #C7D2FE", borderRadius: "6px", cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}
                     >Edit</button>
+                    {!shift.isUberShift && (
+                      <button
+                        onClick={() => { setUberTarget(shift); setUberBookedByInput(""); setUberError(""); }}
+                        style={{ fontSize: "0.75rem", padding: "4px 10px", background: "#111827", color: "#fff", border: "none", borderRadius: "6px", cursor: "pointer", fontFamily: "'DM Sans', sans-serif", fontWeight: 600 }}
+                      >Switch to Uber</button>
+                    )}
+                    {shift.isUberShift && (
+                      <>
+                        <button
+                          disabled={actionLoading === `booked-${shift.id}`}
+                          onClick={() => toggleUberBooked(shift)}
+                          style={{ fontSize: "0.75rem", padding: "4px 10px", background: shift.uberBooked ? "#DCFCE7" : "#FEF9C3", color: shift.uberBooked ? "#15803D" : "#854D0E", border: `1px solid ${shift.uberBooked ? "#86EFAC" : "#FDE047"}`, borderRadius: "6px", cursor: "pointer", fontFamily: "'DM Sans', sans-serif", fontWeight: 600 }}
+                        >{shift.uberBooked ? "✓ Uber Booked" : "Mark Uber Booked"}</button>
+                        <button
+                          disabled={actionLoading === `van-${shift.id}`}
+                          onClick={() => switchToVan(shift)}
+                          style={{ fontSize: "0.75rem", padding: "4px 10px", background: "#F0FDF4", color: "#166534", border: "1px solid #86EFAC", borderRadius: "6px", cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}
+                        >Switch to Van</button>
+                      </>
+                    )}
                     <button
                       onClick={() => { setCancelTarget(shift); setCancelInput(""); }}
                       style={{ fontSize: "0.75rem", padding: "4px 10px", background: "#FEF2F2", color: "#DC2626", border: "1px solid #FECACA", borderRadius: "6px", cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}
@@ -566,6 +647,31 @@ export default function BrowsePage() {
               {shift.notes}
             </div>
           )}
+          {/* Uber booking status */}
+          {shift.isUberShift && !isPast && (
+            <div style={{ padding: "10px 22px", background: shift.uberBooked ? "#F0FDF4" : "#FEF9C3", borderBottom: "1px solid var(--card-border)", display: "flex", alignItems: "center", gap: "8px" }}>
+              <span style={{ fontSize: "0.82rem", fontWeight: 700, color: shift.uberBooked ? "#15803D" : "#854D0E" }}>
+                {shift.uberBooked ? "✓ Uber booked" : "⚠ Uber not yet booked"}
+              </span>
+              {shift.uberBookedBy && (
+                <span style={{ fontSize: "0.78rem", color: "#374151" }}>— Booker: {shift.uberBookedBy}</span>
+              )}
+              <span style={{ fontSize: "0.75rem", color: "#374151", marginLeft: "4px" }}>· Meet at Front Gates</span>
+            </div>
+          )}
+          {/* Red alert: post-Uber→Van, no driver but interpreters are signed up */}
+          {!shift.isUberShift && !isPast && (() => {
+            const seat1 = shift.positions.find((p) => p.isDriver);
+            const hasFilledInterpreters = shift.positions.some((p) => !p.isDriver && p.status === "FILLED");
+            if (!seat1 || seat1.status !== "OPEN" || !hasFilledInterpreters) return null;
+            return (
+              <div style={{ padding: "10px 22px", background: "#FEF2F2", borderBottom: "1px solid #FECACA", display: "flex", alignItems: "center", gap: "8px" }}>
+                <span style={{ fontSize: "0.82rem", fontWeight: 700, color: "#DC2626" }}>
+                  🚨 No driver assigned — assign a driver immediately
+                </span>
+              </div>
+            );
+          })()}
           {/* Positions */}
           {shift.positions.map((pos) => {
             const st = posStatus(pos);
@@ -574,12 +680,14 @@ export default function BrowsePage() {
                 <div style={{ width: "9px", height: "9px", borderRadius: "50%", background: pos.status === "FILLED" ? "var(--green)" : pos.status === "OPEN" ? "#3B82F6" : "var(--gray-400)", flexShrink: 0 }} />
                 <div style={{ minWidth: "110px" }}>
                   <span style={{ fontSize: "0.82rem", fontWeight: 700, color: "#111827" }}>
-                    {pos.isDriver ? "Driver" : `Seat ${pos.positionNumber}`}
+                    {pos.isDriver && shift.isUberShift
+                      ? <span style={{ display: "inline-flex", alignItems: "center", gap: "5px" }}><span style={{ fontSize: "0.72rem", fontWeight: 800, background: "#111827", color: "#fff", padding: "1px 7px", borderRadius: "99px", letterSpacing: "0.04em" }}>UBER</span></span>
+                      : pos.isDriver ? "Driver" : `Seat ${pos.positionNumber}`}
                   </span>
                   {pos.languageCode && (
                     <span style={{ marginLeft: "6px", fontSize: "0.75rem", color: "#374151" }}>{langName(pos.languageCode)}</span>
                   )}
-                  {pos.isDriver && !pos.languageCode && pos.status === "OPEN" && (() => {
+                  {pos.isDriver && !pos.languageCode && pos.status === "OPEN" && !shift.isUberShift && (() => {
                     const uniqueLangs = [...new Set(shift.languagesNeeded)];
                     const label = uniqueLangs.map(langName).join(" or ");
                     return <span style={{ marginLeft: "6px", fontSize: "0.75rem", color: "#374151" }}>({label})</span>;
@@ -872,6 +980,26 @@ export default function BrowsePage() {
                     placeholder="Special instructions, parking info, etc."
                   />
                 </div>
+                {/* Displacement warning — shown when editing reduces languages and filled positions will be removed */}
+                {editTarget && (() => {
+                  const displaced = editTarget.positions.filter(
+                    (p) => p.status === "FILLED" && p.positionNumber > formLangs.length,
+                  );
+                  if (displaced.length === 0) return null;
+                  const names = displaced
+                    .map((p) => p.volunteer?.user?.name ?? p.volunteer?.user?.email ?? "Unknown volunteer")
+                    .join(", ");
+                  return (
+                    <div style={{ background: "#FEF9C3", border: "1.5px solid #FDE047", borderRadius: "9px", padding: "10px 14px" }}>
+                      <p style={{ fontSize: "0.82rem", fontWeight: 700, color: "#854D0E", margin: "0 0 2px 0" }}>
+                        ⚠ {displaced.length} volunteer{displaced.length !== 1 ? "s" : ""} will be removed
+                      </p>
+                      <p style={{ fontSize: "0.78rem", color: "#854D0E", margin: 0 }}>
+                        {names} — they will be notified and removed from the shift.
+                      </p>
+                    </div>
+                  );
+                })()}
                 {formError && <p style={{ fontSize: "0.82rem", color: "#DC2626" }}>{formError}</p>}
                 <div style={{ display: "flex", gap: "8px", paddingTop: "4px" }}>
                   <button
@@ -1209,6 +1337,61 @@ export default function BrowsePage() {
                   onClick={confirmDriverSignUp}
                   style={{ flex: 1, padding: "10px", fontSize: "0.875rem", background: "var(--blue)", color: "#fff", border: "none", borderRadius: "10px", cursor: "pointer", opacity: !driverLangChoice ? 0.4 : 1, fontFamily: "'DM Sans', sans-serif", fontWeight: 600 }}
                 >{actionLoading === driverLangPicker.positionId ? "Signing up..." : "Confirm Sign-Up"}</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Uber confirmation modal */}
+      {uberTarget && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 300, padding: "16px" }}>
+          <div style={{ background: "var(--card-bg)", borderRadius: "16px", boxShadow: "0 8px 32px rgba(0,0,0,.2)", width: "100%", maxWidth: "480px" }}>
+            <div style={{ padding: "16px 24px", borderBottom: "1.5px solid var(--card-border)", display: "flex", alignItems: "center", gap: "10px" }}>
+              <span style={{ fontSize: "0.72rem", fontWeight: 800, background: "#111827", color: "#fff", padding: "2px 8px", borderRadius: "99px" }}>UBER</span>
+              <h3 style={{ fontSize: "0.95rem", fontWeight: 700, color: "var(--gray-900)", margin: 0 }}>Switch to Uber — {uberTarget.clinic.name}</h3>
+            </div>
+            <div style={{ padding: "20px 24px", display: "flex", flexDirection: "column", gap: "14px" }}>
+              <div style={{ background: "#FEF2F2", border: "1.5px solid #FECACA", borderRadius: "10px", padding: "12px 16px" }}>
+                <p style={{ fontSize: "0.83rem", fontWeight: 700, color: "#991B1B", margin: "0 0 6px 0" }}>Read before proceeding</p>
+                <p style={{ fontSize: "0.8rem", color: "#7F1D1D", margin: "0 0 6px 0", lineHeight: 1.5 }}>
+                  Switching to Uber is hard to undo. All interpreter seats will open immediately. Make sure you have a plan before proceeding.
+                </p>
+                <p style={{ fontSize: "0.8rem", color: "#7F1D1D", margin: "0 0 6px 0", lineHeight: 1.5 }}>
+                  If a driver shows up without signing up and all seats are full, you either stick with the Uber or call a volunteer, ask if you can remove them, and then assign the driver.
+                </p>
+                <p style={{ fontSize: "0.8rem", color: "#7F1D1D", margin: 0, lineHeight: 1.5 }}>
+                  Volunteers will be directed to meet at the <strong>Front Gates of Georgetown University</strong> instead of the Leavey Garage.
+                </p>
+              </div>
+              <div style={{ background: "#EFF6FF", border: "1.5px solid #BFDBFE", borderRadius: "10px", padding: "10px 14px" }}>
+                <p style={{ fontSize: "0.8rem", fontWeight: 600, color: "#1E40AF", margin: 0 }}>
+                  Set pick-up location to: <strong>Front Gates of Georgetown University</strong>
+                </p>
+              </div>
+              <div>
+                <label style={{ fontSize: "0.78rem", fontWeight: 700, color: "#374151", display: "block", marginBottom: "6px" }}>
+                  Who is booking the Uber? <span style={{ color: "#DC2626" }}>*</span>
+                </label>
+                <input
+                  autoFocus
+                  type="text"
+                  value={uberBookedByInput}
+                  onChange={(e) => setUberBookedByInput(e.target.value)}
+                  placeholder="Full name of person responsible"
+                  style={{ width: "100%", padding: "9px 12px", fontSize: "0.875rem", border: "1.5px solid var(--card-border)", borderRadius: "9px", background: "var(--card-bg)", color: "var(--gray-900)", outline: "none", fontFamily: "'DM Sans', sans-serif", boxSizing: "border-box" }}
+                />
+              </div>
+              {uberError && <p style={{ fontSize: "0.82rem", color: "#DC2626", margin: 0 }}>{uberError}</p>}
+              <div style={{ display: "flex", gap: "8px" }}>
+                <button
+                  onClick={() => { setUberTarget(null); setUberBookedByInput(""); setUberError(""); }}
+                  style={{ flex: 1, padding: "10px", fontSize: "0.875rem", border: "1.5px solid var(--card-border)", color: "#111827", borderRadius: "10px", background: "none", cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}
+                >Cancel</button>
+                <button
+                  disabled={uberLoading || !uberBookedByInput.trim()}
+                  onClick={confirmSwitchToUber}
+                  style={{ flex: 1, padding: "10px", fontSize: "0.875rem", background: "#111827", color: "#fff", border: "none", borderRadius: "10px", cursor: "pointer", opacity: (uberLoading || !uberBookedByInput.trim()) ? 0.5 : 1, fontFamily: "'DM Sans', sans-serif", fontWeight: 700 }}
+                >{uberLoading ? "Switching..." : "Switch to Uber"}</button>
               </div>
             </div>
           </div>
