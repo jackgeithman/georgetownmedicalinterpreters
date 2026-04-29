@@ -623,18 +623,11 @@ export default function BrowsePage() {
                       >Switch to Uber</button>
                     )}
                     {shift.isUberShift && (
-                      <>
-                        <button
-                          disabled={actionLoading === `booked-${shift.id}`}
-                          onClick={() => toggleUberBooked(shift)}
-                          style={{ fontSize: "0.75rem", padding: "4px 10px", background: shift.uberBooked ? "#DCFCE7" : "#FEF9C3", color: shift.uberBooked ? "#15803D" : "#854D0E", border: `1px solid ${shift.uberBooked ? "#86EFAC" : "#FDE047"}`, borderRadius: "6px", cursor: "pointer", fontFamily: "'DM Sans', sans-serif", fontWeight: 600 }}
-                        >{shift.uberBooked ? "✓ Uber Booked" : "Mark Uber Booked"}</button>
-                        <button
-                          disabled={actionLoading === `van-${shift.id}`}
-                          onClick={() => switchToVan(shift)}
-                          style={{ fontSize: "0.75rem", padding: "4px 10px", background: "#F0FDF4", color: "#166534", border: "1px solid #86EFAC", borderRadius: "6px", cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}
-                        >Switch to Van</button>
-                      </>
+                      <button
+                        disabled={actionLoading === `van-${shift.id}`}
+                        onClick={() => switchToVan(shift)}
+                        style={{ fontSize: "0.75rem", padding: "4px 10px", background: "#F0FDF4", color: "#166534", border: "1px solid #86EFAC", borderRadius: "6px", cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}
+                      >Switch to Van</button>
                     )}
                     <button
                       onClick={() => { setCancelTarget(shift); setCancelInput(""); }}
@@ -652,17 +645,15 @@ export default function BrowsePage() {
           )}
           {/* Uber booking status */}
           {shift.isUberShift && !isPast && (
-            <div style={{ padding: "10px 22px", background: shift.uberBooked ? "#F0FDF4" : "#FEF9C3", borderBottom: "1px solid var(--card-border)", display: "flex", alignItems: "center", gap: "8px" }}>
-              <span style={{ fontSize: "0.82rem", fontWeight: 700, color: shift.uberBooked ? "#15803D" : "#854D0E" }}>
-                {shift.uberBooked ? "✓ Uber booked" : "⚠ Uber not yet booked"}
-              </span>
+            <div style={{ padding: "10px 22px", background: "#FEF9C3", borderBottom: "1px solid var(--card-border)", display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+              <span style={{ fontSize: "0.82rem", fontWeight: 700, color: "#854D0E" }}>🚗 Uber</span>
               {shift.uberBookedBy && (
                 <span style={{ fontSize: "0.78rem", color: "#374151" }}>
-                  — There: {shift.uberBookedBy}
-                  {shift.uberBookedByReturn && ` · Back: ${shift.uberBookedByReturn}`}
+                  There: <strong>{shift.uberBookedBy}</strong>
+                  {shift.uberBookedByReturn && <> · Back: <strong>{shift.uberBookedByReturn}</strong></>}
                 </span>
               )}
-              <span style={{ fontSize: "0.75rem", color: "#374151", marginLeft: "4px" }}>· Meet at Front Gates</span>
+              <span style={{ fontSize: "0.75rem", color: "#374151" }}>· Meet at Front Gates</span>
             </div>
           )}
           {/* Red alert: post-Uber→Van, no driver but interpreters are signed up */}
@@ -679,17 +670,28 @@ export default function BrowsePage() {
             );
           })()}
           {/* Positions */}
-          {shift.positions.map((pos) => {
+          {/* In Uber mode: prepend a decorative "Uber is the driver" row */}
+          {shift.isUberShift && (
+            <div style={{ display: "flex", alignItems: "center", padding: "12px 22px", borderBottom: "1px solid var(--card-border)", gap: "14px", background: "#111827" }}>
+              <div style={{ width: "9px", height: "9px", borderRadius: "50%", background: "#22C55E", flexShrink: 0 }} />
+              <div style={{ minWidth: "110px", display: "flex", alignItems: "center", gap: "8px" }}>
+                <span style={{ fontSize: "1.05rem", fontWeight: 900, color: "#fff", letterSpacing: "-0.04em" }}>Uber</span>
+              </div>
+              <span style={{ fontSize: "0.72rem", fontWeight: 600, padding: "2px 8px", borderRadius: "99px", background: "#22C55E", color: "#fff" }}>Driver</span>
+            </div>
+          )}
+          {shift.positions.map((pos, idx) => {
             const st = posStatus(pos);
+            // In Uber mode: all positions are interpreter seats numbered 1, 2, 3...
+            // In Van mode: pos 1 is "Driver", pos 2+ are "Seat 2", "Seat 3"...
+            const seatLabel = shift.isUberShift
+              ? `Seat ${idx + 1}`
+              : pos.isDriver ? "Driver" : `Seat ${pos.positionNumber}`;
             return (
               <div key={pos.id} style={{ display: "flex", alignItems: "center", padding: "12px 22px", borderBottom: "1px solid var(--card-border)", gap: "14px", flexWrap: "wrap" }}>
                 <div style={{ width: "9px", height: "9px", borderRadius: "50%", background: pos.status === "FILLED" ? "var(--green)" : pos.status === "OPEN" ? "#3B82F6" : "var(--gray-400)", flexShrink: 0 }} />
                 <div style={{ minWidth: "110px" }}>
-                  <span style={{ fontSize: "0.82rem", fontWeight: 700, color: "#111827" }}>
-                    {pos.isDriver && shift.isUberShift
-                      ? <span style={{ display: "inline-flex", alignItems: "center", gap: "5px" }}><span style={{ fontSize: "0.72rem", fontWeight: 800, background: "#111827", color: "#fff", padding: "1px 7px", borderRadius: "99px", letterSpacing: "0.04em" }}>UBER</span></span>
-                      : pos.isDriver ? "Driver" : `Seat ${pos.positionNumber}`}
-                  </span>
+                  <span style={{ fontSize: "0.82rem", fontWeight: 700, color: "#111827" }}>{seatLabel}</span>
                   {pos.languageCode && (
                     <span style={{ marginLeft: "6px", fontSize: "0.75rem", color: "#374151" }}>{langName(pos.languageCode)}</span>
                   )}
@@ -723,12 +725,10 @@ export default function BrowsePage() {
                         style={{ fontSize: "0.72rem", padding: "2px 8px", background: "#FEF2F2", color: "#DC2626", border: "1px solid #FECACA", borderRadius: "5px", cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}
                       >Remove</button>
                     ) : pos.status === "OPEN" ? (
-                      <>
-                        <button
-                          onClick={() => openAssignModal(pos, shift)}
-                          style={{ fontSize: "0.72rem", padding: "2px 8px", background: "#EEF2FF", color: "#4338CA", border: "1px solid #C7D2FE", borderRadius: "5px", cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}
-                        >Assign</button>
-                      </>
+                      <button
+                        onClick={() => openAssignModal(pos, shift)}
+                        style={{ fontSize: "0.72rem", padding: "2px 8px", background: "#EEF2FF", color: "#4338CA", border: "1px solid #C7D2FE", borderRadius: "5px", cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}
+                      >Assign</button>
                     ) : null}
                   </div>
                 )}
