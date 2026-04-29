@@ -1153,15 +1153,10 @@ export default function BrowsePage() {
                     Switching to Uber is hard to undo. All interpreter seats will open immediately. Make sure you have a plan before proceeding.
                   </p>
                   <p style={{ fontSize: "0.8rem", color: "#7F1D1D", margin: "0 0 6px 0", lineHeight: 1.5 }}>
-                    If a driver shows up without signing up and all seats are full, you either stick with the Uber or call a volunteer, ask if you can remove them, and then assign the driver.
+                    If a driver becomes available last minute and all seats are full, you either stick with the Uber or call a volunteer, ask if you can remove them, and then assign the driver.
                   </p>
                   <p style={{ fontSize: "0.8rem", color: "#7F1D1D", margin: 0, lineHeight: 1.5 }}>
                     Volunteers will be directed to meet at the <strong>Front Gates of Georgetown University</strong> instead of the Leavey Garage.
-                  </p>
-                </div>
-                <div style={{ background: "#EFF6FF", border: "1.5px solid #BFDBFE", borderRadius: "10px", padding: "10px 14px" }}>
-                  <p style={{ fontSize: "0.8rem", fontWeight: 600, color: "#1E40AF", margin: 0 }}>
-                    Set pick-up location to: <strong>Front Gates of Georgetown University</strong>
                   </p>
                 </div>
                 <div>
@@ -1176,6 +1171,11 @@ export default function BrowsePage() {
                     placeholder="Full name of person responsible"
                     style={{ width: "100%", padding: "9px 12px", fontSize: "0.875rem", border: "1.5px solid var(--card-border)", borderRadius: "9px", background: "var(--card-bg)", color: "var(--gray-900)", outline: "none", fontFamily: "'DM Sans', sans-serif", boxSizing: "border-box" }}
                   />
+                </div>
+                <div style={{ background: "#EFF6FF", border: "1.5px solid #BFDBFE", borderRadius: "10px", padding: "10px 14px" }}>
+                  <p style={{ fontSize: "0.8rem", fontWeight: 600, color: "#1E40AF", margin: 0 }}>
+                    Set pick-up location to: <strong>Front Gates of Georgetown University</strong>
+                  </p>
                 </div>
                 {uberError && <p style={{ fontSize: "0.82rem", color: "#DC2626", margin: 0 }}>{uberError}</p>}
                 <div style={{ display: "flex", gap: "8px" }}>
