@@ -58,21 +58,15 @@ function shiftTimeBlock(params: {
   volunteerStart: number;
   volunteerEnd: number;
   travelMinutes: number;
-  keyRetrievalTime?: number | null;
-  keyReturnTime?: number | null;
 }): string {
   const { volunteerStart, volunteerEnd, travelMinutes } = params;
-  const keyRetrieval = params.keyRetrievalTime ?? (volunteerStart - travelMinutes - 15);
-  const driveStart   = volunteerStart - travelMinutes;
-  const driveEnd     = volunteerEnd   + travelMinutes;
-  const keyReturn    = params.keyReturnTime    ?? (volunteerEnd   + travelMinutes + 15);
+  const driveStart = volunteerStart - travelMinutes;
+  const driveEnd   = volunteerEnd   + travelMinutes;
 
   return table(
-    detail("Key retrieval (driver only)", minutesTo12(keyRetrieval)),
-    detail("Depart Georgetown (driver only)", minutesTo12(driveStart)),
+    detail("Depart Georgetown", minutesTo12(driveStart)),
     detail("Interpreting", `${minutesTo12(volunteerStart)} &ndash; ${minutesTo12(volunteerEnd)}`),
-    detail("Return + park (driver only)", minutesTo12(driveEnd)),
-    detail("Return key by (driver only)", minutesTo12(keyReturn)),
+    detail("Return + park", minutesTo12(driveEnd)),
   );
 }
 

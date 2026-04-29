@@ -51,22 +51,20 @@ function buildShiftEventBody(info: ShiftCalInfo, attendees: Attendee[] = []) {
   const senderEmail = process.env.GOOGLE_GMAIL_SENDER_EMAIL!;
   const dateStr = info.date.toISOString().slice(0, 10);
 
-  const keyRetrieval = info.keyRetrievalTime ?? (info.volunteerStart - info.travelMinutes - 15);
-  const driveStart   = info.volunteerStart - info.travelMinutes;
-  const driveEnd     = info.volunteerEnd   + info.travelMinutes;
-  const keyReturn    = info.keyReturnTime  ?? (info.volunteerEnd + info.travelMinutes + 15);
+  const driveStart = info.volunteerStart - info.travelMinutes;
+  const driveEnd   = info.volunteerEnd   + info.travelMinutes;
 
-  const startStr = `${dateStr}T${minutesToTimeStr(keyRetrieval)}`;
-  const endStr   = `${dateStr}T${minutesToTimeStr(keyReturn)}`;
+  const startStr = `${dateStr}T${minutesToTimeStr(driveStart)}`;
+  const endStr   = `${dateStr}T${minutesToTimeStr(driveEnd)}`;
 
   const lines = [
+    "If you need to cancel, please do so as early as possible via the volunteer dashboard.",
+    "",
     "── Schedule ──────────────────────────────────────",
-    `Key retrieval (DRIVER ONLY):      ${minutesTo12(keyRetrieval)}`,
-    `Depart Georgetown (DRIVER ONLY):  ${minutesTo12(driveStart)}`,
-    `Interpreting starts:              ${minutesTo12(info.volunteerStart)}`,
-    `Interpreting ends:                ${minutesTo12(info.volunteerEnd)}`,
-    `Return + park (DRIVER ONLY):      ${minutesTo12(driveEnd)}`,
-    `Return key by (DRIVER ONLY):      ${minutesTo12(keyReturn)}`,
+    `Depart Georgetown:   ${minutesTo12(driveStart)}`,
+    `Interpreting starts: ${minutesTo12(info.volunteerStart)}`,
+    `Interpreting ends:   ${minutesTo12(info.volunteerEnd)}`,
+    `Return + park:       ${minutesTo12(driveEnd)}`,
     "",
     "── Meeting Location ──────────────────────────────",
     "Meet outside the Leavey Garage on the side of the building",
@@ -80,8 +78,7 @@ function buildShiftEventBody(info: ShiftCalInfo, attendees: Attendee[] = []) {
     "",
     "Georgetown Medical Interpreters",
     "georgetownmedicalinterpreters.org",
-    "",
-    "If you need to cancel, please do so as early as possible via the volunteer dashboard.",
+    "In the event of an issue with the website or Google Calendar, text Jack Geithman at (425) 877-4701.",
   ];
 
   // Ensure organizer is always present

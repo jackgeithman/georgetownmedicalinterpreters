@@ -518,13 +518,10 @@ export default function BrowsePage() {
                   <span style={{ fontSize: "0.95rem", fontWeight: 600, color: "#111827" }}>{fmtDate(shift.date)}</span>
                 </div>
                 <div style={{ display: "flex", flexDirection: "column", gap: "3px" }}>
-                  <span style={{ fontSize: "0.68rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.09em", color: "#111827" }}>Time Commitment</span>
+                  <span style={{ fontSize: "0.68rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.09em", color: "#111827" }}>Depart → Return + Park</span>
                   <span style={{ fontSize: "0.95rem", fontWeight: 600, color: "#111827" }}>
-                    {(() => {
-                      const kr = shift.keyRetrievalTime ?? (shift.volunteerStart - shift.travelMinutes - 15);
-                      const kret = shift.keyReturnTime ?? (shift.volunteerEnd + shift.travelMinutes + 15);
-                      return <>{fmtMin(kr)} – {fmtMin(kret)}<span style={{ fontSize: "0.78rem", fontWeight: 400, marginLeft: "5px" }}>({Math.round((kret - kr) / 60 * 10) / 10} hrs)</span></>;
-                    })()}
+                    {fmtMin(shift.volunteerStart - shift.travelMinutes)} – {fmtMin(shift.volunteerEnd + shift.travelMinutes)}
+                    <span style={{ fontSize: "0.78rem", fontWeight: 400, marginLeft: "5px" }}>({Math.round((shift.volunteerEnd + shift.travelMinutes - (shift.volunteerStart - shift.travelMinutes)) / 60 * 10) / 10} hrs)</span>
                   </span>
                 </div>
                 <div style={{ display: "flex", flexDirection: "column", gap: "3px" }}>
@@ -1091,10 +1088,10 @@ export default function BrowsePage() {
                         <span style={{ fontSize: "0.95rem", fontWeight: 600, color: "var(--gray-900)" }}>{fmtDate(shift.date)}</span>
                       </div>
                       <div style={{ display: "flex", flexDirection: "column", gap: "3px" }}>
-                        <span style={{ fontSize: "0.68rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.09em", color: "#111827" }}>Full Time Commitment</span>
+                        <span style={{ fontSize: "0.68rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.09em", color: "#111827" }}>Depart → Return + Park</span>
                         <span style={{ fontSize: "0.95rem", fontWeight: 600, color: "#111827" }}>
-                          {fmtMin(shift.keyRetrievalTime)} – {fmtMin(shift.keyReturnTime)}
-                          <span style={{ fontSize: "0.78rem", fontWeight: 400, marginLeft: "5px" }}>({Math.round((shift.keyReturnTime - shift.keyRetrievalTime) / 60 * 10) / 10} hrs)</span>
+                          {fmtMin(shift.volunteerStart - shift.travelMinutes)} – {fmtMin(shift.volunteerEnd + shift.travelMinutes)}
+                          <span style={{ fontSize: "0.78rem", fontWeight: 400, marginLeft: "5px" }}>({Math.round((shift.volunteerEnd + shift.travelMinutes - (shift.volunteerStart - shift.travelMinutes)) / 60 * 10) / 10} hrs)</span>
                         </span>
                       </div>
                       <div style={{ display: "flex", flexDirection: "column", gap: "3px" }}>
