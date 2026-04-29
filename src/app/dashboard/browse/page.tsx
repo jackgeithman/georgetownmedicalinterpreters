@@ -645,15 +645,16 @@ export default function BrowsePage() {
           )}
           {/* Uber booking status */}
           {shift.isUberShift && !isPast && (
-            <div style={{ padding: "10px 22px", background: "#FEF9C3", borderBottom: "1px solid var(--card-border)", display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
-              <span style={{ fontSize: "0.82rem", fontWeight: 700, color: "#854D0E" }}>🚗 Uber</span>
+            <div style={{ padding: "10px 22px", background: "#FEF9C3", borderBottom: "1px solid var(--card-border)", flexWrap: "wrap" }}>
               {shift.uberBookedBy && (
-                <span style={{ fontSize: "0.78rem", color: "#374151" }}>
-                  There: <strong>{shift.uberBookedBy}</strong>
-                  {shift.uberBookedByReturn && <> · Back: <strong>{shift.uberBookedByReturn}</strong></>}
-                </span>
+                <p style={{ fontSize: "0.82rem", color: "#854D0E", margin: "0 0 2px 0", lineHeight: 1.5 }}>
+                  <strong>{shift.uberBookedBy}</strong> is responsible for ordering the Uber there
+                  {shift.uberBookedByReturn
+                    ? <>, and <strong>{shift.uberBookedByReturn}</strong> is responsible for ordering the Uber back.</>
+                    : <> and back.</>}
+                </p>
               )}
-              <span style={{ fontSize: "0.75rem", color: "#374151" }}>· Meet at Front Gates</span>
+              <p style={{ fontSize: "0.75rem", color: "#92400E", margin: 0 }}>Volunteers meet at the Front Gates of Georgetown University.</p>
             </div>
           )}
           {/* Red alert: post-Uber→Van, no driver but interpreters are signed up */}
@@ -674,10 +675,7 @@ export default function BrowsePage() {
           {shift.isUberShift && (
             <div style={{ display: "flex", alignItems: "center", padding: "12px 22px", borderBottom: "1px solid var(--card-border)", gap: "14px", background: "#111827" }}>
               <div style={{ width: "9px", height: "9px", borderRadius: "50%", background: "#22C55E", flexShrink: 0 }} />
-              <div style={{ minWidth: "110px", display: "flex", alignItems: "center", gap: "8px" }}>
-                <span style={{ fontSize: "1.05rem", fontWeight: 900, color: "#fff", letterSpacing: "-0.04em" }}>Uber</span>
-              </div>
-              <span style={{ fontSize: "0.72rem", fontWeight: 600, padding: "2px 8px", borderRadius: "99px", background: "#22C55E", color: "#fff" }}>Driver</span>
+              <span style={{ fontSize: "1.05rem", fontWeight: 900, color: "#fff", letterSpacing: "-0.04em" }}>Uber</span>
             </div>
           )}
           {shift.positions.map((pos, idx) => {
