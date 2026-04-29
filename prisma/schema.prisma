@@ -185,6 +185,7 @@ model Shift {
   isUberShift        Boolean         @default(false)
   uberBooked         Boolean         @default(false)
   uberBookedBy       String?
+  uberBookedByReturn String?
   postedById         String
   postedBy           User            @relation("PostedShifts", fields: [postedById], references: [id])
   positions          ShiftPosition[]

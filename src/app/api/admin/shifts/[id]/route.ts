@@ -48,7 +48,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     date, volunteerStart, volunteerEnd, travelMinutes,
     keyRetrievalTime, keyReturnTime, languagesNeeded, notes,
     // Uber fields
-    isUberShift, uberBookedBy, uberBooked,
+    isUberShift, uberBookedBy, uberBookedByReturn, uberBooked,
   } = body;
 
   const shift = await prisma.shift.findUnique({
@@ -76,7 +76,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     await prisma.$transaction(async (tx) => {
       await tx.shift.update({
         where: { id },
-        data: { isUberShift: true, uberBooked: false, uberBookedBy: uberBookedBy.trim() },
+        data: { isUberShift: true, uberBooked: false, uberBookedBy: uberBookedBy.trim(), uberBookedByReturn: uberBookedByReturn?.trim() || null },
       });
       // Distribute all languages across all positions and open every seat
       for (let i = 0; i < shift.positions.length; i++) {
@@ -184,7 +184,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
       await tx.shift.update({
         where: { id },
-        data: { isUberShift: false, uberBooked: false, uberBookedBy: null },
+        data: { isUberShift: false, uberBooked: false, uberBookedBy: null, uberBookedByReturn: null },
       });
     });
 

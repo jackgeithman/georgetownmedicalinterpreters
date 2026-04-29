@@ -32,6 +32,7 @@ type AdminShift = {
   isUberShift: boolean;
   uberBooked: boolean;
   uberBookedBy: string | null;
+  uberBookedByReturn: string | null;
   clinic: { id: string; name: string; address: string };
   postedBy: { name: string | null; email: string };
   positions: Position[];
@@ -149,6 +150,7 @@ export default function BrowsePage() {
   // Uber mode confirmation modal
   const [uberTarget, setUberTarget] = useState<AdminShift | null>(null);
   const [uberBookedByInput, setUberBookedByInput] = useState("");
+  const [uberBookedByReturnInput, setUberBookedByReturnInput] = useState("");
   const [uberLoading, setUberLoading] = useState(false);
   const [uberError, setUberError] = useState("");
 
@@ -343,11 +345,12 @@ export default function BrowsePage() {
     const res = await fetch(`/api/admin/shifts/${uberTarget.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ isUberShift: true, uberBookedBy: uberBookedByInput.trim() }),
+      body: JSON.stringify({ isUberShift: true, uberBookedBy: uberBookedByInput.trim(), uberBookedByReturn: uberBookedByReturnInput.trim() || null }),
     });
     if (res.ok) {
       setUberTarget(null);
       setUberBookedByInput("");
+      setUberBookedByReturnInput("");
       await fetchData();
     } else {
       const err = await res.json().catch(() => ({}));
@@ -615,7 +618,7 @@ export default function BrowsePage() {
                     >Edit</button>
                     {!shift.isUberShift && (
                       <button
-                        onClick={() => { setUberTarget(shift); setUberBookedByInput(""); setUberError(""); }}
+                        onClick={() => { setUberTarget(shift); setUberBookedByInput(""); setUberBookedByReturnInput(""); setUberError(""); }}
                         style={{ fontSize: "0.75rem", padding: "4px 10px", background: "#111827", color: "#fff", border: "none", borderRadius: "6px", cursor: "pointer", fontFamily: "'DM Sans', sans-serif", fontWeight: 600 }}
                       >Switch to Uber</button>
                     )}
@@ -654,7 +657,10 @@ export default function BrowsePage() {
                 {shift.uberBooked ? "✓ Uber booked" : "⚠ Uber not yet booked"}
               </span>
               {shift.uberBookedBy && (
-                <span style={{ fontSize: "0.78rem", color: "#374151" }}>— Booker: {shift.uberBookedBy}</span>
+                <span style={{ fontSize: "0.78rem", color: "#374151" }}>
+                  — There: {shift.uberBookedBy}
+                  {shift.uberBookedByReturn && ` · Back: ${shift.uberBookedByReturn}`}
+                </span>
               )}
               <span style={{ fontSize: "0.75rem", color: "#374151", marginLeft: "4px" }}>· Meet at Front Gates</span>
             </div>
@@ -1159,18 +1165,32 @@ export default function BrowsePage() {
                     Volunteers will be directed to meet at the <strong>Front Gates of Georgetown University</strong> instead of the Leavey Garage.
                   </p>
                 </div>
-                <div>
-                  <label style={{ fontSize: "0.78rem", fontWeight: 700, color: "#374151", display: "block", marginBottom: "6px" }}>
-                    Who is booking the Uber? <span style={{ color: "#DC2626" }}>*</span>
-                  </label>
-                  <input
-                    autoFocus
-                    type="text"
-                    value={uberBookedByInput}
-                    onChange={(e) => setUberBookedByInput(e.target.value)}
-                    placeholder="Full name of person responsible"
-                    style={{ width: "100%", padding: "9px 12px", fontSize: "0.875rem", border: "1.5px solid var(--card-border)", borderRadius: "9px", background: "var(--card-bg)", color: "var(--gray-900)", outline: "none", fontFamily: "'DM Sans', sans-serif", boxSizing: "border-box" }}
-                  />
+                <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                  <div>
+                    <label style={{ fontSize: "0.78rem", fontWeight: 700, color: "#374151", display: "block", marginBottom: "6px" }}>
+                      Who is booking the Uber there? <span style={{ color: "#DC2626" }}>*</span>
+                    </label>
+                    <input
+                      autoFocus
+                      type="text"
+                      value={uberBookedByInput}
+                      onChange={(e) => setUberBookedByInput(e.target.value)}
+                      placeholder="Full name of person responsible"
+                      style={{ width: "100%", padding: "9px 12px", fontSize: "0.875rem", border: "1.5px solid var(--card-border)", borderRadius: "9px", background: "var(--card-bg)", color: "var(--gray-900)", outline: "none", fontFamily: "'DM Sans', sans-serif", boxSizing: "border-box" }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: "0.78rem", fontWeight: 700, color: "#374151", display: "block", marginBottom: "6px" }}>
+                      Who is booking the Uber back? <span style={{ fontSize: "0.72rem", fontWeight: 400, color: "#6B7280" }}>(if different)</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={uberBookedByReturnInput}
+                      onChange={(e) => setUberBookedByReturnInput(e.target.value)}
+                      placeholder="Leave blank if same person"
+                      style={{ width: "100%", padding: "9px 12px", fontSize: "0.875rem", border: "1.5px solid var(--card-border)", borderRadius: "9px", background: "var(--card-bg)", color: "var(--gray-900)", outline: "none", fontFamily: "'DM Sans', sans-serif", boxSizing: "border-box" }}
+                    />
+                  </div>
                 </div>
                 <div style={{ background: "#EFF6FF", border: "1.5px solid #BFDBFE", borderRadius: "10px", padding: "10px 14px" }}>
                   <p style={{ fontSize: "0.8rem", fontWeight: 600, color: "#1E40AF", margin: 0 }}>
@@ -1180,7 +1200,7 @@ export default function BrowsePage() {
                 {uberError && <p style={{ fontSize: "0.82rem", color: "#DC2626", margin: 0 }}>{uberError}</p>}
                 <div style={{ display: "flex", gap: "8px" }}>
                   <button
-                    onClick={() => { setUberTarget(null); setUberBookedByInput(""); setUberError(""); }}
+                    onClick={() => { setUberTarget(null); setUberBookedByInput(""); setUberBookedByReturnInput(""); setUberError(""); }}
                     style={{ flex: 1, padding: "10px", fontSize: "0.875rem", border: "1.5px solid var(--card-border)", color: "#111827", borderRadius: "10px", background: "none", cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}
                   >Cancel</button>
                   <button
