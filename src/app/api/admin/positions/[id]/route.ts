@@ -86,6 +86,20 @@ export async function PATCH(
     }
   });
 
+  // Re-query positions after transaction for up-to-date roster in GCal description
+  const updatedPositionsForAssign = await prisma.shiftPosition.findMany({
+    where: { shiftId: position.shiftId },
+    orderBy: { positionNumber: "asc" },
+    include: { volunteer: { include: { user: { select: { name: true } } } } },
+  });
+  const assignPositionInfos = updatedPositionsForAssign.map((p) => ({
+    positionNumber: p.positionNumber,
+    isDriver: p.isDriver,
+    languageCode: p.languageCode,
+    volunteerName: p.volunteer?.user?.name ?? null,
+    status: p.status,
+  }));
+
   // Notify
   if (targetUser.email) {
     const { shift } = position;
@@ -104,6 +118,8 @@ export async function PATCH(
       keyRetrievalTime: shift.keyRetrievalTime,
       keyReturnTime: shift.keyReturnTime,
       notes: shift.notes,
+      languagesNeeded: shift.languagesNeeded,
+      positions: assignPositionInfos,
     }).catch(console.error);
   }
 
@@ -157,6 +173,20 @@ export async function DELETE(
     }
   });
 
+  // Re-query positions after transaction for up-to-date roster in GCal description
+  const updatedPositionsForRemove = await prisma.shiftPosition.findMany({
+    where: { shiftId: position.shiftId },
+    orderBy: { positionNumber: "asc" },
+    include: { volunteer: { include: { user: { select: { name: true } } } } },
+  });
+  const removePositionInfos = updatedPositionsForRemove.map((p) => ({
+    positionNumber: p.positionNumber,
+    isDriver: p.isDriver,
+    languageCode: p.languageCode,
+    volunteerName: p.volunteer?.user?.name ?? null,
+    status: p.status,
+  }));
+
   // Remove from GCal and notify volunteer
   const volunteerEmail = position.volunteer?.user?.email;
   const volunteerName = position.volunteer?.user?.name ?? volunteerEmail ?? "Volunteer";
@@ -166,10 +196,14 @@ export async function DELETE(
       volunteerEmail,
       volunteerName,
       clinicName: position.shift.clinic.name,
+      clinicAddress: position.shift.clinic.address,
       language: position.languageCode,
       date: position.shift.date,
       volunteerStart: position.shift.volunteerStart,
       volunteerEnd: position.shift.volunteerEnd,
+      travelMinutes: position.shift.travelMinutes,
+      languagesNeeded: position.shift.languagesNeeded,
+      positions: removePositionInfos,
     }).catch(console.error);
   }
 

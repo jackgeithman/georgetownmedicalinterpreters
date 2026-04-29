@@ -85,8 +85,17 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     }
   }
 
-  // Fetch the updated shift to get current values for GCal
-  const updatedShift = await prisma.shift.findUnique({ where: { id }, include: { clinic: true } });
+  // Fetch the updated shift (with positions) for GCal
+  const updatedShift = await prisma.shift.findUnique({
+    where: { id },
+    include: {
+      clinic: true,
+      positions: {
+        orderBy: { positionNumber: "asc" },
+        include: { volunteer: { include: { user: { select: { name: true } } } } },
+      },
+    },
+  });
   if (updatedShift) {
     await updateShiftCalEvent(id, {
       date: updatedShift.date,
@@ -98,6 +107,14 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       clinicName: updatedShift.clinic.name,
       clinicAddress: updatedShift.clinic.address,
       notes: updatedShift.notes,
+      languagesNeeded: updatedShift.languagesNeeded,
+      positions: updatedShift.positions.map((p) => ({
+        positionNumber: p.positionNumber,
+        isDriver: p.isDriver,
+        languageCode: p.languageCode,
+        volunteerName: p.volunteer?.user?.name ?? null,
+        status: p.status,
+      })),
     }).catch(console.error);
   }
 

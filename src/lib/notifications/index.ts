@@ -5,7 +5,10 @@ import {
   updateShiftCalEvent,
   deleteShiftCalEvent,
   type ShiftCalInfo,
+  type PositionInfo,
 } from "./gcal";
+
+export type { PositionInfo };
 import { sendResendEmail } from "./resend";
 import { langName } from "@/lib/languages";
 
@@ -92,6 +95,8 @@ export async function notifyVolunteerAddedToShift(params: {
   keyRetrievalTime?: number | null;
   keyReturnTime?: number | null;
   notes?: string | null;
+  languagesNeeded?: string[];
+  positions?: PositionInfo[];
 }): Promise<void> {
   const calInfo: ShiftCalInfo = {
     date: params.date,
@@ -103,6 +108,8 @@ export async function notifyVolunteerAddedToShift(params: {
     clinicName: params.clinicName,
     clinicAddress: params.clinicAddress,
     notes: params.notes,
+    languagesNeeded: params.languagesNeeded,
+    positions: params.positions,
   };
 
   // Always add to GCal — GCal sends the invite
@@ -142,29 +149,45 @@ export async function notifyVolunteerCancellation(params: {
   shiftId: string;
   volunteerEmail: string;
   clinicName: string;
+  clinicAddress: string;
   clinicContactEmail: string;
   language: string;
   date: Date;
   volunteerStart: number;
   volunteerEnd: number;
+  travelMinutes: number;
   isWithin24h: boolean;
+  languagesNeeded?: string[];
+  positions?: PositionInfo[];
 }): Promise<void> {
   const {
     shiftId,
     volunteerEmail,
     clinicName,
+    clinicAddress,
     clinicContactEmail,
     language,
     date,
     volunteerStart,
     volunteerEnd,
+    travelMinutes,
     isWithin24h,
   } = params;
 
   const lang = langName(language);
   // Remove from shift GCal event — GCal sends cancellation email automatically
+  const calInfo: ShiftCalInfo = {
+    date,
+    volunteerStart,
+    volunteerEnd,
+    travelMinutes,
+    clinicName,
+    clinicAddress,
+    languagesNeeded: params.languagesNeeded,
+    positions: params.positions,
+  };
   const notifications: Promise<void>[] = [
-    removeAttendeeFromShiftEvent(shiftId, volunteerEmail).catch(console.error),
+    removeAttendeeFromShiftEvent(shiftId, volunteerEmail, calInfo).catch(console.error),
   ];
 
   // Alert clinic on urgent same-day cancellations
@@ -311,13 +334,28 @@ export async function notifyAdminRemovedFromPosition(params: {
   volunteerEmail: string;
   volunteerName: string;
   clinicName: string;
+  clinicAddress: string;
   language: string;
   date: Date;
   volunteerStart: number;
   volunteerEnd: number;
+  travelMinutes: number;
+  languagesNeeded?: string[];
+  positions?: PositionInfo[];
 }): Promise<void> {
-  const { shiftId, volunteerEmail, volunteerName, clinicName, language, date, volunteerStart, volunteerEnd } = params;
+  const { shiftId, volunteerEmail, volunteerName, clinicName, clinicAddress, language, date, volunteerStart, volunteerEnd, travelMinutes } = params;
   const lang = langName(language);
+
+  const calInfo: ShiftCalInfo = {
+    date,
+    volunteerStart,
+    volunteerEnd,
+    travelMinutes,
+    clinicName,
+    clinicAddress,
+    languagesNeeded: params.languagesNeeded,
+    positions: params.positions,
+  };
 
   const html = wrap(
     "You Have Been Removed From a Shift",
@@ -334,7 +372,7 @@ ${table(
 
   await Promise.all([
     sendGmail(volunteerEmail, `Removed From Shift: ${clinicName} on ${fmtDate(date)}`, html).catch(console.error),
-    removeAttendeeFromShiftEvent(shiftId, volunteerEmail).catch(console.error),
+    removeAttendeeFromShiftEvent(shiftId, volunteerEmail, calInfo).catch(console.error),
   ]);
 }
 

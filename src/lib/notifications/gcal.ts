@@ -1,4 +1,5 @@
 import { google } from "googleapis";
+import { langName } from "@/lib/languages";
 
 function getAuth() {
   const client = new google.auth.OAuth2(
@@ -33,31 +34,47 @@ function minutesTo12(minutes: number): string {
   return m === 0 ? `${h12}:00 ${period}` : `${h12}:${String(m).padStart(2, "0")} ${period}`;
 }
 
+export interface PositionInfo {
+  positionNumber: number;
+  isDriver: boolean;
+  languageCode: string | null;
+  volunteerName: string | null;
+  status: string; // "OPEN" | "FILLED" | "LOCKED" | "CANCELLED"
+}
+
 export interface ShiftCalInfo {
   date: Date;
   volunteerStart: number;    // minutes from midnight
   volunteerEnd: number;      // minutes from midnight
   travelMinutes: number;
-  keyRetrievalTime?: number | null;  // stored commitment start; null = use formula
-  keyReturnTime?: number | null;     // stored commitment end;   null = use formula
+  keyRetrievalTime?: number | null;
+  keyReturnTime?: number | null;
   clinicName: string;
   clinicAddress: string;
   notes?: string | null;
+  languagesNeeded?: string[];   // e.g. ["ES", "ES", "ZH"]
+  positions?: PositionInfo[];   // current roster — passed after DB update
 }
 
 type Attendee = { email?: string | null; organizer?: boolean | null; responseStatus?: string | null };
 
-function buildShiftEventBody(info: ShiftCalInfo, attendees: Attendee[] = []) {
-  const senderEmail = process.env.GOOGLE_GMAIL_SENDER_EMAIL!;
-  const dateStr = info.date.toISOString().slice(0, 10);
+// ─── Description builders ─────────────────────────────────────────────────────
 
+function buildLangSummary(languagesNeeded: string[]): string {
+  const counts = new Map<string, number>();
+  for (const lang of languagesNeeded) {
+    counts.set(lang, (counts.get(lang) ?? 0) + 1);
+  }
+  return Array.from(counts.entries())
+    .map(([code, count]) => `${count} ${langName(code)}`)
+    .join(" · ");
+}
+
+function buildDescription(info: ShiftCalInfo): string {
   const driveStart = info.volunteerStart - info.travelMinutes;
   const driveEnd   = info.volunteerEnd   + info.travelMinutes;
 
-  const startStr = `${dateStr}T${minutesToTimeStr(driveStart)}`;
-  const endStr   = `${dateStr}T${minutesToTimeStr(driveEnd)}`;
-
-  const lines = [
+  const lines: string[] = [
     "If you need to cancel, please do so as early as possible via the volunteer dashboard.",
     "",
     "── Schedule ───────────────────────",
@@ -71,6 +88,52 @@ function buildShiftEventBody(info: ShiftCalInfo, attendees: Attendee[] = []) {
     "next to Aruppe and Reiss. Once everyone is assembled outside,",
     "you will retrieve the van from the garage.",
     "",
+  ];
+
+  // ── Team section ─────────────────────────────────────────────────────────
+  const hasLangs     = (info.languagesNeeded?.length ?? 0) > 0;
+  const hasPositions = (info.positions?.length ?? 0) > 0;
+
+  if (hasLangs || hasPositions) {
+    lines.push("── Team ───────────────────────────");
+
+    if (hasLangs) {
+      lines.push(buildLangSummary(info.languagesNeeded!));
+    }
+
+    if (hasPositions) {
+      lines.push("");
+      const active = info.positions!.filter((p) => p.status !== "CANCELLED");
+      for (const pos of active) {
+        let roleLabel: string;
+        if (pos.isDriver) {
+          if (pos.languageCode) {
+            roleLabel = `Driver (${langName(pos.languageCode)})`;
+          } else {
+            // Driver seat open — show deduplicated available languages
+            const uniq = hasLangs ? [...new Set(info.languagesNeeded!)] : [];
+            const avail = uniq.length > 0 ? uniq.map((l) => langName(l)).join(" or ") : "TBD";
+            roleLabel = `Driver (${avail})`;
+          }
+        } else {
+          const seatLabel = `Seat ${pos.positionNumber}`;
+          roleLabel = pos.languageCode
+            ? `${seatLabel} (${langName(pos.languageCode)})`
+            : seatLabel;
+        }
+
+        const personLabel =
+          pos.volunteerName ?? (pos.status === "LOCKED" ? "(locked)" : "(open)");
+
+        lines.push(`${roleLabel}   ${personLabel}`);
+      }
+    }
+
+    lines.push("");
+  }
+
+  // ── Clinic ───────────────────────────────────────────────────────────────
+  lines.push(
     "── Clinic ──────────────────────────",
     info.clinicName,
     info.clinicAddress,
@@ -79,7 +142,20 @@ function buildShiftEventBody(info: ShiftCalInfo, attendees: Attendee[] = []) {
     "Georgetown Medical Interpreters",
     "georgetownmedicalinterpreters.org",
     "In the event of an issue with the website or Google Calendar, text Jack Geithman at (425) 877-4701.",
-  ];
+  );
+
+  return lines.join("\n");
+}
+
+function buildShiftEventBody(info: ShiftCalInfo, attendees: Attendee[] = []) {
+  const senderEmail = process.env.GOOGLE_GMAIL_SENDER_EMAIL!;
+  const dateStr = info.date.toISOString().slice(0, 10);
+
+  const driveStart = info.volunteerStart - info.travelMinutes;
+  const driveEnd   = info.volunteerEnd   + info.travelMinutes;
+
+  const startStr = `${dateStr}T${minutesToTimeStr(driveStart)}`;
+  const endStr   = `${dateStr}T${minutesToTimeStr(driveEnd)}`;
 
   // Only include volunteer attendees — the organizer email is excluded because the event
   // already lives on their calendar. Including the organizer as an attendee causes Google
@@ -89,7 +165,7 @@ function buildShiftEventBody(info: ShiftCalInfo, attendees: Attendee[] = []) {
   return {
     summary: `GMI at ${info.clinicName}`,
     location: info.clinicAddress,
-    description: lines.join("\n"),
+    description: buildDescription(info),
     start: { dateTime: startStr, timeZone: "America/New_York" },
     end:   { dateTime: endStr,   timeZone: "America/New_York" },
     attendees: volunteerAttendees,
@@ -154,9 +230,9 @@ export async function createShiftCalEvent(shiftId: string, info: ShiftCalInfo): 
 }
 
 /**
- * Add a volunteer as a guest to the shift's GCal event.
- * Lazy-creates the event if the shift predates this system.
- * GCal automatically sends an invite email to the volunteer.
+ * Add a volunteer as a guest to the shift's GCal event and rebuild the description
+ * so the team roster reflects the current state. Lazy-creates the event if the shift
+ * predates this system. GCal automatically sends an invite email to the volunteer.
  */
 export async function addAttendeeToShiftEvent(
   shiftId: string,
@@ -166,6 +242,7 @@ export async function addAttendeeToShiftEvent(
   if (!process.env.GOOGLE_GMAIL_REFRESH_TOKEN || !process.env.GOOGLE_GMAIL_SENDER_EMAIL) return;
   const cal = google.calendar({ version: "v3", auth: getAuth() });
   const eventId = shiftEventId(shiftId);
+  const senderEmail = process.env.GOOGLE_GMAIL_SENDER_EMAIL;
 
   let current: Attendee[];
   try {
@@ -180,41 +257,51 @@ export async function addAttendeeToShiftEvent(
     }
   }
 
-  // Already a guest — nothing to do (handles re-signup after cancel gracefully)
-  if (current.some((a) => a.email === volunteerEmail)) return;
+  // Already a guest — still update description in case positions changed
+  const volunteerAttendees = current.filter((a) => a.email !== senderEmail);
+  const alreadyGuest = volunteerAttendees.some((a) => a.email === volunteerEmail);
 
   await cal.events.patch({
     calendarId: gmiCalendarId(),
     eventId,
-    sendUpdates: "all",
+    sendUpdates: alreadyGuest ? "none" : "all",
     requestBody: {
-      attendees: [...current, { email: volunteerEmail }],
+      attendees: alreadyGuest
+        ? volunteerAttendees
+        : [...volunteerAttendees, { email: volunteerEmail }],
+      description: buildDescription(info),
     },
   });
 }
 
 /**
- * Remove a volunteer from the shift's GCal event guest list.
+ * Remove a volunteer from the shift's GCal event guest list and rebuild the description.
  * GCal automatically sends a cancellation email to the volunteer.
  */
 export async function removeAttendeeFromShiftEvent(
   shiftId: string,
   volunteerEmail: string,
+  info?: ShiftCalInfo,
 ): Promise<void> {
   if (!process.env.GOOGLE_GMAIL_REFRESH_TOKEN) return;
   const cal = google.calendar({ version: "v3", auth: getAuth() });
   const eventId = shiftEventId(shiftId);
+  const senderEmail = process.env.GOOGLE_GMAIL_SENDER_EMAIL ?? "";
 
   try {
     const current = await fetchAttendees(cal, eventId);
-    const updated = current.filter((a) => a.email !== volunteerEmail);
-    if (updated.length === current.length) return; // not a guest, nothing to do
+    const volunteerAttendees = current.filter((a) => a.email !== senderEmail);
+    const updated = volunteerAttendees.filter((a) => a.email !== volunteerEmail);
+    if (updated.length === volunteerAttendees.length) return; // not a guest, nothing to do
 
     await cal.events.patch({
       calendarId: gmiCalendarId(),
       eventId,
       sendUpdates: "all",
-      requestBody: { attendees: updated },
+      requestBody: {
+        attendees: updated,
+        ...(info ? { description: buildDescription(info) } : {}),
+      },
     });
   } catch {
     // 404 = shift event doesn't exist yet, nothing to remove

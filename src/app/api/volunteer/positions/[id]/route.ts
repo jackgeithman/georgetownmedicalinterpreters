@@ -29,7 +29,7 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
   const position = await prisma.shiftPosition.findUnique({
     where: { id },
     include: {
-      shift: { include: { clinic: true } },
+      shift: { include: { clinic: true, positions: { orderBy: { positionNumber: "asc" } } } },
     },
   });
 
@@ -81,18 +81,36 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
     }
   });
 
+  // Re-query positions after transaction for up-to-date roster in GCal description
+  const updatedPositions = await prisma.shiftPosition.findMany({
+    where: { shiftId: position.shiftId },
+    orderBy: { positionNumber: "asc" },
+    include: { volunteer: { include: { user: { select: { name: true } } } } },
+  });
+  const positionInfos = updatedPositions.map((p) => ({
+    positionNumber: p.positionNumber,
+    isDriver: p.isDriver,
+    languageCode: p.languageCode,
+    volunteerName: p.volunteer?.user?.name ?? null,
+    status: p.status,
+  }));
+
   // Send notification
   if (user.email) {
     await notifyVolunteerCancellation({
       shiftId: position.shiftId,
       volunteerEmail: user.email,
       clinicName: position.shift.clinic.name,
+      clinicAddress: position.shift.clinic.address,
       date: position.shift.date,
       volunteerStart: position.shift.volunteerStart,
       volunteerEnd: position.shift.volunteerEnd,
+      travelMinutes: position.shift.travelMinutes,
       language: position.languageCode ?? "",
       isWithin24h: hoursUntilShift <= 24,
       clinicContactEmail: position.shift.clinic.contactEmail,
+      languagesNeeded: position.shift.languagesNeeded,
+      positions: positionInfos,
     }).catch(console.error);
   }
 

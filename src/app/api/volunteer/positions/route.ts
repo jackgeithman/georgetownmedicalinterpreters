@@ -167,6 +167,20 @@ export async function POST(req: NextRequest) {
     }
   });
 
+  // Re-query positions after transaction for up-to-date roster in GCal description
+  const updatedPositions = await prisma.shiftPosition.findMany({
+    where: { shiftId: position.shiftId },
+    orderBy: { positionNumber: "asc" },
+    include: { volunteer: { include: { user: { select: { name: true } } } } },
+  });
+  const positionInfos = updatedPositions.map((p) => ({
+    positionNumber: p.positionNumber,
+    isDriver: p.isDriver,
+    languageCode: p.languageCode,
+    volunteerName: p.volunteer?.user?.name ?? null,
+    status: p.status,
+  }));
+
   // Send notification
   const notifPrefs = await prisma.volunteerNotifPrefs.findUnique({
     where: { volunteerId: profile.id },
@@ -189,6 +203,8 @@ export async function POST(req: NextRequest) {
       keyRetrievalTime: shift.keyRetrievalTime,
       keyReturnTime: shift.keyReturnTime,
       notes: shift.notes,
+      languagesNeeded: shift.languagesNeeded,
+      positions: positionInfos,
     }).catch(console.error);
   }
 

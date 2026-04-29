@@ -110,6 +110,7 @@ export async function POST(req: NextRequest) {
     clinicName: clinic.name,
     clinicAddress: clinic.address,
     notes: notes || null,
+    languagesNeeded,
   }).catch(console.error);
 
   await logActivity({
