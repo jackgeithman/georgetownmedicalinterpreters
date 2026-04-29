@@ -99,6 +99,8 @@ export async function PATCH(
       volunteerStart: shift.volunteerStart,
       volunteerEnd: shift.volunteerEnd,
       travelMinutes: shift.travelMinutes,
+      keyRetrievalTime: shift.keyRetrievalTime,
+      keyReturnTime: shift.keyReturnTime,
       isDriver: position.isDriver,
       notes: shift.notes,
     }).catch(console.error);

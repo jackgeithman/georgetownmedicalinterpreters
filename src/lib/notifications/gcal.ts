@@ -39,9 +39,11 @@ import { langName } from "@/lib/languages";
 
 export interface ShiftPositionInfo {
   date: Date;
-  volunteerStart: number;   // XX1, minutes from midnight
-  volunteerEnd: number;     // XX2, minutes from midnight
-  travelMinutes: number;    // t
+  volunteerStart: number;     // XX1, minutes from midnight
+  volunteerEnd: number;       // XX2, minutes from midnight
+  travelMinutes: number;      // t
+  keyRetrievalTime?: number | null;  // stored commitment start (null = use formula)
+  keyReturnTime?: number | null;     // stored commitment end   (null = use formula)
   clinicName: string;
   clinicAddress: string;
   language: string;
@@ -54,9 +56,9 @@ function buildEventBody(volunteerEmail: string, info: ShiftPositionInfo, titlePr
   const senderEmail = process.env.GOOGLE_GMAIL_SENDER_EMAIL!;
   const dateStr = info.date.toISOString().slice(0, 10); // "YYYY-MM-DD"
 
-  // Full time commitment: key retrieval → key return
-  const keyRetrieval = info.volunteerStart - info.travelMinutes - 30;
-  const keyReturn = info.volunteerEnd + info.travelMinutes + 15;
+  // Full time commitment: use stored values, fall back to formula
+  const keyRetrieval = info.keyRetrievalTime ?? (info.volunteerStart - info.travelMinutes - 15);
+  const keyReturn    = info.keyReturnTime    ?? (info.volunteerEnd   + info.travelMinutes + 15);
 
   const startStr = `${dateStr}T${minutesToTimeStr(keyRetrieval)}`;
   const endStr   = `${dateStr}T${minutesToTimeStr(keyReturn)}`;
@@ -111,11 +113,33 @@ export async function createCalEvent(
 ): Promise<void> {
   if (!process.env.GOOGLE_GMAIL_REFRESH_TOKEN || !process.env.GOOGLE_GMAIL_SENDER_EMAIL) return;
   const cal = google.calendar({ version: "v3", auth: getAuth() });
-  await cal.events.insert({
-    calendarId: gmiCalendarId(),
-    sendUpdates: "all",
-    requestBody: { id: calEventId(positionId), ...buildEventBody(volunteerEmail, info) },
-  });
+  const eventId = calEventId(positionId);
+  const body = buildEventBody(volunteerEmail, info);
+
+  try {
+    await cal.events.insert({
+      calendarId: gmiCalendarId(),
+      sendUpdates: "all",
+      requestBody: { id: eventId, ...body },
+    });
+  } catch (err: unknown) {
+    // Google Calendar returns 409 when an event with this ID already exists or was recently
+    // deleted (tombstone window). This happens on cancel → re-signup for the same position.
+    // Fall back to update, which restores the event and re-sends the invite.
+    const status =
+      (err as { code?: number })?.code ??
+      (err as { response?: { status?: number } })?.response?.status;
+    if (status === 409) {
+      await cal.events.update({
+        calendarId: gmiCalendarId(),
+        eventId,
+        sendUpdates: "all",
+        requestBody: { id: eventId, ...body },
+      });
+    } else {
+      throw err;
+    }
+  }
 }
 
 export async function updateCalEvent(

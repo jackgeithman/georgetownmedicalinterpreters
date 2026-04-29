@@ -52,13 +52,15 @@ function shiftTimeBlock(params: {
   volunteerStart: number;
   volunteerEnd: number;
   travelMinutes: number;
+  keyRetrievalTime?: number | null;
+  keyReturnTime?: number | null;
   isDriver: boolean;
 }): string {
   const { volunteerStart, volunteerEnd, travelMinutes, isDriver } = params;
-  const keyRetrieval = volunteerStart - travelMinutes - 30;
+  const keyRetrieval = params.keyRetrievalTime ?? (volunteerStart - travelMinutes - 15);
   const driveStart   = volunteerStart - travelMinutes;
   const driveEnd     = volunteerEnd   + travelMinutes;
-  const keyReturn    = volunteerEnd   + travelMinutes + 15;
+  const keyReturn    = params.keyReturnTime    ?? (volunteerEnd   + travelMinutes + 15);
 
   const rows = [
     detail("Key retrieval", minutesTo12(keyRetrieval)),
@@ -87,6 +89,8 @@ export async function notifyVolunteerPositionSignup(params: {
   volunteerStart: number;
   volunteerEnd: number;
   travelMinutes: number;
+  keyRetrievalTime?: number | null;
+  keyReturnTime?: number | null;
   isDriver: boolean;
   notes?: string | null;
 }): Promise<void> {
@@ -95,6 +99,8 @@ export async function notifyVolunteerPositionSignup(params: {
     volunteerStart: params.volunteerStart,
     volunteerEnd: params.volunteerEnd,
     travelMinutes: params.travelMinutes,
+    keyRetrievalTime: params.keyRetrievalTime,
+    keyReturnTime: params.keyReturnTime,
     clinicName: params.clinicName,
     clinicAddress: params.clinicAddress,
     language: params.language,
