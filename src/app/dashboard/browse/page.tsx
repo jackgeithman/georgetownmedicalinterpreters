@@ -579,7 +579,7 @@ export default function BrowsePage() {
                   <span style={{ fontSize: "0.95rem", fontWeight: 600, color: "#111827" }}>{fmtDate(shift.date)}</span>
                 </div>
                 <div style={{ display: "flex", flexDirection: "column", gap: "3px" }}>
-                  <span style={{ fontSize: "0.68rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.09em", color: "#111827" }}>Depart → Return + Park</span>
+                  <span style={{ fontSize: "0.68rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.09em", color: "#111827" }}>Total Time Commitment</span>
                   <span style={{ fontSize: "0.95rem", fontWeight: 600, color: "#111827" }}>
                     {fmtMin(shift.volunteerStart - shift.travelMinutes)} – {fmtMin(shift.volunteerEnd + shift.travelMinutes)}
                     <span style={{ fontSize: "0.78rem", fontWeight: 400, marginLeft: "5px" }}>({Math.round((shift.volunteerEnd + shift.travelMinutes - (shift.volunteerStart - shift.travelMinutes)) / 60 * 10) / 10} hrs)</span>
@@ -1137,6 +1137,62 @@ export default function BrowsePage() {
             </div>
           </div>
         )}
+
+        {/* Uber confirmation modal */}
+        {uberTarget && (
+          <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 300, padding: "16px" }}>
+            <div style={{ background: "var(--card-bg)", borderRadius: "16px", boxShadow: "0 8px 32px rgba(0,0,0,.2)", width: "100%", maxWidth: "480px" }}>
+              <div style={{ padding: "16px 24px", borderBottom: "1.5px solid var(--card-border)", display: "flex", alignItems: "center", gap: "10px" }}>
+                <span style={{ fontSize: "0.72rem", fontWeight: 800, background: "#111827", color: "#fff", padding: "2px 8px", borderRadius: "99px" }}>UBER</span>
+                <h3 style={{ fontSize: "0.95rem", fontWeight: 700, color: "var(--gray-900)", margin: 0 }}>Switch to Uber — {uberTarget.clinic.name}</h3>
+              </div>
+              <div style={{ padding: "20px 24px", display: "flex", flexDirection: "column", gap: "14px" }}>
+                <div style={{ background: "#FEF2F2", border: "1.5px solid #FECACA", borderRadius: "10px", padding: "12px 16px" }}>
+                  <p style={{ fontSize: "0.83rem", fontWeight: 700, color: "#991B1B", margin: "0 0 6px 0" }}>Read before proceeding</p>
+                  <p style={{ fontSize: "0.8rem", color: "#7F1D1D", margin: "0 0 6px 0", lineHeight: 1.5 }}>
+                    Switching to Uber is hard to undo. All interpreter seats will open immediately. Make sure you have a plan before proceeding.
+                  </p>
+                  <p style={{ fontSize: "0.8rem", color: "#7F1D1D", margin: "0 0 6px 0", lineHeight: 1.5 }}>
+                    If a driver shows up without signing up and all seats are full, you either stick with the Uber or call a volunteer, ask if you can remove them, and then assign the driver.
+                  </p>
+                  <p style={{ fontSize: "0.8rem", color: "#7F1D1D", margin: 0, lineHeight: 1.5 }}>
+                    Volunteers will be directed to meet at the <strong>Front Gates of Georgetown University</strong> instead of the Leavey Garage.
+                  </p>
+                </div>
+                <div style={{ background: "#EFF6FF", border: "1.5px solid #BFDBFE", borderRadius: "10px", padding: "10px 14px" }}>
+                  <p style={{ fontSize: "0.8rem", fontWeight: 600, color: "#1E40AF", margin: 0 }}>
+                    Set pick-up location to: <strong>Front Gates of Georgetown University</strong>
+                  </p>
+                </div>
+                <div>
+                  <label style={{ fontSize: "0.78rem", fontWeight: 700, color: "#374151", display: "block", marginBottom: "6px" }}>
+                    Who is booking the Uber? <span style={{ color: "#DC2626" }}>*</span>
+                  </label>
+                  <input
+                    autoFocus
+                    type="text"
+                    value={uberBookedByInput}
+                    onChange={(e) => setUberBookedByInput(e.target.value)}
+                    placeholder="Full name of person responsible"
+                    style={{ width: "100%", padding: "9px 12px", fontSize: "0.875rem", border: "1.5px solid var(--card-border)", borderRadius: "9px", background: "var(--card-bg)", color: "var(--gray-900)", outline: "none", fontFamily: "'DM Sans', sans-serif", boxSizing: "border-box" }}
+                  />
+                </div>
+                {uberError && <p style={{ fontSize: "0.82rem", color: "#DC2626", margin: 0 }}>{uberError}</p>}
+                <div style={{ display: "flex", gap: "8px" }}>
+                  <button
+                    onClick={() => { setUberTarget(null); setUberBookedByInput(""); setUberError(""); }}
+                    style={{ flex: 1, padding: "10px", fontSize: "0.875rem", border: "1.5px solid var(--card-border)", color: "#111827", borderRadius: "10px", background: "none", cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}
+                  >Cancel</button>
+                  <button
+                    disabled={uberLoading || !uberBookedByInput.trim()}
+                    onClick={confirmSwitchToUber}
+                    style={{ flex: 1, padding: "10px", fontSize: "0.875rem", background: "#111827", color: "#fff", border: "none", borderRadius: "10px", cursor: "pointer", opacity: (uberLoading || !uberBookedByInput.trim()) ? 0.5 : 1, fontFamily: "'DM Sans', sans-serif", fontWeight: 700 }}
+                  >{uberLoading ? "Switching..." : "Switch to Uber"}</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
@@ -1216,7 +1272,7 @@ export default function BrowsePage() {
                         <span style={{ fontSize: "0.95rem", fontWeight: 600, color: "var(--gray-900)" }}>{fmtDate(shift.date)}</span>
                       </div>
                       <div style={{ display: "flex", flexDirection: "column", gap: "3px" }}>
-                        <span style={{ fontSize: "0.68rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.09em", color: "#111827" }}>Depart → Return + Park</span>
+                        <span style={{ fontSize: "0.68rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.09em", color: "#111827" }}>Total Time Commitment</span>
                         <span style={{ fontSize: "0.95rem", fontWeight: 600, color: "#111827" }}>
                           {fmtMin(shift.volunteerStart - shift.travelMinutes)} – {fmtMin(shift.volunteerEnd + shift.travelMinutes)}
                           <span style={{ fontSize: "0.78rem", fontWeight: 400, marginLeft: "5px" }}>({Math.round((shift.volunteerEnd + shift.travelMinutes - (shift.volunteerStart - shift.travelMinutes)) / 60 * 10) / 10} hrs)</span>
@@ -1337,61 +1393,6 @@ export default function BrowsePage() {
                   onClick={confirmDriverSignUp}
                   style={{ flex: 1, padding: "10px", fontSize: "0.875rem", background: "var(--blue)", color: "#fff", border: "none", borderRadius: "10px", cursor: "pointer", opacity: !driverLangChoice ? 0.4 : 1, fontFamily: "'DM Sans', sans-serif", fontWeight: 600 }}
                 >{actionLoading === driverLangPicker.positionId ? "Signing up..." : "Confirm Sign-Up"}</button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-      {/* Uber confirmation modal */}
-      {uberTarget && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 300, padding: "16px" }}>
-          <div style={{ background: "var(--card-bg)", borderRadius: "16px", boxShadow: "0 8px 32px rgba(0,0,0,.2)", width: "100%", maxWidth: "480px" }}>
-            <div style={{ padding: "16px 24px", borderBottom: "1.5px solid var(--card-border)", display: "flex", alignItems: "center", gap: "10px" }}>
-              <span style={{ fontSize: "0.72rem", fontWeight: 800, background: "#111827", color: "#fff", padding: "2px 8px", borderRadius: "99px" }}>UBER</span>
-              <h3 style={{ fontSize: "0.95rem", fontWeight: 700, color: "var(--gray-900)", margin: 0 }}>Switch to Uber — {uberTarget.clinic.name}</h3>
-            </div>
-            <div style={{ padding: "20px 24px", display: "flex", flexDirection: "column", gap: "14px" }}>
-              <div style={{ background: "#FEF2F2", border: "1.5px solid #FECACA", borderRadius: "10px", padding: "12px 16px" }}>
-                <p style={{ fontSize: "0.83rem", fontWeight: 700, color: "#991B1B", margin: "0 0 6px 0" }}>Read before proceeding</p>
-                <p style={{ fontSize: "0.8rem", color: "#7F1D1D", margin: "0 0 6px 0", lineHeight: 1.5 }}>
-                  Switching to Uber is hard to undo. All interpreter seats will open immediately. Make sure you have a plan before proceeding.
-                </p>
-                <p style={{ fontSize: "0.8rem", color: "#7F1D1D", margin: "0 0 6px 0", lineHeight: 1.5 }}>
-                  If a driver shows up without signing up and all seats are full, you either stick with the Uber or call a volunteer, ask if you can remove them, and then assign the driver.
-                </p>
-                <p style={{ fontSize: "0.8rem", color: "#7F1D1D", margin: 0, lineHeight: 1.5 }}>
-                  Volunteers will be directed to meet at the <strong>Front Gates of Georgetown University</strong> instead of the Leavey Garage.
-                </p>
-              </div>
-              <div style={{ background: "#EFF6FF", border: "1.5px solid #BFDBFE", borderRadius: "10px", padding: "10px 14px" }}>
-                <p style={{ fontSize: "0.8rem", fontWeight: 600, color: "#1E40AF", margin: 0 }}>
-                  Set pick-up location to: <strong>Front Gates of Georgetown University</strong>
-                </p>
-              </div>
-              <div>
-                <label style={{ fontSize: "0.78rem", fontWeight: 700, color: "#374151", display: "block", marginBottom: "6px" }}>
-                  Who is booking the Uber? <span style={{ color: "#DC2626" }}>*</span>
-                </label>
-                <input
-                  autoFocus
-                  type="text"
-                  value={uberBookedByInput}
-                  onChange={(e) => setUberBookedByInput(e.target.value)}
-                  placeholder="Full name of person responsible"
-                  style={{ width: "100%", padding: "9px 12px", fontSize: "0.875rem", border: "1.5px solid var(--card-border)", borderRadius: "9px", background: "var(--card-bg)", color: "var(--gray-900)", outline: "none", fontFamily: "'DM Sans', sans-serif", boxSizing: "border-box" }}
-                />
-              </div>
-              {uberError && <p style={{ fontSize: "0.82rem", color: "#DC2626", margin: 0 }}>{uberError}</p>}
-              <div style={{ display: "flex", gap: "8px" }}>
-                <button
-                  onClick={() => { setUberTarget(null); setUberBookedByInput(""); setUberError(""); }}
-                  style={{ flex: 1, padding: "10px", fontSize: "0.875rem", border: "1.5px solid var(--card-border)", color: "#111827", borderRadius: "10px", background: "none", cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}
-                >Cancel</button>
-                <button
-                  disabled={uberLoading || !uberBookedByInput.trim()}
-                  onClick={confirmSwitchToUber}
-                  style={{ flex: 1, padding: "10px", fontSize: "0.875rem", background: "#111827", color: "#fff", border: "none", borderRadius: "10px", cursor: "pointer", opacity: (uberLoading || !uberBookedByInput.trim()) ? 0.5 : 1, fontFamily: "'DM Sans', sans-serif", fontWeight: 700 }}
-                >{uberLoading ? "Switching..." : "Switch to Uber"}</button>
               </div>
             </div>
           </div>
