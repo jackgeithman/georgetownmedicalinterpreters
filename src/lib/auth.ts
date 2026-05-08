@@ -28,19 +28,23 @@ export const authOptions: NextAuthOptions = {
     CredentialsProvider({
       id: "dev",
       name: "Dev Role",
-      credentials: { role: { label: "Role", type: "text" } },
+      credentials: {
+        role:  { label: "Role",  type: "text" },
+        email: { label: "Email", type: "text" }, // optional — persona email from toolbar
+      },
       async authorize(credentials) {
         if (process.env.NODE_ENV !== "development") return null;
-        const role = credentials?.role ?? "ADMIN";
-        const email = `dev-${role.toLowerCase()}@dev.local`;
+        const role  = credentials?.role  ?? "ADMIN";
+        // If toolbar passes a specific persona email, use it; otherwise fall back to legacy pattern
+        const email = credentials?.email?.trim() || `dev-${role.toLowerCase()}@dev.local`;
         // Pick up language clearances (etc.) from the seeded DB user if present
-        const dbUser = await prisma.user.findUnique({ where: { email }, select: { roles: true } }).catch(() => null);
+        const dbUser = await prisma.user.findUnique({ where: { email }, select: { roles: true, name: true } }).catch(() => null);
         return {
-          id: `dev-${role}`,
-          name: `Dev ${role.charAt(0) + role.slice(1).toLowerCase()}`,
+          id: email,
+          name: dbUser?.name ?? `Dev ${role.charAt(0) + role.slice(1).toLowerCase()}`,
           email,
           role,
-          roles: dbUser?.roles ?? [role],
+          roles: dbUser?.roles ?? [],
           status: "ACTIVE",
           onboardingComplete: true,
           clinicId: role === "CLINIC" ? "dev-clinic" : null,

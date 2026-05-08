@@ -1,4 +1,5 @@
 import { google } from "googleapis";
+import { devLog } from "@/lib/dev-logger";
 
 function getAuth() {
   const client = new google.auth.OAuth2(
@@ -79,6 +80,10 @@ export async function sendGmail(
   html: string,
   ics?: IcsAttachment,
 ): Promise<void> {
+  if (process.env.NODE_ENV === "development") {
+    devLog({ service: "GMAIL", action: "send_email", summary: `To: ${to} — ${subject}`, detail: html });
+    return;
+  }
   if (!process.env.GOOGLE_GMAIL_REFRESH_TOKEN || !process.env.GOOGLE_GMAIL_SENDER_EMAIL) return;
   const gmail = google.gmail({ version: "v1", auth: getAuth() });
   await gmail.users.messages.send({

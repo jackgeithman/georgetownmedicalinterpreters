@@ -1,5 +1,6 @@
 import { google } from "googleapis";
 import { langName } from "@/lib/languages";
+import { devLog } from "@/lib/dev-logger";
 
 function getAuth() {
   const client = new google.auth.OAuth2(
@@ -229,6 +230,10 @@ async function fetchAttendees(
  * No volunteer attendees yet — just the GMI organizer.
  */
 export async function createShiftCalEvent(shiftId: string, info: ShiftCalInfo): Promise<void> {
+  if (process.env.NODE_ENV === "development") {
+    devLog({ service: "GCAL", action: "create_event", summary: `Create event: ${info.clinicName} on ${info.date.toISOString().slice(0,10)}`, detail: buildDescription(info) });
+    return;
+  }
   if (!process.env.GOOGLE_GMAIL_REFRESH_TOKEN || !process.env.GOOGLE_GMAIL_SENDER_EMAIL) return;
   const cal = google.calendar({ version: "v3", auth: getAuth() });
   const eventId = shiftEventId(shiftId);
@@ -265,6 +270,10 @@ export async function addAttendeeToShiftEvent(
   volunteerEmail: string,
   info: ShiftCalInfo,
 ): Promise<void> {
+  if (process.env.NODE_ENV === "development") {
+    devLog({ service: "GCAL", action: "add_attendee", summary: `Add attendee: ${volunteerEmail} → ${info.clinicName} on ${info.date.toISOString().slice(0,10)}`, detail: buildDescription(info) });
+    return;
+  }
   if (!process.env.GOOGLE_GMAIL_REFRESH_TOKEN || !process.env.GOOGLE_GMAIL_SENDER_EMAIL) return;
   const cal = google.calendar({ version: "v3", auth: getAuth() });
   const eventId = shiftEventId(shiftId);
@@ -309,6 +318,10 @@ export async function removeAttendeeFromShiftEvent(
   volunteerEmail: string,
   info?: ShiftCalInfo,
 ): Promise<void> {
+  if (process.env.NODE_ENV === "development") {
+    devLog({ service: "GCAL", action: "remove_attendee", summary: `Remove attendee: ${volunteerEmail} from shift ${shiftId}`, detail: info ? buildDescription(info) : "(no updated description)" });
+    return;
+  }
   if (!process.env.GOOGLE_GMAIL_REFRESH_TOKEN) return;
   const cal = google.calendar({ version: "v3", auth: getAuth() });
   const eventId = shiftEventId(shiftId);
@@ -339,6 +352,10 @@ export async function removeAttendeeFromShiftEvent(
  * Preserves the current attendee list and notifies all guests of the change.
  */
 export async function updateShiftCalEvent(shiftId: string, info: ShiftCalInfo): Promise<void> {
+  if (process.env.NODE_ENV === "development") {
+    devLog({ service: "GCAL", action: "update_event", summary: `Update event: ${info.clinicName} on ${info.date.toISOString().slice(0,10)}`, detail: buildDescription(info) });
+    return;
+  }
   if (!process.env.GOOGLE_GMAIL_REFRESH_TOKEN || !process.env.GOOGLE_GMAIL_SENDER_EMAIL) return;
   const cal = google.calendar({ version: "v3", auth: getAuth() });
   const eventId = shiftEventId(shiftId);
@@ -366,6 +383,10 @@ export async function updateShiftCalEvent(shiftId: string, info: ShiftCalInfo): 
  * GCal automatically sends cancellation emails to all guests.
  */
 export async function deleteShiftCalEvent(shiftId: string): Promise<void> {
+  if (process.env.NODE_ENV === "development") {
+    devLog({ service: "GCAL", action: "delete_event", summary: `Delete event for shift ${shiftId}`, detail: "" });
+    return;
+  }
   if (!process.env.GOOGLE_GMAIL_REFRESH_TOKEN) return;
   const cal = google.calendar({ version: "v3", auth: getAuth() });
   try {
