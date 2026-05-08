@@ -423,7 +423,7 @@ export default function BrowsePage() {
   const confirmAssign = async () => {
     if (!assignModal || !assignSelected) return;
     const { position, shift } = assignModal;
-    if (position.isDriver && !assignLangChoice) return;
+    if (position.isDriver && !shift.isUberShift && !assignLangChoice) return;
     setAssignLoading(true);
     setAssignError("");
     const res = await fetch(`/api/admin/positions/${position.id}`, {
@@ -431,7 +431,7 @@ export default function BrowsePage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         userId: assignSelected.id,
-        languageCode: position.isDriver ? assignLangChoice : position.languageCode,
+        languageCode: (position.isDriver && !shift.isUberShift) ? assignLangChoice : position.languageCode,
       }),
     });
     if (res.ok) {
