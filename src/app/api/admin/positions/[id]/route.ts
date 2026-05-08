@@ -129,6 +129,9 @@ export async function PATCH(
       notes: shift.notes,
       languagesNeeded: shift.languagesNeeded,
       positions: assignPositionInfos,
+      isUberShift: shift.isUberShift,
+      uberBookedBy: shift.uberBookedBy,
+      uberBookedByReturn: shift.uberBookedByReturn,
     }).catch(console.error);
   }
 
@@ -167,11 +170,11 @@ export async function DELETE(
   await prisma.$transaction(async (tx) => {
     await tx.shiftPosition.update({
       where: { id: positionId },
-      data: { volunteerId: null, languageCode: position.isDriver ? null : position.languageCode, status: "OPEN", signedUpAt: null },
+      data: { volunteerId: null, languageCode: (position.isDriver && !position.shift.isUberShift) ? null : position.languageCode, status: "OPEN", signedUpAt: null },
     });
 
-    if (position.isDriver) {
-      // Re-lock all other positions
+    if (position.isDriver && !position.shift.isUberShift) {
+      // Van mode: re-lock all other positions
       const otherPositions = position.shift.positions.filter((p) => !p.isDriver);
       for (const p of otherPositions) {
         await tx.shiftPosition.update({
@@ -213,6 +216,9 @@ export async function DELETE(
       travelMinutes: position.shift.travelMinutes,
       languagesNeeded: position.shift.languagesNeeded,
       positions: removePositionInfos,
+      isUberShift: position.shift.isUberShift,
+      uberBookedBy: position.shift.uberBookedBy,
+      uberBookedByReturn: position.shift.uberBookedByReturn,
     }).catch(console.error);
   }
 

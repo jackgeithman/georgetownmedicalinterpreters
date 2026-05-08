@@ -213,6 +213,9 @@ export async function POST(req: NextRequest) {
       notes: shift.notes,
       languagesNeeded: shift.languagesNeeded,
       positions: positionInfos,
+      isUberShift: shift.isUberShift,
+      uberBookedBy: shift.uberBookedBy,
+      uberBookedByReturn: shift.uberBookedByReturn,
     }).catch(console.error);
   }
 

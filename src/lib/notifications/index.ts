@@ -97,6 +97,9 @@ export async function notifyVolunteerAddedToShift(params: {
   notes?: string | null;
   languagesNeeded?: string[];
   positions?: PositionInfo[];
+  isUberShift?: boolean;
+  uberBookedBy?: string | null;
+  uberBookedByReturn?: string | null;
 }): Promise<void> {
   const calInfo: ShiftCalInfo = {
     date: params.date,
@@ -110,6 +113,9 @@ export async function notifyVolunteerAddedToShift(params: {
     notes: params.notes,
     languagesNeeded: params.languagesNeeded,
     positions: params.positions,
+    isUberShift: params.isUberShift,
+    uberBookedBy: params.uberBookedBy,
+    uberBookedByReturn: params.uberBookedByReturn,
   };
 
   // Always add to GCal — GCal sends the invite
@@ -159,6 +165,9 @@ export async function notifyVolunteerCancellation(params: {
   isWithin24h: boolean;
   languagesNeeded?: string[];
   positions?: PositionInfo[];
+  isUberShift?: boolean;
+  uberBookedBy?: string | null;
+  uberBookedByReturn?: string | null;
 }): Promise<void> {
   const {
     shiftId,
@@ -185,6 +194,9 @@ export async function notifyVolunteerCancellation(params: {
     clinicAddress,
     languagesNeeded: params.languagesNeeded,
     positions: params.positions,
+    isUberShift: params.isUberShift,
+    uberBookedBy: params.uberBookedBy,
+    uberBookedByReturn: params.uberBookedByReturn,
   };
   const notifications: Promise<void>[] = [
     removeAttendeeFromShiftEvent(shiftId, volunteerEmail, calInfo).catch(console.error),
@@ -342,6 +354,9 @@ export async function notifyAdminRemovedFromPosition(params: {
   travelMinutes: number;
   languagesNeeded?: string[];
   positions?: PositionInfo[];
+  isUberShift?: boolean;
+  uberBookedBy?: string | null;
+  uberBookedByReturn?: string | null;
 }): Promise<void> {
   const { shiftId, volunteerEmail, volunteerName, clinicName, clinicAddress, language, date, volunteerStart, volunteerEnd, travelMinutes } = params;
   const lang = langName(language);
@@ -355,6 +370,9 @@ export async function notifyAdminRemovedFromPosition(params: {
     clinicAddress,
     languagesNeeded: params.languagesNeeded,
     positions: params.positions,
+    isUberShift: params.isUberShift,
+    uberBookedBy: params.uberBookedBy,
+    uberBookedByReturn: params.uberBookedByReturn,
   };
 
   const html = wrap(

@@ -55,6 +55,8 @@ export interface ShiftCalInfo {
   languagesNeeded?: string[];   // e.g. ["ES", "ES", "ZH"]
   positions?: PositionInfo[];   // current roster — passed after DB update
   isUberShift?: boolean;
+  uberBookedBy?: string | null;
+  uberBookedByReturn?: string | null;
 }
 
 type Attendee = { email?: string | null; organizer?: boolean | null; responseStatus?: string | null };
@@ -79,16 +81,31 @@ function buildDescription(info: ShiftCalInfo): string {
     "If you need to cancel, please do so as early as possible via the volunteer dashboard.",
     "",
     "── Schedule ───────────────────────",
-    `Depart Georgetown:   ${minutesTo12(driveStart)}`,
-    `Interpreting starts: ${minutesTo12(info.volunteerStart)}`,
-    `Interpreting ends:   ${minutesTo12(info.volunteerEnd)}`,
-    `Return + park:       ${minutesTo12(driveEnd)}`,
+    ...(info.isUberShift
+      ? [
+          `Depart for pickup:   ${minutesTo12(driveStart)}`,
+          `Interpreting starts: ${minutesTo12(info.volunteerStart)}`,
+          `Interpreting ends:   ${minutesTo12(info.volunteerEnd)}`,
+          `Return to GU:        ${minutesTo12(driveEnd)}`,
+        ]
+      : [
+          `Depart Georgetown:   ${minutesTo12(driveStart)}`,
+          `Interpreting starts: ${minutesTo12(info.volunteerStart)}`,
+          `Interpreting ends:   ${minutesTo12(info.volunteerEnd)}`,
+          `Return + park:       ${minutesTo12(driveEnd)}`,
+        ]),
     "",
     "── Meeting Location ────────────────",
     ...(info.isUberShift
       ? [
           "Meet at the Front Gates of Georgetown University.",
-          "An Uber will be arranged for transportation to the clinic.",
+          ...(info.uberBookedBy
+            ? [
+                info.uberBookedByReturn
+                  ? `${info.uberBookedBy} will order the Uber there; ${info.uberBookedByReturn} will order the Uber back.`
+                  : `${info.uberBookedBy} will order the Uber both ways.`,
+              ]
+            : []),
         ]
       : [
           "Meet outside the Leavey Garage on the side of the building",
@@ -114,7 +131,7 @@ function buildDescription(info: ShiftCalInfo): string {
       const active = info.positions!.filter((p) => p.status !== "CANCELLED");
       for (const pos of active) {
         let roleLabel: string;
-        if (pos.isDriver) {
+        if (pos.isDriver && !info.isUberShift) {
           if (pos.languageCode) {
             roleLabel = `Driver (${langName(pos.languageCode)})`;
           } else {
@@ -150,7 +167,7 @@ function buildDescription(info: ShiftCalInfo): string {
     "Georgetown Medical Interpreters",
     "georgetownmedicalinterpreters.org",
     "",
-    "In the event of an issue with the website or Google Calendar, text Jack Geithman at (425) 877-4701.",
+    "In the event of an issue with the website or Google Calendar, email jag490@georgetown.edu or if urgent, text or call (425) 877-4701.",
   );
 
   return lines.join("\n");

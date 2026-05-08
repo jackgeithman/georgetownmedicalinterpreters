@@ -111,6 +111,9 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
       clinicContactEmail: position.shift.clinic.contactEmail,
       languagesNeeded: position.shift.languagesNeeded,
       positions: positionInfos,
+      isUberShift: position.shift.isUberShift,
+      uberBookedBy: position.shift.uberBookedBy,
+      uberBookedByReturn: position.shift.uberBookedByReturn,
     }).catch(console.error);
   }
 

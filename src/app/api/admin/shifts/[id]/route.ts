@@ -20,6 +20,7 @@ function gcalInfo(s: {
   keyRetrievalTime: number | null; keyReturnTime: number | null;
   clinicName: string; clinicAddress: string; notes: string | null;
   languagesNeeded: string[]; isUberShift: boolean;
+  uberBookedBy?: string | null; uberBookedByReturn?: string | null;
   positions: { positionNumber: number; isDriver: boolean; languageCode: string | null; status: string; volunteerName: string | null }[];
 }) {
   return {
@@ -34,6 +35,8 @@ function gcalInfo(s: {
     notes: s.notes,
     languagesNeeded: s.languagesNeeded,
     isUberShift: s.isUberShift,
+    uberBookedBy: s.uberBookedBy ?? null,
+    uberBookedByReturn: s.uberBookedByReturn ?? null,
     positions: s.positions,
   };
 }
