@@ -451,8 +451,8 @@ export default function BrowsePage() {
     const pos = shift.positions.find((p) => p.id === positionId);
     if (!pos) return;
 
-    if (pos.isDriver) {
-      // Need language picker
+    if (pos.isDriver && !shift.isUberShift) {
+      // Van mode driver: need language picker
       const cleared = shift.languagesNeeded.filter((lang) =>
         roles.includes(`LANG_${lang}_CLEARED`)
       );
