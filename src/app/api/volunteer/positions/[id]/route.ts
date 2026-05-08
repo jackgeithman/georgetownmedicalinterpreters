@@ -56,19 +56,19 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
       data: { status: "CANCELLED", volunteerId: null, cancelledAt: now, signedUpAt: null },
     });
 
-    // If driver cancels: re-lock all other positions and clear their language assignments
-    if (position.isDriver) {
+    // If Van mode driver cancels: re-lock all other positions and clear their language assignments
+    if (position.isDriver && !position.shift.isUberShift) {
       await tx.shiftPosition.updateMany({
         where: { shiftId: position.shiftId, isDriver: false },
         data: { status: "LOCKED", languageCode: null, volunteerId: null, cancelledAt: null, signedUpAt: null },
       });
-      // Re-open driver seat
+      // Re-open driver seat with no language
       await tx.shiftPosition.update({
         where: { id },
         data: { status: "OPEN", languageCode: null },
       });
     } else {
-      // Non-driver cancels: just re-open that seat
+      // Non-driver cancels, or Uber mode Seat 1 cancels: just re-open that seat keeping its language
       await tx.shiftPosition.update({
         where: { id },
         data: { status: "OPEN", languageCode: position.languageCode },
